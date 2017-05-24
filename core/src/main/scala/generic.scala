@@ -18,6 +18,20 @@ class Macros(val c: whitebox.Context) {
    
     val scope = GlobalState.globalState.asInstanceOf[Map[Type, TermName]]
 
+    scope.get(genericType) match {
+      case Some(ref) =>
+        q"$ref"
+      case None =>
+        
+      val searchType = appliedType(typeConstructor, genericType)
+      println(s"${scope.keySet} vs $genericType")
+      println(s"inferring on $genericType")
+      try c.inferImplicitValue(searchType, false, false) catch {
+        case e: Exception =>
+          go(genericType, typeConstructor/*, scope*/)
+      }
+    }
+
     scope.get(genericType).map { nm =>
       println("substituting "+nm)
       q"$nm"
