@@ -15,8 +15,14 @@ object Extractor extends Extractor_1 {
   implicit val intExtractor: Extractor[Int] = Extractor(_.toInt)
   implicit val stringExtractor: Extractor[String] = Extractor(identity)
   implicit val doubleExtractor: Extractor[Double] = Extractor(_.toDouble)
+
 }
 
-trait Extractor_1 {
+trait Extractor_1 extends Extractor_2 {
+  implicit def listExtractor[T: Extractor]: Extractor[List[T]] = new Extractor[List[T]] {
+    def extract(source: String): List[T] = List(implicitly[Extractor[T]].extract(source))
+  }
+}
+trait Extractor_2 {
   implicit def generic[T]: Extractor[T] = macro Macros.generic[T, Extractor[_]]
 }
