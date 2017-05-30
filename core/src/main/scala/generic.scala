@@ -97,7 +97,9 @@ abstract class GenericMacro(whiteboxContext: whitebox.Context) {
         }
 
         inferredImplicit.map { imp =>
+          c.resetLocalAttrs(imp)
           transformer.transform(imp)
+          c.typecheck(imp)
         }.orElse {
           directInferImplicit(genericType, typeConstructor, count + 1)
         }
