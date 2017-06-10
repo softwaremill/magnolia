@@ -103,12 +103,10 @@ abstract class GenericMacro(whiteboxContext: whitebox.Context) {
                   typeConstructor: c.universe.Type,
                   myName: c.universe.TermName): c.Tree = {
     
-    //log(c)(s"getImplicit1($genericType)")
-    GlobalMutableState.find(c)(genericType).map { nm =>
-      val str = nm.encodedName.toString
+    GlobalMutableState.find(c)(genericType).map { methodName =>
+      val methodAsString = methodName.encodedName.toString
       val searchType = appliedType(typeConstructor, genericType)
-      q"$str.asInstanceOf[${searchType}]"
-      q"_root_.magnolia.Lazy[$searchType]($str)"
+      q"_root_.magnolia.Lazy[$searchType]($methodAsString)"
     }.orElse {
       val searchType = appliedType(typeConstructor, genericType)
       if(GlobalMutableState.find(c)(genericType).isEmpty) {
@@ -127,9 +125,7 @@ abstract class GenericMacro(whiteboxContext: whitebox.Context) {
           case e: Exception => None
         }
 
-        inferredImplicit.map { imp =>
-          imp
-        }.orElse {
+        inferredImplicit.orElse {
           directInferImplicit(genericType, typeConstructor)
         }
       } else {
@@ -145,8 +141,6 @@ abstract class GenericMacro(whiteboxContext: whitebox.Context) {
          typeConstructor: c.universe.Type): Option[c.Tree] = {
    
     log(c)(s"directInferImplicit($genericType) given definitions for ${GlobalMutableState.enclosingTypes(c).mkString("{", ", ", "}")}")
-
-    //if(genericType.typeSymbol.isAbstract) log(c)(s"cannot derive typeclass for abstract type $genericType")
 
     val myName: TermName = TermName(c.freshName(genericType.typeSymbol.name.encodedName.toString.toLowerCase+"Extractor"))
     val typeSymbol = genericType.typeSymbol
