@@ -113,18 +113,20 @@ abstract class GenericMacro(whiteboxContext: whitebox.Context) {
         log(c)(s"could not find type $genericType in current context")
         GlobalMutableState.searchType = Some(genericType)
         val inferredImplicit = try Some({
-          val imp = c.inferImplicitValue(searchType, false, false)
-          /*q"""{
-            def $myName: $searchType = $imp
-            $myName
-          }"""*/
-          imp
+          val myName: TermName = TermName(c.freshName(genericType.typeSymbol.name.encodedName.toString.toLowerCase+"Extractor"))
+          GlobalMutableState.wrap(c)(genericType, myName) {
+            val imp = c.inferImplicitValue(searchType, false, false)
+            q"""{
+              def $myName: $searchType = $imp
+              $myName
+            }"""
+          }.get
         }) catch {
           case e: Exception => None
         }
 
         inferredImplicit.map { imp =>
-          imp // c.untypecheck(transformer.transform(imp))
+          imp
         }.orElse {
           directInferImplicit(genericType, typeConstructor)
         }
@@ -250,7 +252,7 @@ abstract class GenericMacro(whiteboxContext: whitebox.Context) {
       transformedTree
     }.getOrElse {
       log(c)("failed to derive a tree")
-      c.abort(c.enclosingPosition, "Could not infer extractor. Sorry.")
+      c.abort(c.enclosingPosition, "Could not infer typeclass. Sorry.")
     }
   } catch {
     case e@DirectlyReentrantException() => throw e
