@@ -15,6 +15,10 @@ case class Pos(pos: api.Position) {
 
 case class DirectlyReentrantException() extends Exception("attempt to recurse directly")
 
+object Lazy {
+  def apply[T](method: String): T = ???
+}
+
 object GlobalMutableState {
 
   def log(c: whitebox.Context)(msg: String) = msg.split("/n").foreach { ln =>
@@ -60,7 +64,6 @@ object GlobalMutableState {
 @bundle
 class Macros(val context: whitebox.Context) extends GenericMacro(context) {
   
-  
   protected def classBody(context: whitebox.Context)(genericType: context.Type, implementation: context.Tree): context.Tree = {
     import context.universe._
     q"""def extract(src: _root_.magnolia.Thing): $genericType = $implementation"""
@@ -89,10 +92,8 @@ abstract class GenericMacro(whiteboxContext: whitebox.Context) {
   import c.universe._
   val transformer = new Transformer {
     override def transform(tree: Tree): Tree = tree match {
-      case ta@TypeApply(Select(Literal(Constant(method: String)), TermName("asInstanceOf")), List(tpe)) =>
-        log(c)(s"FOUND TYPEAPPLY: ${ta}")
-        val m = TermName(method)
-        q"$m"
+      case q"_root_.magnolia.Lazy[$returnType](${Literal(Constant(method: String))})" =>
+        q"${TermName(method)}"
       case _ => super.transform(tree)
     }
   }
@@ -107,6 +108,7 @@ abstract class GenericMacro(whiteboxContext: whitebox.Context) {
       val str = nm.encodedName.toString
       val searchType = appliedType(typeConstructor, genericType)
       q"$str.asInstanceOf[${searchType}]"
+      q"_root_.magnolia.Lazy[$searchType]($str)"
     }.orElse {
       val searchType = appliedType(typeConstructor, genericType)
       if(GlobalMutableState.find(c)(genericType).isEmpty) {
