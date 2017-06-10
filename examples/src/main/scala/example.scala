@@ -35,5 +35,5 @@ trait Extractor_1 extends Extractor_2 {
   }
 }
 trait Extractor_2 {
-  implicit def generic[T]: Extractor[T] = macro Macros.generic[T, Extractor[_]]
+  implicit def generic[T]: Extractor[T] = macro Macros.magnolia[T, Extractor[_]]
 }
