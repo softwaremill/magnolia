@@ -18,20 +18,19 @@ abstract class MagnoliaMacro(val c: whitebox.Context) {
 
   protected def transformation(c: whitebox.Context): Transformation[c.type]
 
-  private def findType(key: c.universe.Type): Option[c.universe.TermName] =
-    recursionStack(c.enclosingPosition).find(_._1 == key).map(_._2.asInstanceOf[c.universe.TermName])
+  private def findType(key: c.universe.Type): Option[c.TermName] =
+    recursionStack(c.enclosingPosition).find(_.genericType == key).map(_.termName(c))
 
-  private def recurse[T](key: c.universe.Type, value: c.universe.TermName)(fn: => T): Option[T] = {
+  private def recurse[T](key: c.universe.Type, value: c.TermName)(fn: => T): Option[T] = {
     recursionStack = recursionStack.updated(
       c.enclosingPosition,
-      recursionStack.get(c.enclosingPosition).map { m =>
-        m ::: List((key, value))
-      }.getOrElse(List(key -> value))
+      recursionStack.get(c.enclosingPosition).map(Frame(key, value) :: _).getOrElse(
+          List(Frame(key, value)))
     )
     
     try Some(fn) catch { case e: Exception => None } finally {
       recursionStack = recursionStack.updated(c.enclosingPosition,
-          recursionStack(c.enclosingPosition).init)
+          recursionStack(c.enclosingPosition).tail)
     }
   }
   
@@ -47,7 +46,7 @@ abstract class MagnoliaMacro(val c: whitebox.Context) {
 
   private def getImplicit(genericType: c.universe.Type,
                   typeConstructor: c.universe.Type,
-                  assignedName: c.universe.TermName): c.Tree = {
+                  assignedName: c.TermName): c.Tree = {
     
     findType(genericType).map { methodName =>
       val methodAsString = methodName.encodedName.toString
@@ -183,9 +182,12 @@ private[magnolia] object Lazy { def apply[T](method: String): T = ??? }
 
 private[magnolia] object CompileTimeState {
 
-  private[magnolia] var recursionStack: Map[api.Position, List[
-    (c.universe.Type, c.universe.TermName) forSome { val c: whitebox.Context }
-  ]] = Map()
+  case class Frame[C <: whitebox.Context](val genericType: C#Type, val term: C#TermName) {
+    def termName(c: whitebox.Context): c.TermName = term.asInstanceOf[c.TermName]
+  }
+
+  private[magnolia] var recursionStack: Map[api.Position, List[Frame[_ <: whitebox.Context]]] =
+    Map()
  
   private[magnolia] var lastSearchType: Option[Universe#Type] = None
 }
