@@ -6,16 +6,10 @@ import scala.util.Try
 import language.existentials
 import language.higherKinds
 
-abstract class Transformation[C <: whitebox.Context](val c: C) {
-  def typeclassBody(genericType: c.Type, implementation: c.Tree): c.Tree
-  def coproductReduction(left: c.Tree, right: c.Tree): c.Tree
-}
-
-abstract class MagnoliaMacro(val c: whitebox.Context) {
+@bundle
+class Macros(val c: whitebox.Context) {
   import c.universe._
   import CompileTimeState._
-
-  protected def transformation(c: whitebox.Context): Transformation[c.type]
 
   private def findType(key: c.universe.Type): Option[c.TermName] =
     recursionStack(c.enclosingPosition).frames.find(_.genericType == key).map(_.termName(c))
@@ -108,11 +102,9 @@ abstract class MagnoliaMacro(val c: whitebox.Context) {
           c.abort(c.enclosingPosition, s"failed to get implicit for type $genericType")
         }
         
-        val dereferencedValue = q"$dereferencerImplicit.dereference(src, ${param.name.toString})"
+        val dereferencedValue = q"$dereferencerImplicit.dereference(sourceParameter, ${param.name.toString})"
         
-        val result = q"$dereferencerImplicit.delegate($derivedImplicit, $dereferencedValue)"
-        println(result+"\n\n")
-        result
+        q"$dereferencerImplicit.delegate($derivedImplicit, $dereferencedValue)"
       }
 
       Some(q"new $genericType(..$implicits)")
@@ -127,17 +119,15 @@ abstract class MagnoliaMacro(val c: whitebox.Context) {
           }.getOrElse {
             c.abort(c.enclosingPosition, s"failed to get implicit for type $searchType")
           }
-        }.reduce(transformation(c).coproductReduction)
+        }.reduce { (left, right) => q"$dereferencerImplicit.combine($left, $right)" }
         
-        q"$dereferencerImplicit.delegate($reduction, src)"
+        q"$dereferencerImplicit.delegate($reduction, sourceParameter)"
       }
     } else None
 
     construct.map { const =>
-      val bodyImplementation = transformation(c).typeclassBody(genericType, const)
-      
       q"""{
-        def $assignedName: $resultType = new $resultType { $bodyImplementation }
+        def $assignedName: $resultType = $dereferencerImplicit.construct { sourceParameter => $const }
         $assignedName
       }"""
     }
@@ -220,22 +210,10 @@ private[magnolia] object CompileTimeState {
     Map()
 }
 
-
-@bundle
-class Macros(val context: whitebox.Context) extends MagnoliaMacro(context) {
-  protected def transformation(c: whitebox.Context): Transformation[c.type] =
-    new Transformation[c.type](c) {
-      import c.universe._
-
-      def typeclassBody(genericType: c.Type, implementation: c.Tree): c.Tree =
-        q"""def extract(src: _root_.magnolia.Thing): $genericType = $implementation"""
-
-      def coproductReduction(left: c.Tree, right: c.Tree): c.Tree = q"$left.orElse($right)"
-    }
-}
-
 trait Dereferencer[Typeclass[_]] {
   type Value
   def dereference(value: Value, param: String): Value
   def delegate[T](typeclass: Typeclass[T], value: Value): T
+  def combine[Supertype, Right <: Supertype](left: Typeclass[_ <: Supertype], right: Typeclass[Right]): Typeclass[Supertype]
+  def construct[T](body: Value => T): Typeclass[T]
 }

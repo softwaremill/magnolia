@@ -34,6 +34,12 @@ object Extractor extends Extractor_1 {
     type Value = Thing
     def dereference(value: Thing, param: String): Thing = value.access(param)
     def delegate[T](extractor: Extractor[T], value: Thing): T = extractor.extract(value)
+    def combine[Supertype, Right <: Supertype](left: Extractor[_ <: Supertype],
+        right: Extractor[Right]): Extractor[Supertype] = left.orElse(right)
+    
+    def construct[T](body: Thing => T): Extractor[T] = new Extractor[T] {
+      def extract(source: Thing): T = body(source)
+    }
   }
 
 }
