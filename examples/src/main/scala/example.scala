@@ -1,6 +1,9 @@
 package magnolia
 
 import language.experimental.macros
+import language.higherKinds
+
+
 
 case class Thing(str: String) {
   def access(path: String): Thing = Thing(s"$str.$path")
@@ -26,6 +29,12 @@ object Extractor extends Extractor_1 {
   implicit val intExtractor: Extractor[Int] = Extractor(_.str.length)
   implicit val stringExtractor: Extractor[String] = Extractor(_.str)
   implicit val doubleExtractor: Extractor[Double] = Extractor(_.str.length.toDouble)
+
+  implicit val dereferencer: Dereferencer[Extractor] { type Value = Thing } = new Dereferencer[Extractor] {
+    type Value = Thing
+    def dereference(value: Thing, param: String): Thing = value.access(param)
+    def delegate[T](extractor: Extractor[T], value: Thing): T = extractor.extract(value)
+  }
 
 }
 

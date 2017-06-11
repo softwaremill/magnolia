@@ -4,12 +4,11 @@ import scala.reflect._, macros._
 import macrocompat.bundle
 import scala.util.Try
 import language.existentials
+import language.higherKinds
 
 abstract class Transformation[C <: whitebox.Context](val c: C) {
   def typeclassBody(genericType: c.Type, implementation: c.Tree): c.Tree
   def coproductReduction(left: c.Tree, right: c.Tree): c.Tree
-  def dereferenceValue(value: c.Tree, elem: String): c.Tree
-  def callDelegateMethod(value: c.Tree, argument: c.Tree): c.Tree
 }
 
 abstract class MagnoliaMacro(val c: whitebox.Context) {
@@ -19,22 +18,24 @@ abstract class MagnoliaMacro(val c: whitebox.Context) {
   protected def transformation(c: whitebox.Context): Transformation[c.type]
 
   private def findType(key: c.universe.Type): Option[c.TermName] =
-    recursionStack(c.enclosingPosition).find(_.genericType == key).map(_.termName(c))
+    recursionStack(c.enclosingPosition).frames.find(_.genericType == key).map(_.termName(c))
 
-  private def recurse[T](key: c.universe.Type, value: c.TermName)(fn: => T): Option[T] = {
+  private def recurse[T](path: TypePath, key: c.universe.Type, value: c.TermName)(fn: => T):
+      Option[T] = {
     recursionStack = recursionStack.updated(
       c.enclosingPosition,
-      recursionStack.get(c.enclosingPosition).map(Frame(key, value) :: _).getOrElse(
-          List(Frame(key, value)))
+      recursionStack.get(c.enclosingPosition).map(_.push(path, key, value)).getOrElse(
+          Stack(List(Frame(path, key, value)), Nil))
     )
     
     try Some(fn) catch { case e: Exception => None } finally {
+      val currentStack = recursionStack(c.enclosingPosition)
       recursionStack = recursionStack.updated(c.enclosingPosition,
-          recursionStack(c.enclosingPosition).tail)
+          currentStack.pop())
     }
   }
   
-  private val transformer = new Transformer {
+  private val removeLazy: Transformer = new Transformer {
     override def transform(tree: Tree): Tree = tree match {
       case q"magnolia.Lazy.apply[$returnType](${Literal(Constant(method: String))})" =>
         q"${TermName(method)}"
@@ -43,10 +44,11 @@ abstract class MagnoliaMacro(val c: whitebox.Context) {
     }
   }
   
-
-  private def getImplicit(genericType: c.universe.Type,
-                  typeConstructor: c.universe.Type,
-                  assignedName: c.TermName): c.Tree = {
+  private def getImplicit(paramName: Option[String],
+                          genericType: c.universe.Type,
+                          typeConstructor: c.universe.Type,
+                          assignedName: c.TermName,
+                          dereferencerImplicit: c.Tree): c.Tree = {
     
     findType(genericType).map { methodName =>
       val methodAsString = methodName.encodedName.toString
@@ -54,35 +56,36 @@ abstract class MagnoliaMacro(val c: whitebox.Context) {
       q"_root_.magnolia.Lazy[$searchType]($methodAsString)"
     }.orElse {
       val searchType = appliedType(typeConstructor, genericType)
-      if(findType(genericType).isEmpty) {
-        lastSearchType = Some(genericType)
-        val inferredImplicit = try Some({
+      findType(genericType).map { _ =>
+        directInferImplicit(genericType, typeConstructor, dereferencerImplicit)
+      }.getOrElse {
+        scala.util.Try {
           val genericTypeName: String = genericType.typeSymbol.name.encodedName.toString.toLowerCase
           val assignedName: TermName = TermName(c.freshName(s"${genericTypeName}Typeclass"))
-          recurse(genericType, assignedName) {
-            val imp = c.inferImplicitValue(searchType, false, false)
+          recurse(RecursiveCall(genericType.toString), genericType, assignedName) {
+            val inferredImplicit = c.inferImplicitValue(searchType, false, false)
             q"""{
-              def $assignedName: $searchType = $imp
+              def $assignedName: $searchType = $inferredImplicit
               $assignedName
             }"""
           }.get
-        }) catch {
-          case e: Exception => None
-        }
-
-        inferredImplicit.orElse {
-          directInferImplicit(genericType, typeConstructor)
-        }
-      } else {
-        directInferImplicit(genericType, typeConstructor)
+        }.toOption.orElse(directInferImplicit(genericType, typeConstructor, dereferencerImplicit))
       }
     }.getOrElse {
-      c.abort(c.enclosingPosition, "Could not find extractor for type "+genericType)
+      val currentStack: Stack = recursionStack(c.enclosingPosition)
+      
+      val error = ImplicitNotFound(genericType.toString,
+          recursionStack(c.enclosingPosition).frames.map(_.path))
+      
+      val updatedStack = currentStack.copy(errors = error :: currentStack.errors) 
+      recursionStack = recursionStack.updated(c.enclosingPosition, updatedStack)
+      c.abort(c.enclosingPosition, s"Could not find type class for type $genericType")
     }
   }
   
   private def directInferImplicit(genericType: c.universe.Type,
-         typeConstructor: c.universe.Type): Option[c.Tree] = {
+         typeConstructor: c.universe.Type,
+         dereferencerImplicit: c.Tree): Option[c.Tree] = {
 
     val genericTypeName: String = genericType.typeSymbol.name.encodedName.toString.toLowerCase
     val assignedName: TermName = TermName(c.freshName(s"${genericTypeName}Typeclass"))
@@ -98,19 +101,18 @@ abstract class MagnoliaMacro(val c: whitebox.Context) {
       val implicits = genericType.decls.collect {
         case m: MethodSymbol if m.isCaseAccessor => m.asMethod
       }.map { param =>
-        
-        val derivedImplicit = recurse(genericType, assignedName) {
-          getImplicit(param.returnType, typeConstructor, assignedName)
+        val paramName = param.name.encodedName.toString
+        val derivedImplicit = recurse(ProductType(paramName, genericType.toString), genericType, assignedName) {
+          getImplicit(Some(paramName), param.returnType, typeConstructor, assignedName, dereferencerImplicit)
         }.getOrElse {
           c.abort(c.enclosingPosition, s"failed to get implicit for type $genericType")
         }
         
-        val dereferencedValue = transformation(c).dereferenceValue(q"src", param.name.toString)
+        val dereferencedValue = q"$dereferencerImplicit.dereference(src, ${param.name.toString})"
         
-        transformation(c).callDelegateMethod(
-          derivedImplicit,
-          dereferencedValue
-        )
+        val result = q"$dereferencerImplicit.delegate($derivedImplicit, $dereferencedValue)"
+        println(result+"\n\n")
+        result
       }
 
       Some(q"new $genericType(..$implicits)")
@@ -118,15 +120,17 @@ abstract class MagnoliaMacro(val c: whitebox.Context) {
 
       val subtypes = classType.get.knownDirectSubclasses.to[List]
       
-      Some(
-        transformation(c)callDelegateMethod(subtypes.map(_.asType.toType).map { searchType =>
-          recurse(genericType, assignedName) {
-            getImplicit(searchType, typeConstructor, assignedName)
+      Some {
+        val reduction = subtypes.map(_.asType.toType).map { searchType =>
+          recurse(CoproductType(genericType.toString), genericType, assignedName) {
+            getImplicit(None, searchType, typeConstructor, assignedName, dereferencerImplicit)
           }.getOrElse {
             c.abort(c.enclosingPosition, s"failed to get implicit for type $searchType")
           }
-        }.reduce(transformation(c).coproductReduction), q"src")
-      )
+        }.reduce(transformation(c).coproductReduction)
+        
+        q"$dereferencerImplicit.delegate($reduction, src)"
+      }
     } else None
 
     construct.map { const =>
@@ -139,39 +143,40 @@ abstract class MagnoliaMacro(val c: whitebox.Context) {
     }
   }
   
-  def magnolia[T: c.WeakTypeTag, Typeclass: c.WeakTypeTag]: c.Tree = try {
+  def magnolia[T: c.WeakTypeTag, Typeclass: c.WeakTypeTag]: c.Tree = {
     import c.universe._
 
     val genericType: Type = weakTypeOf[T]
-    val directlyReentrant = Some(genericType) == lastSearchType
+    val currentStack: List[Frame] = recursionStack.get(c.enclosingPosition).map(_.frames).getOrElse(List())
+    val directlyReentrant = Some(genericType) == currentStack.headOption.map(_.genericType)
+    val typeConstructor: Type = weakTypeOf[Typeclass].typeConstructor
+    val dereferencerTypeclass = weakTypeOf[Dereferencer[_]].typeConstructor
+    val dereferencerType = appliedType(dereferencerTypeclass, typeConstructor)
+    val dereferencerImplicit = c.untypecheck(c.inferImplicitValue(dereferencerType, false, false))
+    
     if(directlyReentrant) throw DirectlyReentrantException()
-    val result: Option[c.Tree] = if(lastSearchType != None) {
+    
+    val result: Option[c.Tree] = if(!recursionStack.isEmpty) {
       findType(genericType) match {
         case None =>
-          val typeConstructor: Type = weakTypeOf[Typeclass].typeConstructor
-          directInferImplicit(genericType, typeConstructor)
+          directInferImplicit(genericType, typeConstructor, dereferencerImplicit)
         case Some(enclosingRef) =>
           val methodAsString = enclosingRef.toString
-          val typeConstructor: Type = weakTypeOf[Typeclass].typeConstructor
           val searchType = appliedType(typeConstructor, genericType)
           Some(q"_root_.magnolia.Lazy[$searchType]($methodAsString)")
       }
     } else {
       val typeConstructor: Type = weakTypeOf[Typeclass].typeConstructor
-      directInferImplicit(genericType, typeConstructor)
+      directInferImplicit(genericType, typeConstructor, dereferencerImplicit)
     }
     
     result.map { tree =>
-      val recursionDepth = recursionStack.get(c.enclosingPosition).map(_.size).getOrElse(0)
-      if(recursionDepth == 0) c.untypecheck(transformer.transform(tree)) else tree
+      if(currentStack.isEmpty) c.untypecheck(removeLazy.transform(tree)) else tree
     }.getOrElse {
-      c.abort(c.enclosingPosition, "Could not infer typeclass. Sorry.")
+      if(currentStack.isEmpty) println("Foo")
+      c.abort(c.enclosingPosition, "could not infer typeclass for type $genericType")
     }
-  } catch {
-    case e@DirectlyReentrantException() => throw e
-    case e: Exception =>
-      e.printStackTrace()
-      ???
+
   }
 }
 
@@ -182,14 +187,37 @@ private[magnolia] object Lazy { def apply[T](method: String): T = ??? }
 
 private[magnolia] object CompileTimeState {
 
-  case class Frame[C <: whitebox.Context](val genericType: C#Type, val term: C#TermName) {
+  sealed trait TypePath
+  case class CoproductType(typeName: String) extends TypePath {
+    override def toString = s"coproduct type $typeName"
+  }
+
+  case class ProductType(paramName: String, typeName: String) extends TypePath {
+    override def toString = s"parameter '$paramName' of product type $typeName"
+  }
+
+  case class RecursiveCall(typeName: String) extends TypePath {
+    override def toString = s"recursive implicit of type $typeName"
+  }
+
+  case class ImplicitNotFound(genericType: String, path: List[TypePath])
+
+  case class Stack(frames: List[Frame], errors: List[ImplicitNotFound]) {
+    
+    def push(path: TypePath, key: whitebox.Context#Type,
+        value: whitebox.Context#TermName): Stack =
+      Stack(Frame(path, key, value) :: frames, errors)
+    
+    def pop(): Stack = Stack(frames.tail, errors)
+  }
+
+  case class Frame(path: TypePath, genericType: whitebox.Context#Type,
+      term: whitebox.Context#TermName) {
     def termName(c: whitebox.Context): c.TermName = term.asInstanceOf[c.TermName]
   }
 
-  private[magnolia] var recursionStack: Map[api.Position, List[Frame[_ <: whitebox.Context]]] =
+  private[magnolia] var recursionStack: Map[api.Position, Stack] =
     Map()
- 
-  private[magnolia] var lastSearchType: Option[Universe#Type] = None
 }
 
 
@@ -202,8 +230,12 @@ class Macros(val context: whitebox.Context) extends MagnoliaMacro(context) {
       def typeclassBody(genericType: c.Type, implementation: c.Tree): c.Tree =
         q"""def extract(src: _root_.magnolia.Thing): $genericType = $implementation"""
 
-      def dereferenceValue(value: c.Tree, elem: String): c.Tree = q"$value.access($elem)"
-      def callDelegateMethod(value: c.Tree, argument: c.Tree): c.Tree = q"$value.extract($argument)"
       def coproductReduction(left: c.Tree, right: c.Tree): c.Tree = q"$left.orElse($right)"
     }
+}
+
+trait Dereferencer[Typeclass[_]] {
+  type Value
+  def dereference(value: Value, param: String): Value
+  def delegate[T](typeclass: Typeclass[T], value: Value): T
 }
