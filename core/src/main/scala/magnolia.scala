@@ -5,8 +5,6 @@ import macrocompat.bundle
 import scala.util.Try
 import language.existentials
 
-import scala.collection.immutable.ListMap
-
 abstract class Transformation[C <: whitebox.Context](val c: C) {
   def typeclassBody(genericType: c.Type, implementation: c.Tree): c.Tree
   def coproductReduction(left: c.Tree, right: c.Tree): c.Tree
@@ -21,14 +19,14 @@ abstract class MagnoliaMacro(val c: whitebox.Context) {
   protected def transformation(c: whitebox.Context): Transformation[c.type]
 
   private def findType(key: c.universe.Type): Option[c.universe.TermName] =
-    recursionStack(c.enclosingPosition).get(key).map(_.asInstanceOf[c.universe.TermName])
+    recursionStack(c.enclosingPosition).find(_._1 == key).map(_._2.asInstanceOf[c.universe.TermName])
 
   private def recurse[T](key: c.universe.Type, value: c.universe.TermName)(fn: => T): Option[T] = {
     recursionStack = recursionStack.updated(
       c.enclosingPosition,
       recursionStack.get(c.enclosingPosition).map { m =>
-        m.updated(key, value)
-      }.getOrElse(ListMap(key -> value))
+        m ::: List((key, value))
+      }.getOrElse(List(key -> value))
     )
     
     try Some(fn) catch { case e: Exception => None } finally {
@@ -39,9 +37,10 @@ abstract class MagnoliaMacro(val c: whitebox.Context) {
   
   private val transformer = new Transformer {
     override def transform(tree: Tree): Tree = tree match {
-      case q"_root_.magnolia.Lazy[$returnType](${Literal(Constant(method: String))})" =>
+      case q"magnolia.Lazy.apply[$returnType](${Literal(Constant(method: String))})" =>
         q"${TermName(method)}"
-      case _ => super.transform(tree)
+      case _ =>
+        super.transform(tree)
     }
   }
   
@@ -184,9 +183,8 @@ private[magnolia] object Lazy { def apply[T](method: String): T = ??? }
 
 private[magnolia] object CompileTimeState {
 
-  private[magnolia] var recursionStack: Map[api.Position, ListMap[
-    c.universe.Type forSome { val c: whitebox.Context },
-    c.universe.TermName forSome { val c: whitebox.Context }
+  private[magnolia] var recursionStack: Map[api.Position, List[
+    (c.universe.Type, c.universe.TermName) forSome { val c: whitebox.Context }
   ]] = Map()
  
   private[magnolia] var lastSearchType: Option[Universe#Type] = None
