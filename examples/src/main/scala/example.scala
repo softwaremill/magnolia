@@ -1,11 +1,13 @@
-package magnolia
+package magnolia.examples
+
+import magnolia._
 
 import language.experimental.macros
 import language.higherKinds
 
 
 
-case class Thing(str: String) {
+/*case class Thing(str: String) {
   def access(path: String): Thing = Thing(s"$str.$path")
 }
 
@@ -80,4 +82,30 @@ trait Serializer_1 extends Serializer_2 {
 
 trait Serializer_2 {
   implicit def generic[T]: Serializer[T] = macro Macros.magnolia[T, Serializer[_]]
+}
+*/
+
+object `package` {
+  implicit class Showable[T: Show](t: T) {
+    def show: String = implicitly[Show[T]].show(t)
+  }
+}
+
+sealed trait Tree
+case class Branch(left: Tree, right: Tree) extends Tree
+case class Leaf(value: Int) extends Tree
+
+trait Show[T] { def show(t: T): String }
+object Show extends Show_1 {
+  implicit val showInt: Show[Int] = _.toString
+  implicit val derivation = new ContravariantDerivation[Show] {
+    type Return = String
+    def call[T](show: Show[T], value: T): String = show.show(value)
+    def construct[T](body: T => String): Show[T] = body(_)
+    def join(xs: List[String]): String = xs.mkString("(", ", ", ")")
+  }
+}
+
+trait Show_1 {
+  implicit def generic[T]: Show[T] = macro Macros.magnolia[T, Show[_]]
 }

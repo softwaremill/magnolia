@@ -11,10 +11,10 @@ class Macros(val c: whitebox.Context) {
   import c.universe._
   import CompileTimeState._
 
-  private def findType(key: c.universe.Type): Option[c.TermName] =
+  private def findType(key: Type): Option[TermName] =
     recursionStack(c.enclosingPosition).frames.find(_.genericType == key).map(_.termName(c))
 
-  private def recurse[T](path: TypePath, key: c.universe.Type, value: c.TermName)(fn: => T):
+  private def recurse[T](path: TypePath, key: Type, value: TermName)(fn: => T):
       Option[T] = {
     recursionStack = recursionStack.updated(
       c.enclosingPosition,
@@ -31,7 +31,7 @@ class Macros(val c: whitebox.Context) {
   
   private val removeLazy: Transformer = new Transformer {
     override def transform(tree: Tree): Tree = tree match {
-      case q"magnolia.Lazy.apply[$returnType](${Literal(Constant(method: String))})" =>
+      case q"_root_.magnolia.Lazy.apply[$returnType](${Literal(Constant(method: String))})" =>
         q"${TermName(method)}"
       case _ =>
         super.transform(tree)
@@ -39,15 +39,15 @@ class Macros(val c: whitebox.Context) {
   }
   
   private def getImplicit(paramName: Option[String],
-                          genericType: c.universe.Type,
-                          typeConstructor: c.universe.Type,
-                          assignedName: c.TermName,
-                          derivationImplicit: Either[c.Tree, c.Tree]): c.Tree = {
+                          genericType: Type,
+                          typeConstructor: Type,
+                          assignedName: TermName,
+                          derivationImplicit: Either[Tree, Tree]): Tree = {
     
     findType(genericType).map { methodName =>
       val methodAsString = methodName.encodedName.toString
       val searchType = appliedType(typeConstructor, genericType)
-      q"_root_.magnolia.Lazy[$searchType]($methodAsString)"
+      q"_root_.magnolia.Lazy.apply[$searchType]($methodAsString)"
     }.orElse {
       val searchType = appliedType(typeConstructor, genericType)
       findType(genericType).map { _ =>
@@ -77,9 +77,9 @@ class Macros(val c: whitebox.Context) {
     }
   }
   
-  private def directInferImplicit(genericType: c.universe.Type,
-         typeConstructor: c.universe.Type,
-         derivationImplicit: Either[c.Tree, c.Tree]): Option[c.Tree] = {
+  private def directInferImplicit(genericType: Type,
+         typeConstructor: Type,
+         derivationImplicit: Either[Tree, Tree]): Option[Tree] = {
 
     val genericTypeName: String = genericType.typeSymbol.name.encodedName.toString.toLowerCase
     val assignedName: TermName = TermName(c.freshName(s"${genericTypeName}Typeclass"))
@@ -160,8 +160,7 @@ class Macros(val c: whitebox.Context) {
     }
   }
   
-  def magnolia[T: c.WeakTypeTag, Typeclass: c.WeakTypeTag]: c.Tree = try {
-    import c.universe._
+  def magnolia[T: WeakTypeTag, Typeclass: WeakTypeTag]: Tree = try {
 
     val genericType: Type = weakTypeOf[T]
     val currentStack: List[Frame] = recursionStack.get(c.enclosingPosition).map(_.frames).getOrElse(List())
@@ -182,7 +181,7 @@ class Macros(val c: whitebox.Context) {
     
     if(directlyReentrant) throw DirectlyReentrantException()
     
-    val result: Option[c.Tree] = if(!recursionStack.isEmpty) {
+    val result: Option[Tree] = if(!recursionStack.isEmpty) {
       findType(genericType) match {
         case None =>
           directInferImplicit(genericType, typeConstructor, derivationImplicit)
@@ -199,7 +198,10 @@ class Macros(val c: whitebox.Context) {
     if(currentStack.isEmpty) recursionStack = Map()
 
     result.map { tree =>
-      if(currentStack.isEmpty) c.untypecheck(removeLazy.transform(tree)) else tree
+      if(currentStack.isEmpty) {
+        val res = c.untypecheck(removeLazy.transform(tree))
+        res
+      } else tree
     }.getOrElse {
       c.abort(c.enclosingPosition, "could not infer typeclass for type $genericType")
     }
