@@ -56,7 +56,7 @@ class Macros(val c: whitebox.Context) {
         scala.util.Try {
           val genericTypeName: String = genericType.typeSymbol.name.encodedName.toString.toLowerCase
           val assignedName: TermName = TermName(c.freshName(s"${genericTypeName}Typeclass"))
-          recurse(RecursiveCall(genericType.toString), genericType, assignedName) {
+          recurse(ChainedImplicit(genericType.toString), genericType, assignedName) {
             val inferredImplicit = c.inferImplicitValue(searchType, false, false)
             q"""{
               def $assignedName: $searchType = $inferredImplicit
@@ -96,8 +96,13 @@ class Macros(val c: whitebox.Context) {
         case m: MethodSymbol if m.isCaseAccessor => m.asMethod
       }.map { param =>
         val paramName = param.name.encodedName.toString
-        val derivedImplicit = recurse(ProductType(paramName, genericType.toString), genericType, assignedName) {
-          getImplicit(Some(paramName), param.returnType, typeConstructor, assignedName, derivationImplicit)
+        
+        val derivedImplicit = recurse(ProductType(paramName, genericType.toString), genericType,
+            assignedName) {
+          
+          getImplicit(Some(paramName), param.returnType, typeConstructor, assignedName,
+              derivationImplicit)
+        
         }.getOrElse {
           c.abort(c.enclosingPosition, s"failed to get implicit for type $genericType")
         }
@@ -137,9 +142,17 @@ class Macros(val c: whitebox.Context) {
             val reduction = components.reduce { (left, right) => q"$impl.combine($left, $right)" }
             q"$impl.call($reduction, sourceParameter)"
           case Right(impl) =>
-            val parts = subtypes.zip(components)
-            parts.tail.foldLeft(q"$impl.call(${parts.head._2}, sourceParameter.asInstanceOf[${parts.head._1}])") { case (aggregated, (componentType, derivedImplicit)) =>
-              q"if(sourceParameter.isInstanceOf[$componentType]) $impl.call($derivedImplicit, sourceParameter.asInstanceOf[$componentType]) else $aggregated"
+            val parts = subtypes.tail.zip(components.tail)
+            
+            val base = q"""
+              $impl.call(${components.head}, sourceParameter.asInstanceOf[${subtypes.head}])
+            """
+            
+            parts.foldLeft(base) { case (aggregated, (componentType, derivedImplicit)) =>
+              q"""
+                if(sourceParameter.isInstanceOf[$componentType])
+                  $impl.call($derivedImplicit, sourceParameter.asInstanceOf[$componentType])
+                else $aggregated"""
             }
         }
       }
@@ -163,8 +176,8 @@ class Macros(val c: whitebox.Context) {
   def magnolia[T: WeakTypeTag, Typeclass: WeakTypeTag]: Tree = try {
 
     val genericType: Type = weakTypeOf[T]
-    val currentStack: List[Frame] = recursionStack.get(c.enclosingPosition).map(_.frames).getOrElse(List())
-    val directlyReentrant = Some(genericType) == currentStack.headOption.map(_.genericType)
+    val currentStack: Stack = recursionStack.get(c.enclosingPosition).getOrElse(Stack(List(), List()))
+    val directlyReentrant = Some(genericType) == currentStack.frames.headOption.map(_.genericType)
     val typeConstructor: Type = weakTypeOf[Typeclass].typeConstructor
     
     val coDerivationTypeclass = weakTypeOf[CovariantDerivation[_]].typeConstructor
@@ -180,8 +193,17 @@ class Macros(val c: whitebox.Context) {
     }
     
     if(directlyReentrant) throw DirectlyReentrantException()
-    
-    val result: Option[Tree] = if(!recursionStack.isEmpty) {
+   
+    currentStack.errors.foreach { error =>
+      if(!emittedErrors.contains(error)) {
+        emittedErrors += error
+        val trace = error.path.mkString("\n    in ", "\n    in ", "\n \n")
+        val msg = s"could not derive ${typeConstructor} instance for type ${error.genericType}"
+        c.info(c.enclosingPosition, msg+trace, true)
+      }
+    }
+
+    val result: Option[Tree] = if(!currentStack.frames.isEmpty) {
       findType(genericType) match {
         case None =>
           directInferImplicit(genericType, typeConstructor, derivationImplicit)
@@ -195,10 +217,10 @@ class Macros(val c: whitebox.Context) {
       directInferImplicit(genericType, typeConstructor, derivationImplicit)
     }
    
-    if(currentStack.isEmpty) recursionStack = Map()
+    if(currentStack.frames.isEmpty) recursionStack = Map()
 
     result.map { tree =>
-      if(currentStack.isEmpty) {
+      if(currentStack.frames.isEmpty) {
         val res = c.untypecheck(removeLazy.transform(tree))
         res
       } else tree
@@ -228,8 +250,8 @@ private[magnolia] object CompileTimeState {
     override def toString = s"parameter '$paramName' of product type $typeName"
   }
 
-  case class RecursiveCall(typeName: String) extends TypePath {
-    override def toString = s"recursive implicit of type $typeName"
+  case class ChainedImplicit(typeName: String) extends TypePath {
+    override def toString = s"chained implicit of type $typeName"
   }
 
   case class ImplicitNotFound(genericType: String, path: List[TypePath])
@@ -250,14 +272,18 @@ private[magnolia] object CompileTimeState {
 
   private[magnolia] var recursionStack: Map[api.Position, Stack] =
     Map()
+  
+  private[magnolia] var emittedErrors: Set[ImplicitNotFound] = Set()
 }
 
 trait CovariantDerivation[Typeclass[_]] {
   type Value
   def dereference(value: Value, param: String): Value
   def call[T](typeclass: Typeclass[T], value: Value): T
-  def combine[Supertype, Right <: Supertype](left: Typeclass[_ <: Supertype], right: Typeclass[Right]): Typeclass[Supertype]
   def construct[T](body: Value => T): Typeclass[T]
+  
+  def combine[Supertype, Right <: Supertype](left: Typeclass[_ <: Supertype],
+      right: Typeclass[Right]): Typeclass[Supertype]
 }
 
 trait ContravariantDerivation[Typeclass[_]] {

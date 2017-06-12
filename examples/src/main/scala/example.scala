@@ -89,11 +89,21 @@ object `package` {
   implicit class Showable[T: Show](t: T) {
     def show: String = implicitly[Show[T]].show(t)
   }
+  implicit val showString: Show[String] = identity
+  implicit val showBool: Show[Boolean] = _.toString
+  implicit def showList[T: Show]: Show[List[T]] = xs => xs.map { x => s"list:${implicitly[Show[T]].show(x)}" }.mkString(";")
+  implicit def showSet[T: Show]: Show[Set[T]] = s => "set"
 }
 
 sealed trait Tree
 case class Branch(left: Tree, right: Tree) extends Tree
 case class Leaf(value: Int) extends Tree
+
+sealed trait Entity
+case class Person(name: String, address: Address) extends Entity
+case class Organization(name: String, contacts: Set[Person]) extends Entity
+case class Address(lines: List[String], country: Country)
+case class Country(name: String, code: String, salesTax: Boolean)
 
 trait Show[T] { def show(t: T): String }
 object Show extends Show_1 {
