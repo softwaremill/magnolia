@@ -134,6 +134,11 @@ class Macros(val c: whitebox.Context) {
     } else if(isSealedTrait) {
 
       val subtypes = classType.get.knownDirectSubclasses.to[List]
+
+      if(subtypes.isEmpty) {
+        c.info(c.enclosingPosition, s"could not find any direct subtypes of $typeSymbol", true)
+        c.abort(c.enclosingPosition, "")
+      }
       
       Some {
         val components = subtypes.map(_.asType.toType).map { searchType =>
@@ -167,20 +172,14 @@ class Macros(val c: whitebox.Context) {
 
     construct.map { const =>
       val impl = derivationImplicit.merge
-      val res = q"""{
+      q"""{
         def $assignedName: $resultType = $impl.construct { sourceParameter => $const }
         $assignedName
       }"""
-
-      try c.typecheck(res) catch {
-        case e: Exception =>
-          e.printStackTrace()
-      }
-      res
     }
   }
   
-  def magnolia[T: WeakTypeTag, Typeclass: WeakTypeTag]: Tree = try {
+  def magnolia[T: WeakTypeTag, Typeclass: WeakTypeTag]: Tree = {
 
     val genericType: Type = weakTypeOf[T]
     val currentStack: Stack = recursionStack.get(c.enclosingPosition).getOrElse(Stack(List(), List()))
@@ -196,7 +195,14 @@ class Macros(val c: whitebox.Context) {
       Left(c.untypecheck(c.inferImplicitValue(coDerivationType, false, false)))
     } catch {
       case e: Exception =>
-        Right(c.untypecheck(c.inferImplicitValue(contraDerivationType)))
+        try Right(c.untypecheck(c.inferImplicitValue(contraDerivationType, false, false))) catch {
+          case e: Exception =>
+            c.info(c.enclosingPosition, s"could not find an implicit instance of "+
+                s"CovariantDerivation[$typeConstructor] or "+
+                s"ContravariantDerivation[$typeConstructor]", true)
+
+            throw e
+        }
     }
     
     if(directlyReentrant) throw DirectlyReentrantException()
@@ -235,9 +241,6 @@ class Macros(val c: whitebox.Context) {
       c.abort(c.enclosingPosition, "could not infer typeclass for type $genericType")
     }
 
-  } catch {
-    case DirectlyReentrantException() => ???
-    case e: Exception => e.printStackTrace(); ???
   }
 }
 

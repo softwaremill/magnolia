@@ -16,9 +16,11 @@ object `package` {
   implicit def showSet[T: Show]: Show[Set[T]] = s => "set"
 }
 
+sealed trait EmptyType
+
 sealed trait Tree
 case class Branch(left: Tree, right: Tree) extends Tree
-case class Leaf(value: Int) extends Tree
+case class Leaf(value: Int, no: EmptyType) extends Tree
 
 sealed trait Entity
 case class Person(name: String, address: Address) extends Entity
