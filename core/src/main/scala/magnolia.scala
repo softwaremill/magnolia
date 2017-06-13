@@ -3,6 +3,7 @@ package magnolia
 import scala.reflect._, macros._
 import macrocompat.bundle
 import scala.util.Try
+import scala.collection.immutable.ListMap
 import language.existentials
 import language.higherKinds
 
@@ -92,9 +93,11 @@ class Macros(val c: whitebox.Context) {
     val resultType = appliedType(typeConstructor, genericType)
 
     val construct = if(isCaseClass) {
-      val implicits = genericType.decls.collect {
+      val caseClassParameters = genericType.decls.collect {
         case m: MethodSymbol if m.isCaseAccessor => m.asMethod
-      }.map { param =>
+      }
+
+      val implicits = caseClassParameters.map { param =>
         val paramName = param.name.encodedName.toString
         
         val derivedImplicit = recurse(ProductType(paramName, genericType.toString), genericType,
@@ -122,7 +125,11 @@ class Macros(val c: whitebox.Context) {
         case Left(_) =>
           Some(q"new $genericType(..$implicits)")
         case Right(impl) =>
-          Some(q"$impl.join(_root_.scala.List(..$implicits))")
+          val namedImplicits = caseClassParameters.zip(implicits).map { case (param, tree) =>
+            q"(${param.name.encodedName.toString}, $tree)"
+          }
+          
+          Some(q"$impl.join(_root_.scala.collection.immutable.ListMap(..$namedImplicits))")
       }
     } else if(isSealedTrait) {
 
@@ -290,6 +297,6 @@ trait ContravariantDerivation[Typeclass[_]] {
   type Return
   def call[T](typeclass: Typeclass[T], value: T): Return
   def construct[T](body: T => Return): Typeclass[T]
-  def join(elements: List[Return]): Return
+  def join(elements: ListMap[String, Return]): Return
 
 }

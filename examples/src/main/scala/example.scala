@@ -4,6 +4,7 @@ import magnolia._
 
 import language.experimental.macros
 import language.higherKinds
+import collection.immutable.ListMap
 
 object `package` {
   implicit class Showable[T: Show](t: T) {
@@ -32,7 +33,7 @@ object Show extends Show_1 {
     type Return = String
     def call[T](show: Show[T], value: T): String = show.show(value)
     def construct[T](body: T => String): Show[T] = body(_)
-    def join(xs: List[String]): String = xs.mkString("(", ", ", ")")
+    def join(xs: ListMap[String, String]): String = xs.map { case (k, v) => s"$k=$v" }.mkString("{", ", ", "}")
   }
 }
 
