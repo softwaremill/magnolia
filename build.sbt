@@ -23,6 +23,7 @@ lazy val examples = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   .settings(publishSettings: _*)
   .settings(moduleName := "magnolia-examples")
   .settings(quasiQuotesDependencies)
+  .settings(examplesDependencies)
   .nativeSettings(nativeSettings)
   .dependsOn(core)
 
@@ -131,6 +132,9 @@ lazy val scalaMacroDependencies: Seq[Setting[_]] = Seq(
   libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value,
   libraryDependencies += compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 )
+
+lazy val examplesDependencies: Seq[Setting[_]] = Seq(
+  libraryDependencies += "org.typelevel" %% "cats-core" % "0.9.0")
 
 credentials ++= (for {
   username <- Option(System.getenv().get("SONATYPE_USERNAME"))
