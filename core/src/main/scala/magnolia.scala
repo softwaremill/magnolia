@@ -44,28 +44,23 @@ class Macros(val c: whitebox.Context) {
                           typeConstructor: Type,
                           assignedName: TermName,
                           derivationImplicit: Either[Tree, Tree]): Tree = {
-    
+
+    val searchType = appliedType(typeConstructor, genericType)
     findType(genericType).map { methodName =>
       val methodAsString = methodName.encodedName.toString
-      val searchType = appliedType(typeConstructor, genericType)
       q"_root_.magnolia.Lazy.apply[$searchType]($methodAsString)"
     }.orElse {
-      val searchType = appliedType(typeConstructor, genericType)
-      findType(genericType).map { _ =>
-        directInferImplicit(genericType, typeConstructor, derivationImplicit)
-      }.getOrElse {
-        scala.util.Try {
-          val genericTypeName: String = genericType.typeSymbol.name.encodedName.toString.toLowerCase
-          val assignedName: TermName = TermName(c.freshName(s"${genericTypeName}Typeclass"))
-          recurse(ChainedImplicit(genericType.toString), genericType, assignedName) {
-            val inferredImplicit = c.inferImplicitValue(searchType, false, false)
-            q"""{
-              def $assignedName: $searchType = $inferredImplicit
-              $assignedName
-            }"""
-          }.get
-        }.toOption.orElse(directInferImplicit(genericType, typeConstructor, derivationImplicit))
-      }
+      scala.util.Try {
+        val genericTypeName: String = genericType.typeSymbol.name.encodedName.toString.toLowerCase
+        val assignedName: TermName = TermName(c.freshName(s"${genericTypeName}Typeclass"))
+        recurse(ChainedImplicit(genericType.toString), genericType, assignedName) {
+          val inferredImplicit = c.inferImplicitValue(searchType, false, false)
+          q"""{
+            def $assignedName: $searchType = $inferredImplicit
+            $assignedName
+          }"""
+        }.get
+      }.toOption.orElse(directInferImplicit(genericType, typeConstructor, derivationImplicit))
     }.getOrElse {
       val currentStack: Stack = recursionStack(c.enclosingPosition)
       
@@ -115,9 +110,16 @@ class Macros(val c: whitebox.Context) {
             val dereferencedValue = q"$impl.dereference(sourceParameter, ${param.name.toString})"
             q"$impl.call($derivedImplicit, $dereferencedValue)"
           case Right(impl) => 
+//            val paramName = TermName(param.name.toString)
+//            val dereferencedValue = q"sourceParameter.$paramName"
+//            q"$impl.call($derivedImplicit, $dereferencedValue)"
+
             val paramName = TermName(param.name.toString)
-            val dereferencedValue = q"sourceParameter.$paramName"
-            q"$impl.call($derivedImplicit, $dereferencedValue)"
+            val dereferencedValue1 = q"sourceParameter1.$paramName"
+            val dereferencedValue2 = q"sourceParameter2.$paramName"
+            q"$impl.call($derivedImplicit, $dereferencedValue1, $dereferencedValue2)"
+
+
         }
       }
 
@@ -154,16 +156,28 @@ class Macros(val c: whitebox.Context) {
             val reduction = components.reduce { (left, right) => q"$impl.combine($left, $right)" }
             q"$impl.call($reduction, sourceParameter)"
           case Right(impl) =>
+
             val parts = subtypes.tail.zip(components.tail)
-            
+
+//            val base = q"""
+//              $impl.call(${components.head}, sourceParameter.asInstanceOf[${subtypes.head}])
+//            """
+//
+//            parts.foldLeft(base) { case (aggregated, (componentType, derivedImplicit)) =>
+//              q"""
+//                if(sourceParameter.isInstanceOf[$componentType])
+//                  $impl.call($derivedImplicit, sourceParameter.asInstanceOf[$componentType])
+//                else $aggregated"""
+//            }
+
             val base = q"""
-              $impl.call(${components.head}, sourceParameter.asInstanceOf[${subtypes.head}])
+              $impl.call(${components.head}, sourceParameter1.asInstanceOf[${subtypes.head}], sourceParameter2.asInstanceOf[${subtypes.head}])
             """
-            
+
             parts.foldLeft(base) { case (aggregated, (componentType, derivedImplicit)) =>
               q"""
-                if(sourceParameter.isInstanceOf[$componentType])
-                  $impl.call($derivedImplicit, sourceParameter.asInstanceOf[$componentType])
+                if(sourceParameter1.isInstanceOf[$componentType] && sourceParameter2.isInstanceOf[$componentType])
+                  $impl.call($derivedImplicit, sourceParameter1.asInstanceOf[$componentType], sourceParameter2.asInstanceOf[$componentType])
                 else $aggregated"""
             }
         }
@@ -172,10 +186,16 @@ class Macros(val c: whitebox.Context) {
 
     construct.map { const =>
       val impl = derivationImplicit.merge
+//      q"""{
+//        def $assignedName: $resultType = $impl.construct { sourceParameter => $const }
+//        $assignedName
+//      }"""
+
       q"""{
-        def $assignedName: $resultType = $impl.construct { sourceParameter => $const }
+        def $assignedName: $resultType = $impl.construct { case (sourceParameter1, sourceParameter2) => $const }
         $assignedName
       }"""
+
     }
   }
   
@@ -188,18 +208,21 @@ class Macros(val c: whitebox.Context) {
     
     val coDerivationTypeclass = weakTypeOf[CovariantDerivation[_]].typeConstructor
     val contraDerivationTypeclass = weakTypeOf[ContravariantDerivation[_]].typeConstructor
-    
+    val contraDerivation2Typeclass = weakTypeOf[ContravariantDerivation2[_]].typeConstructor
+
     val coDerivationType = appliedType(coDerivationTypeclass, List(typeConstructor))
-    val contraDerivationType = appliedType(contraDerivationTypeclass, List(typeConstructor))
+//    val contraDerivationType = appliedType(contraDerivationTypeclass, List(typeConstructor))
+    val contraDerivation2Type = appliedType(contraDerivation2Typeclass, List(typeConstructor))
+
     val derivationImplicit = try {
       Left(c.untypecheck(c.inferImplicitValue(coDerivationType, false, false)))
     } catch {
       case e: Exception =>
-        try Right(c.untypecheck(c.inferImplicitValue(contraDerivationType, false, false))) catch {
+        try Right(c.untypecheck(c.inferImplicitValue(contraDerivation2Type, false, false))) catch {
           case e: Exception =>
             c.info(c.enclosingPosition, s"could not find an implicit instance of "+
                 s"CovariantDerivation[$typeConstructor] or "+
-                s"ContravariantDerivation[$typeConstructor]", true)
+                s"ContravariantDerivation2[$typeConstructor]", true)
 
             throw e
         }
@@ -226,7 +249,6 @@ class Macros(val c: whitebox.Context) {
           Some(q"_root_.magnolia.Lazy[$searchType]($methodAsString)")
       }
     } else {
-      val typeConstructor: Type = weakTypeOf[Typeclass].typeConstructor
       directInferImplicit(genericType, typeConstructor, derivationImplicit)
     }
    
@@ -301,5 +323,12 @@ trait ContravariantDerivation[Typeclass[_]] {
   def call[T](typeclass: Typeclass[T], value: T): Return
   def construct[T](body: T => Return): Typeclass[T]
   def join(elements: ListMap[String, Return]): Return
-
 }
+
+trait ContravariantDerivation2[Typeclass[_]] {
+  type Return
+  def call[T](typeclass: Typeclass[T], value1: T, value2: T): Return
+  def construct[T](body: (T, T) => Return): Typeclass[T]
+  def join(elements: ListMap[String, Return]): Return
+}
+
