@@ -6,21 +6,11 @@ import language.experimental.macros
 import language.higherKinds
 import collection.immutable.ListMap
 
-object `package` {
-  implicit class Showable[T: Show](t: T) {
-    def show: String = implicitly[Show[T]].show(t)
-  }
-  implicit val showString: Show[String] = identity
-  implicit val showBool: Show[Boolean] = _.toString
-  implicit def showList[T: Show]: Show[List[T]] = xs => xs.map { x => s"list:${implicitly[Show[T]].show(x)}" }.mkString(";")
-  implicit def showSet[T: Show]: Show[Set[T]] = s => "set"
-}
-
 sealed trait EmptyType
 
 sealed trait Tree
 case class Branch(left: Tree, right: Tree) extends Tree
-case class Leaf(value: Int, no: EmptyType) extends Tree
+case class Leaf(value: Int, no: String) extends Tree
 
 sealed trait Entity
 case class Person(name: String, address: Address) extends Entity
@@ -31,11 +21,20 @@ case class Country(name: String, code: String, salesTax: Boolean)
 trait Show[T] { def show(t: T): String }
 object Show extends Show_1 {
   implicit val showInt: Show[Int] = _.toString
+  implicit val showString: Show[String] = identity
+  implicit val showBool: Show[Boolean] = _.toString
+  implicit def showList[T: Show]: Show[List[T]] = xs => xs.map { x => s"list:${implicitly[Show[T]].show(x)}" }.mkString(";")
+  implicit def showSet[T: Show]: Show[Set[T]] = s => "set"
+
   implicit val derivation = new ContravariantDerivation[Show] {
     type Return = String
     def call[T](show: Show[T], value: T): String = show.show(value)
     def construct[T](body: T => String): Show[T] = body(_)
     def join(xs: ListMap[String, String]): String = xs.map { case (k, v) => s"$k=$v" }.mkString("{", ", ", "}")
+  }
+
+  implicit class Showable[T: Show](t: T) {
+    def show: String = implicitly[Show[T]].show(t)
   }
 }
 
