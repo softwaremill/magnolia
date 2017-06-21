@@ -12,6 +12,13 @@ class Macros(val c: whitebox.Context) {
   import c.universe._
   import CompileTimeState._
 
+
+  sealed trait DerivationImplicit { def tree: Tree }
+  case class CovariantDerivationImplicit(tree: Tree) extends DerivationImplicit
+  case class ContravariantDerivationImplicit(tree: Tree) extends DerivationImplicit
+  case class ContravariantDerivation2Implicit(tree: Tree) extends DerivationImplicit
+
+
   private def findType(key: Type): Option[TermName] =
     recursionStack(c.enclosingPosition).frames.find(_.genericType == key).map(_.termName(c))
 
@@ -43,7 +50,7 @@ class Macros(val c: whitebox.Context) {
                           genericType: Type,
                           typeConstructor: Type,
                           assignedName: TermName,
-                          derivationImplicit: Either[Tree, Tree]): Tree = {
+                          derivationImplicit: DerivationImplicit): Tree = {
 
     val searchType = appliedType(typeConstructor, genericType)
     findType(genericType).map { methodName =>
@@ -75,7 +82,7 @@ class Macros(val c: whitebox.Context) {
   
   private def directInferImplicit(genericType: Type,
          typeConstructor: Type,
-         derivationImplicit: Either[Tree, Tree]): Option[Tree] = {
+         derivationImplicit: DerivationImplicit): Option[Tree] = {
 
     val genericTypeName: String = genericType.typeSymbol.name.encodedName.toString.toLowerCase
     val assignedName: TermName = TermName(c.freshName(s"${genericTypeName}Typeclass"))
@@ -106,10 +113,10 @@ class Macros(val c: whitebox.Context) {
         }
         
         derivationImplicit match {
-          case Left(impl) =>
+          case CovariantDerivationImplicit(impl) =>
             val dereferencedValue = q"$impl.dereference(sourceParameter, ${param.name.toString})"
             q"$impl.call($derivedImplicit, $dereferencedValue)"
-          case Right(impl) => 
+          case ContravariantDerivation2Implicit(impl) =>
 //            val paramName = TermName(param.name.toString)
 //            val dereferencedValue = q"sourceParameter.$paramName"
 //            q"$impl.call($derivedImplicit, $dereferencedValue)"
@@ -124,9 +131,9 @@ class Macros(val c: whitebox.Context) {
       }
 
       derivationImplicit match {
-        case Left(_) =>
+        case CovariantDerivationImplicit(_) =>
           Some(q"new $genericType(..$implicits)")
-        case Right(impl) =>
+        case ContravariantDerivation2Implicit(impl) =>
           val namedImplicits = caseClassParameters.zip(implicits).map { case (param, tree) =>
             q"(${param.name.encodedName.toString}, $tree)"
           }
@@ -152,10 +159,10 @@ class Macros(val c: whitebox.Context) {
         }
         
         derivationImplicit match {
-          case Left(impl) =>
+          case CovariantDerivationImplicit(impl) =>
             val reduction = components.reduce { (left, right) => q"$impl.combine($left, $right)" }
             q"$impl.call($reduction, sourceParameter)"
-          case Right(impl) =>
+          case ContravariantDerivation2Implicit(impl) =>
 
             val parts = subtypes.tail.zip(components.tail)
 
@@ -185,7 +192,7 @@ class Macros(val c: whitebox.Context) {
     } else None
 
     construct.map { const =>
-      val impl = derivationImplicit.merge
+      val impl = derivationImplicit.tree
 //      q"""{
 //        def $assignedName: $resultType = $impl.construct { sourceParameter => $const }
 //        $assignedName
@@ -215,10 +222,10 @@ class Macros(val c: whitebox.Context) {
     val contraDerivation2Type = appliedType(contraDerivation2Typeclass, List(typeConstructor))
 
     val derivationImplicit = try {
-      Left(c.untypecheck(c.inferImplicitValue(coDerivationType, false, false)))
+      CovariantDerivationImplicit(c.untypecheck(c.inferImplicitValue(coDerivationType, false, false)))
     } catch {
       case e: Exception =>
-        try Right(c.untypecheck(c.inferImplicitValue(contraDerivation2Type, false, false))) catch {
+        try ContravariantDerivation2Implicit(c.untypecheck(c.inferImplicitValue(contraDerivation2Type, false, false))) catch {
           case e: Exception =>
             c.info(c.enclosingPosition, s"could not find an implicit instance of "+
                 s"CovariantDerivation[$typeConstructor] or "+
