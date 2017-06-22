@@ -161,18 +161,6 @@ class Macros(val c: whitebox.Context) {
             val reduction = components.reduce { (left, right) => q"$impl.combine($left, $right)" }
             q"$impl.call($reduction, sourceParameter)"
 
-          case ContravariantDerivation1Implicit(impl) =>
-            val parts = subtypes.tail.zip(components.tail)
-            val base = q"""
-              $impl.call(${components.head}, sourceParameter.asInstanceOf[${subtypes.head}])
-            """
-            parts.foldLeft(base) { case (aggregated, (componentType, derivedImplicit)) =>
-              q"""
-                if(sourceParameter.isInstanceOf[$componentType])
-                  $impl.call($derivedImplicit, sourceParameter.asInstanceOf[$componentType])
-                else $aggregated"""
-            }
-
           case ContravariantDerivation2Implicit(impl) =>
             val parts = subtypes.tail.zip(components.tail)
             val base = q"""
@@ -184,6 +172,16 @@ class Macros(val c: whitebox.Context) {
                   $impl.call($derivedImplicit, sourceParameter1.asInstanceOf[$componentType], sourceParameter2.asInstanceOf[$componentType])
                 else $aggregated"""
             }
+          case ContravariantDerivation1Implicit(impl) =>
+            val parts = subtypes.zip(components)
+            
+            val caseClauses = parts.map { case (subtype, component) =>
+              cq"(value: $subtype) => $impl.call($component, value)"
+            }
+
+            q"""(sourceParameter: @_root_.scala.annotation.switch) match {
+              case ..$caseClauses
+            }"""
         }
       }
     } else None
