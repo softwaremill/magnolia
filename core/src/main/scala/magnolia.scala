@@ -191,6 +191,8 @@ class Macros(val c: whitebox.Context) {
     construct.map { const =>
 
       derivationImplicit match {
+        case CovariantDerivationImplicit(_) =>
+          ???
         case ContravariantDerivation1Implicit(impl) =>
           q"""{
             def $assignedName: $resultType = $impl.construct { sourceParameter => $const }
@@ -206,6 +208,7 @@ class Macros(val c: whitebox.Context) {
   }
   
   def magnolia[T: WeakTypeTag, Typeclass: WeakTypeTag]: Tree = {
+    import scala.util.{Try, Success, Failure}
 
     val genericType: Type = weakTypeOf[T]
     val currentStack: Stack = recursionStack.get(c.enclosingPosition).getOrElse(Stack(List(), List()))
@@ -220,20 +223,22 @@ class Macros(val c: whitebox.Context) {
     val contraDerivationType = appliedType(contraDerivationTypeclass, List(typeConstructor))
     val contraDerivation2Type = appliedType(contraDerivation2Typeclass, List(typeConstructor))
 
+    def findDerivationImplicit[T <: DerivationImplicit](tpe: c.Type, cons: Tree => T): Try[DerivationImplicit] =
+      Try(cons(c.untypecheck(c.inferImplicitValue(tpe, false, false))))
 
-    val derivationImplicitTry = scala.util.Try[DerivationImplicit](CovariantDerivationImplicit(c.untypecheck(c.inferImplicitValue(coDerivationType, false, false))))
-      .orElse(scala.util.Try(ContravariantDerivation1Implicit(c.untypecheck(c.inferImplicitValue(contraDerivationType, false, false)))))
-      .orElse(scala.util.Try(ContravariantDerivation2Implicit(c.untypecheck(c.inferImplicitValue(contraDerivation2Type, false, false)))))
-
-    val derivationImplicit: DerivationImplicit = if(derivationImplicitTry.isFailure) {
-      c.info(c.enclosingPosition, s"could not find an implicit instance of "+
-        s"CovariantDerivation[$typeConstructor] or "+
-        s"ContravariantDerivation[$typeConstructor] or "+
-        s"ContravariantDerivation2[$typeConstructor]", true)
-      throw derivationImplicitTry.failed.get
-    } else {
-      derivationImplicitTry.get
-    }
+    val derivationImplicit =
+      findDerivationImplicit(coDerivationType, CovariantDerivationImplicit)
+      .orElse(findDerivationImplicit(contraDerivationType, ContravariantDerivation1Implicit))
+      .orElse(findDerivationImplicit(contraDerivation2Type, ContravariantDerivation2Implicit)) match {
+        case Failure(e) =>
+          c.info(c.enclosingPosition, s"could not find an implicit instance of "+
+            s"CovariantDerivation[$typeConstructor] or "+
+            s"ContravariantDerivation[$typeConstructor] or "+
+            s"ContravariantDerivation2[$typeConstructor]", true)
+          throw e
+        case Success(di) =>
+          di
+      }
 
     if(directlyReentrant) throw DirectlyReentrantException()
    
