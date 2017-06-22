@@ -3,6 +3,8 @@
 
 # Magnolia
 
+[![Join the chat at https://gitter.im/propensive/magnolia](https://badges.gitter.im/propensive/magnolia.svg)](https://gitter.im/propensive/magnolia?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Magnolia is a generic macro for automatic derivation of typeclasses for
 datatypes composed from case classes and sealed traits. It supports
 recursively-defined datatypes out-of-the-box, and incurs no significant
