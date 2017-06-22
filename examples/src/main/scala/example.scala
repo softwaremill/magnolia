@@ -26,11 +26,9 @@ object `package` {
     (s1, s2) => s1.size == s2.size && (s1 zip s2).forall { case (e1, e2) => e1 isEqualTo e2 }
 }
 
-sealed trait EmptyType
-
 sealed trait Tree
 case class Branch(left: Tree, right: Tree) extends Tree
-case class Leaf(value: Int, no: String) extends Tree
+case class Leaf(value: Int) extends Tree
 
 sealed trait Entity
 case class Person(name: String, address: Address) extends Entity
