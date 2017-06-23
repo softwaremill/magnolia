@@ -43,7 +43,8 @@ object Eq {
       if(value1.getClass == value2.getClass) eq.isEqual(value1, value2) else false
     
     def construct[T](body: (T, T) => Boolean): Eq[T] = body(_, _)
-    def join(elements: ListMap[String, Boolean]): Boolean = elements.forall(_._2)
+    def join(className: String, elements: ListMap[String, Boolean]): Boolean =
+      elements.forall(_._2)
   }
   
   implicit def generic[T]: Eq[T] = macro Macros.magnolia[T, Eq[_]]

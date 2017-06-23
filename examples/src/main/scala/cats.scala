@@ -14,8 +14,8 @@ object catsShowDerivation {
       type Return = String
       def call[T](show: Show[T], value: T): String = show.show(value)
       def construct[T](body: T => String): Show[T] = body(_)
-      def join(xs: ListMap[String, String]): String =
-        xs.map { case (k, v) => s"$k=$v" }.mkString("{", ", ", "}")
+      def join(name: String, xs: ListMap[String, String]): String =
+        xs.map { case (k, v) => s"$k=$v" }.mkString(s"$name(", ", ", ")")
     }
   
   implicit def genericShow[T]: Show[T] = macro Macros.magnolia[T, Show[_]]
