@@ -221,8 +221,8 @@ class Macros(val c: whitebox.Context) {
     val contraDerivationType = appliedType(contraDerivationTypeclass, List(typeConstructor))
     val contraDerivation2Type = appliedType(contraDerivation2Typeclass, List(typeConstructor))
 
-    def findDerivationImplicit[T <: DerivationImplicit](tpe: c.Type, cons: Tree => T): Try[DerivationImplicit] =
-      Try(cons(c.untypecheck(c.inferImplicitValue(tpe, false, false))))
+    def findDerivationImplicit[T <: DerivationImplicit](derivationType: c.Type, wrap: Tree => T): Try[DerivationImplicit] =
+      Try(wrap(c.untypecheck(c.inferImplicitValue(derivationType, false, false))))
 
     val derivationImplicit =
       findDerivationImplicit(coDerivationType, CovariantDerivationImplicit)
@@ -258,17 +258,12 @@ class Macros(val c: whitebox.Context) {
           val searchType = appliedType(typeConstructor, genericType)
           Some(q"_root_.magnolia.Lazy[$searchType]($methodAsString)")
       }
-    } else {
-      directInferImplicit(genericType, typeConstructor, derivationImplicit)
-    }
+    } else directInferImplicit(genericType, typeConstructor, derivationImplicit)
    
-    if(currentStack.frames.isEmpty) recursionStack = Map()
+    if(currentStack.frames.isEmpty) recursionStack = ListMap()
 
     result.map { tree =>
-      if(currentStack.frames.isEmpty) {
-        val res = c.untypecheck(removeLazy.transform(tree))
-        res
-      } else tree
+      if(currentStack.frames.isEmpty) c.untypecheck(removeLazy.transform(tree)) else tree
     }.getOrElse {
       c.abort(c.enclosingPosition, "could not infer typeclass for type $genericType")
     }
@@ -312,8 +307,8 @@ private[magnolia] object CompileTimeState {
     def termName(c: whitebox.Context): c.TermName = term.asInstanceOf[c.TermName]
   }
 
-  private[magnolia] var recursionStack: Map[api.Position, Stack] =
-    Map()
+  private[magnolia] var recursionStack: ListMap[api.Position, Stack] =
+    ListMap()
   
   private[magnolia] var emittedErrors: Set[ImplicitNotFound] = Set()
 }
