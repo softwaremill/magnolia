@@ -4,13 +4,12 @@ import scala.collection.immutable.ListMap
 import scala.language.experimental.macros
 
 import cats.Show
-import magnolia.ContravariantDerivation
-import magnolia.Macros
+import magnolia.{Coderivation, Macros}
 
 object catsShowDerivation {
 
-  implicit val showDerivation: ContravariantDerivation[Show] =
-    new ContravariantDerivation[Show] {
+  implicit val showDerivation: Coderivation[Show] =
+    new Coderivation[Show] {
       type Return = String
       def call[T](show: Show[T], value: T): String = show.show(value)
       def construct[T](body: T => String): Show[T] = body(_)

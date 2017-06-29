@@ -36,7 +36,7 @@ object Eq {
 
   implicit val eqInt: Eq[Int] = _ == _
 
-  implicit val derivation: ContravariantDerivation2[Eq] = new ContravariantDerivation2[Eq] {
+  implicit val derivation: Coderivation2[Eq] = new Coderivation2[Eq] {
     type Return = Boolean
     
     def call[T](eq: Eq[T], value1: T, value2: T): Boolean =
