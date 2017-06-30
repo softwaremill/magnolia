@@ -75,7 +75,7 @@ class Macros(val c: whitebox.Context) {
 
       val updatedStack = currentStack.copy(errors = error :: currentStack.errors)
       recursionStack = recursionStack.updated(c.enclosingPosition, updatedStack)
-      c.abort(c.enclosingPosition, s"Could not find typeclass for type $genericType")
+      c.abort(c.enclosingPosition, s"magnolia: could not find typeclass for type $genericType")
     }
   }
 
@@ -146,7 +146,7 @@ class Macros(val c: whitebox.Context) {
       val subtypes = classType.get.knownDirectSubclasses.to[List]
 
       if(subtypes.isEmpty) {
-        c.info(c.enclosingPosition, s"could not find any direct subtypes of $typeSymbol", true)
+        c.info(c.enclosingPosition, s"magnolia: could not find any direct subtypes of $typeSymbol", true)
         c.abort(c.enclosingPosition, "")
       }
       
@@ -250,7 +250,7 @@ class Macros(val c: whitebox.Context) {
       if(!emittedErrors.contains(error)) {
         emittedErrors += error
         val trace = error.path.mkString("\n    in ", "\n    in ", "\n \n")
-        val msg = s"could not derive ${typeConstructor} instance for type ${error.genericType}"
+        val msg = s"magnolia: could not derive ${typeConstructor} instance for type ${error.genericType}"
         c.info(c.enclosingPosition, msg+trace, true)
       }
     }
@@ -271,7 +271,7 @@ class Macros(val c: whitebox.Context) {
     result.map { tree =>
       if(currentStack.frames.isEmpty) c.untypecheck(removeLazy.transform(tree)) else tree
     }.getOrElse {
-      c.abort(c.enclosingPosition, s"could not infer typeclass for type $genericType")
+      c.abort(c.enclosingPosition, s"magnolia: could not infer typeclass for type $genericType")
     }
   }
 }
