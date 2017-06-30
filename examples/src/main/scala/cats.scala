@@ -8,8 +8,7 @@ import magnolia.{Coderivation, Macros}
 
 object catsShowDerivation {
 
-  implicit val showDerivation: Coderivation[Show] =
-    new Coderivation[Show] {
+  val ShowDerivation = new Coderivation[Show] {
       type Return = String
       def call[T](show: Show[T], value: T): String = show.show(value)
       def construct[T](body: T => String): Show[T] = body(_)
@@ -17,5 +16,4 @@ object catsShowDerivation {
         xs.map { case (k, v) => s"$k=$v" }.mkString(s"$name(", ", ", ")")
     }
   
-  implicit def genericShow[T]: Show[T] = macro Macros.magnolia[T, Show[_]]
 }

@@ -36,7 +36,7 @@ object Eq {
 
   implicit val eqInt: Eq[Int] = _ == _
 
-  implicit val derivation: Coderivation2[Eq] = new Coderivation2[Eq] {
+  val derivation: Coderivation2[Eq] = new Coderivation2[Eq] {
     type Return = Boolean
     
     def call[T](eq: Eq[T], value1: T, value2: T): Boolean =
@@ -47,5 +47,4 @@ object Eq {
       elements.forall(_._2)
   }
   
-  implicit def generic[T]: Eq[T] = macro Macros.magnolia[T, Eq[_]]
 }
