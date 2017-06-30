@@ -5,6 +5,7 @@ import macrocompat.bundle
 import scala.collection.immutable.ListMap
 import language.existentials
 import language.higherKinds
+import language.experimental.macros
 
 @bundle
 class Macros(val c: whitebox.Context) {
@@ -74,7 +75,7 @@ class Macros(val c: whitebox.Context) {
 
       val updatedStack = currentStack.copy(errors = error :: currentStack.errors)
       recursionStack = recursionStack.updated(c.enclosingPosition, updatedStack)
-      c.abort(c.enclosingPosition, s"Could not find type class for type $genericType")
+      c.abort(c.enclosingPosition, s"Could not find typeclass for type $genericType")
     }
   }
 
@@ -215,7 +216,7 @@ class Macros(val c: whitebox.Context) {
     }
   }
   
-  def magnolia[T: WeakTypeTag, Typeclass: WeakTypeTag]: Tree = {
+  def magnolia[T: WeakTypeTag, Typeclass: WeakTypeTag, DerivationType: WeakTypeTag]: Tree = {
     import scala.util.{Try, Success, Failure}
 
     val genericType: Type = weakTypeOf[T]
@@ -226,32 +227,22 @@ class Macros(val c: whitebox.Context) {
     val directlyReentrant = Some(genericType) == currentStack.frames.headOption.map(_.genericType)
     val typeConstructor: Type = weakTypeOf[Typeclass].typeConstructor
     
-    val derivationTypeclass = weakTypeOf[Derivation[_]].typeConstructor
-    val coderivationTypeclass = weakTypeOf[Coderivation[_]].typeConstructor
-    val coderivation2Typeclass = weakTypeOf[Coderivation2[_]].typeConstructor
+    val DerivationTypeclass = weakTypeOf[Derivation[_]].typeConstructor
+    val CoderivationTypeclass = weakTypeOf[Coderivation[_]].typeConstructor
+    val Coderivation2Typeclass = weakTypeOf[Coderivation2[_]].typeConstructor
 
-    val derivationType = appliedType(derivationTypeclass, List(typeConstructor))
-    val coderivationType = appliedType(coderivationTypeclass, List(typeConstructor))
-    val coderivation2Type = appliedType(coderivation2Typeclass, List(typeConstructor))
+    val derivationType = appliedType(DerivationTypeclass, List(typeConstructor))
+    val coderivationType = appliedType(CoderivationTypeclass, List(typeConstructor))
+    val coderivation2Type = appliedType(Coderivation2Typeclass, List(typeConstructor))
 
-    def findDerivationImplicit[T <: GeneralDerivationImplicit](derivationType: c.Type, wrap: Tree => T):
-        Try[GeneralDerivationImplicit] =
-      Try(wrap(c.untypecheck(c.inferImplicitValue(derivationType, false, false))))
-
-    val derivationImplicit =
-      findDerivationImplicit(derivationType, DerivationImplicit)
-      .orElse(findDerivationImplicit(coderivationType, Coderivation1Implicit))
-      .orElse(findDerivationImplicit(coderivation2Type,
-          Coderivation2Implicit)) match {
-        case Failure(e) =>
-          c.info(c.enclosingPosition, s"could not find an implicit instance of "+
-            s"Derivation[$typeConstructor] or "+
-            s"Coderivation[$typeConstructor] or "+
-            s"Coderivation2[$typeConstructor]", true)
-          throw e
-        case Success(di) =>
-          di
-      }
+    val derivationImplicit = weakTypeOf[DerivationType].typeConstructor match {
+      case DerivationTypeclass =>
+        DerivationImplicit(c.prefix.tree)
+      case CoderivationTypeclass =>
+        Coderivation1Implicit(c.prefix.tree)
+      case Coderivation2Typeclass =>
+        Coderivation2Implicit(c.prefix.tree)
+    }
 
     if(directlyReentrant) throw DirectlyReentrantException()
    
@@ -280,9 +271,8 @@ class Macros(val c: whitebox.Context) {
     result.map { tree =>
       if(currentStack.frames.isEmpty) c.untypecheck(removeLazy.transform(tree)) else tree
     }.getOrElse {
-      c.abort(c.enclosingPosition, "could not infer typeclass for type $genericType")
+      c.abort(c.enclosingPosition, s"could not infer typeclass for type $genericType")
     }
-
   }
 }
 
@@ -328,7 +318,7 @@ private[magnolia] object CompileTimeState {
   private[magnolia] var emittedErrors: Set[ImplicitNotFound] = Set()
 }
 
-trait Derivation[Typeclass[_]] {
+abstract class Derivation[Typeclass[_]] {
   type Value
   def dereference(value: Value, param: String): Value
   def call[T](typeclass: Typeclass[T], value: Value): T
@@ -336,19 +326,28 @@ trait Derivation[Typeclass[_]] {
   
   def combine[Supertype, Right <: Supertype](left: Typeclass[_ <: Supertype],
       right: Typeclass[Right]): Typeclass[Supertype]
+
+  implicit def generic[T]: Typeclass[T] = macro Macros.magnolia[T, Typeclass[_],
+      Derivation[Tc] forSome { type Tc[_] }]
 }
 
-trait Coderivation[Typeclass[_]] {
+abstract class Coderivation[Typeclass[_]] {
   type Return
   def call[T](typeclass: Typeclass[T], value: T): Return
   def construct[T](body: T => Return): Typeclass[T]
   def join(name: String, elements: ListMap[String, Return]): Return
+  
+  implicit def generic[T]: Typeclass[T] = macro Macros.magnolia[T, Typeclass[_],
+      Coderivation[Tc] forSome { type Tc[_] }]
 }
 
-trait Coderivation2[Typeclass[_]] {
+abstract class Coderivation2[Typeclass[_]] {
   type Return
   def call[T](typeclass: Typeclass[T], value1: T, value2: T): Return
   def construct[T](body: (T, T) => Return): Typeclass[T]
   def join(name: String, elements: ListMap[String, Return]): Return
+  
+  implicit def generic[T]: Typeclass[T] = macro Macros.magnolia[T, Typeclass[_],
+      Coderivation2[Tc] forSome { type Tc[_] }]
 }
 
