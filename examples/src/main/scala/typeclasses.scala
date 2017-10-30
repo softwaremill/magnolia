@@ -10,7 +10,11 @@ import scala.reflect.macros._
 import scala.language.experimental.macros
 import scala.annotation.unchecked.uncheckedVariance
 
-
+trait Show[T] { def show(value: T): String }
+object Show {
+  implicit val string: Show[String] = identity
+  implicit val int: Show[Int] = new Show[Int] { def show(s: Int): String = s.toString }
+}
 object DerivedShow {
   def join[T](context: JoinContext[Show, T])(value: T): String = context.parameters.map { param =>
     s"${param.label}=${param.typeclass.show(param.dereference(value))}"
@@ -21,12 +25,8 @@ object DerivedShow {
       sub.typeclass.show(sub.cast(value))
     } }.reduce(_ orElse _)(value)
 
-  implicit val string: Show[String] = identity
-  implicit val int: Show[Int] = new Show[Int] { def show(s: Int): String = s.toString }
   def gen[T]: Show[T] = macro Magnolia.generic[T]
 }
-
-trait Show[T] { def show(value: T): String }
 
 object Eq {
   def join[T](context: JoinContext[Eq, T])(value1: T, value2: T): Boolean =
@@ -77,14 +77,3 @@ object Decoder {
 }
 
 trait Decoder[T] { def decode(str: String): T }
-
-sealed trait Tree
-case class Leaf(value: String) extends Tree
-case class Branch(left: Tree, right: Tree) extends Tree
-case object Bud extends Tree
-
-sealed trait Entity
-
-case class Company(name: String) extends Entity
-case class Person(name: String, age: Int) extends Entity
-case class Address(line1: String, occupant: Person)
