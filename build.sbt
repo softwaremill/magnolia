@@ -51,7 +51,7 @@ lazy val buildSettings = Seq(
   name := "magnolia",
   version := "0.2.0",
   scalacOptions ++= Seq("-deprecation", "-feature", "-Ywarn-value-discard", "-Ywarn-dead-code", "-Ywarn-nullary-unit", "-Ywarn-numeric-widen", "-Ywarn-inaccessible", "-Ywarn-adapted-args"),
-  crossScalaVersions := Seq("2.10.6", "2.11.11", "2.12.2"),
+  crossScalaVersions := Seq("2.10.6", "2.11.11", "2.12.4"),
   scmInfo := Some(ScmInfo(url("https://github.com/propensive/magnolia"),
     "scm:git:git@github.com:propensive/magnolia.git"))
 )
@@ -134,9 +134,15 @@ lazy val scalaMacroDependencies: Seq[Setting[_]] = Seq(
 )
 
 lazy val examplesDependencies: Seq[Setting[_]] = Seq(
-  libraryDependencies += "org.typelevel" %% "cats-core" % "0.9.0",
-  libraryDependencies += "com.propensive" %% "estrapade" % "1.0.0",
-  libraryDependencies += "com.propensive" %% "contextual-data" % "1.0.3"
+  addCompilerPlugin(
+    "org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full
+  ),
+  libraryDependencies ++= Seq(
+    "com.fommil" %% "stalactite" % "0.0.5",
+    "org.typelevel" %% "cats-core" % "0.9.0"
+      //"com.propensive" %% "estrapade" % "1.0.0",
+      //"com.propensive" %% "contextual-data" % "1.0.3"
+  )
 )
 
 credentials ++= (for {
