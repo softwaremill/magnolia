@@ -14,7 +14,7 @@ import scala.annotation.unchecked.uncheckedVariance
 object Show {
   def join[T](context: JoinContext[Show, T])(value: T): String = context.parameters.map { param =>
     s"${param.label}=${param.typeclass.show(param.dereference(value))}"
-  }.mkString(s"{", ",", "}")
+  }.mkString(s"${context.typeName.split("\\.").last}(", ",", ")")
 
   def split[T](subclasses: List[Subclass[Show, T]])(value: T): String =
     subclasses.map { sub => sub.cast.andThen { value =>
@@ -81,6 +81,7 @@ trait Decoder[T] { def decode(str: String): T }
 sealed trait Tree
 case class Leaf(value: String) extends Tree
 case class Branch(left: Tree, right: Tree) extends Tree
+case object Bud extends Tree
 
 sealed trait Entity
 

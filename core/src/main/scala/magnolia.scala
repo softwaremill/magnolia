@@ -24,6 +24,7 @@ trait JoinContext[Tc[_], T] {
   def construct[R](param: ((Param[Tc, T]) => Any)): T
   def typeName: String
   def parameters: List[Param[Tc, T]]
+  def isObject: Boolean
 }
 
 object Magnolia {
@@ -34,7 +35,7 @@ object Magnolia {
   def generic[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = {
     import c.universe._
     import scala.util.{Try, Success, Failure}
-    
+
     def javaClassName(sym: Symbol): String =
       if(sym.owner.isPackage) sym.fullName
       else if(sym.owner.isModuleClass) s"${javaClassName(sym.owner)}$$${sym.name}"
@@ -85,7 +86,6 @@ object Magnolia {
                      genericType: Type,
                      typeConstructor: Type,
                      assignedName: TermName): Tree = {
-
       val searchType = appliedType(typeConstructor, genericType)
       findType(genericType).map { methodName =>
         val methodAsString = methodName.encodedName.toString
@@ -123,6 +123,7 @@ object Magnolia {
       val typeSymbol = genericType.typeSymbol
       val classType = if(typeSymbol.isClass) Some(typeSymbol.asClass) else None
       val isCaseClass = classType.map(_.isCaseClass).getOrElse(false)
+      val isCaseObject = classType.map(_.isModuleClass).getOrElse(false)
       val isSealedTrait = classType.map(_.isSealed).getOrElse(false)
       val isValueClass = genericType <:< typeOf[AnyVal]
 
@@ -130,7 +131,24 @@ object Magnolia {
 
 
       // FIXME: Handle AnyVals
-      if(isCaseClass) {
+      if(isCaseObject) {
+        val termSym = genericType.typeSymbol.companionSymbol
+        val obj = termSym.asTerm
+        val className = obj.name.toString
+        val impl = q"""
+          ${c.prefix}.join(new _root_.magnolia.JoinContext[$typeConstructor, $genericType] {
+            def construct[R](fn: ((Param[${typeConstructor}, $genericType]) => Any)): $genericType = $obj
+            def typeName: _root_.java.lang.String = $className
+            def parameters: _root_.scala.List[Param[$typeConstructor, $genericType]] = _root_.scala.List()
+            def isObject = true
+          })
+        """
+          
+        Some(q"""
+          def $assignedName: $resultType = $impl
+          $assignedName
+        """)
+      } else if(isCaseClass) {
         val caseClassParameters = genericType.decls.collect {
           case m: MethodSymbol if m.isCaseAccessor => m.asMethod
         }
@@ -172,6 +190,7 @@ object Magnolia {
               def typeName: _root_.java.lang.String = $className
               def parameters: _root_.scala.List[Param[$typeConstructor, $genericType]] =
                 _root_.scala.List(..$callables)
+              def isObject = false
             })
           """
           
@@ -181,7 +200,6 @@ object Magnolia {
           """
         }
       } else if(isSealedTrait) {
-
         val subtypes = classType.get.knownDirectSubclasses.to[List]
 
         if(subtypes.isEmpty) {

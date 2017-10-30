@@ -16,18 +16,20 @@ object Tests extends TestApp {
     test("construct a Show product instance") {
       import examples._
       Show.generic[Person].show(Person("John Smith", 34))
-    }.assert(_ == """{name=John Smith,age=34}""")
+    }.assert(_ == """Person(name=John Smith,age=34)""")
 
     test("construct a Show coproduct instance") {
       import examples._
       Show.generic[Person].show(Person("John Smith", 34))
-    }.assert(_ == "{name=John Smith,age=34}")
+    }.assert(_ == "Person(name=John Smith,age=34)")
     
+    Show.generic[Tree]
+
     test("serialize a Branch") {
       import magnolia.examples._
       implicitly[Show[Branch]].show(Branch(Leaf("LHS"), Leaf("RHS")))
-    }.assert(_ == "{left={value=LHS},right={value=RHS}}")
-   
+    }.assert(_ == "Branch(left=Leaf(value=LHS),right=Leaf(value=RHS))")
+
     test("test equality false") {
       import examples._
       Eq.generic[Entity].equal(Person("John Smith", 34), Person("", 0))
@@ -63,15 +65,11 @@ object Tests extends TestApp {
     
     test("serialize a Leaf") {
       implicitly[Show[Leaf]].show(Leaf("testing"))
-    }.assert(_ == "{value=testing}")
+    }.assert(_ == "Leaf(value=testing)")
     
     test("serialize a Branch as a Tree") {
       implicitly[Show[Tree]].show(Branch(Leaf("LHS"), Leaf("RHS")))
-    }.assert(_ == "{left={value=LHS},right={value=RHS}}")
-
-    /*test("construct a decoder") {
-      Decoder.generic[Tree].decode("string")
-    }.assert(_ == (Leaf("something"): Tree))*/
+    }.assert(_ == "Branch(left=Leaf(value=LHS),right=Leaf(value=RHS))")
 
     test("show error stack") {
       scalac"""
@@ -84,5 +82,10 @@ object Tests extends TestApp {
                                       |    in parameter 'integer' of product type Alpha
                                       |    in parameter 'alpha' of product type Beta
                                       |"""): Compilation))
+    
+    //test("construct a decoder") {
+    //Decoder.generic[Tree].decode("string")
+    //}.assert(_ == (Leaf("something"): Tree))
+
   }
 }
