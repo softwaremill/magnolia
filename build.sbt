@@ -134,6 +134,9 @@ lazy val scalaMacroDependencies: Seq[Setting[_]] = Seq(
 )
 
 lazy val examplesDependencies: Seq[Setting[_]] = Seq(
+  addCompilerPlugin(
+    "org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full
+  ),
   libraryDependencies ++= Seq(
     "com.fommil" %% "stalactite" % "0.0.5",
     "org.typelevel" %% "cats-core" % "0.9.0"
