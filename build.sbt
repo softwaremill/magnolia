@@ -51,7 +51,7 @@ lazy val buildSettings = Seq(
   name := "magnolia",
   version := "0.2.0",
   scalacOptions ++= Seq("-deprecation", "-feature", "-Ywarn-value-discard", "-Ywarn-dead-code", "-Ywarn-nullary-unit", "-Ywarn-numeric-widen", "-Ywarn-inaccessible", "-Ywarn-adapted-args"),
-  crossScalaVersions := Seq("2.10.6", "2.11.11", "2.12.2"),
+  crossScalaVersions := Seq("2.10.6", "2.11.11", "2.12.4"),
   scmInfo := Some(ScmInfo(url("https://github.com/propensive/magnolia"),
     "scm:git:git@github.com:propensive/magnolia.git"))
 )

@@ -11,7 +11,7 @@ import scala.language.experimental.macros
 import scala.annotation.unchecked.uncheckedVariance
 
 
-object Show {
+object DerivedShow {
   def join[T](context: JoinContext[Show, T])(value: T): String = context.parameters.map { param =>
     s"${param.label}=${param.typeclass.show(param.dereference(value))}"
   }.mkString(s"${context.typeName.split("\\.").last}(", ",", ")")
@@ -23,7 +23,7 @@ object Show {
 
   implicit val string: Show[String] = identity
   implicit val int: Show[Int] = new Show[Int] { def show(s: Int): String = s.toString }
-  implicit def generic[T]: Show[T] = macro Magnolia.generic[T]
+  def gen[T]: Show[T] = macro Magnolia.generic[T]
 }
 
 trait Show[T] { def show(value: T): String }
