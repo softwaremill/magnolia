@@ -20,6 +20,12 @@ trait Param[Tc[_], T] {
   def dereference(param: T): S
 }
 
+trait JoinContext[Tc[_], T] {
+  def construct[R](param: ((Param[Tc, T]) => Any)): T
+  def typeName: String
+  def parameters: List[Param[Tc, T]]
+}
+
 object Magnolia {
   import CompileTimeState._
 
@@ -156,10 +162,17 @@ object Magnolia {
             }"""
           }
 
-          val constructor = q"null" //q"""{ => new ${}(..$params) }"""
+          val constructor = q"""new $genericType(..${callables.zip(implicits).map { case (call, imp) =>
+            q"fn($call).asInstanceOf[${imp._1.returnType}]"
+          } })"""
 
           val impl = q"""
-            ${c.prefix}.join(${constructor}, $className, _root_.scala.List(..$callables))
+            ${c.prefix}.join(new _root_.magnolia.JoinContext[$typeConstructor, $genericType] {
+              def construct[R](fn: ((Param[${typeConstructor}, $genericType]) => Any)): $genericType = $constructor
+              def typeName: _root_.java.lang.String = $className
+              def parameters: _root_.scala.List[Param[$typeConstructor, $genericType]] =
+                _root_.scala.List(..$callables)
+            })
           """
           
           q"""

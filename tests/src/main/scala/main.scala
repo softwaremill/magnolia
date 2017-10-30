@@ -11,6 +11,7 @@ import scala.util._
 object Tests extends TestApp {
 
   def tests() = {
+    import examples._
 
     test("construct a Show product instance") {
       import examples._
@@ -42,40 +43,46 @@ object Tests extends TestApp {
       Eq.generic[Tree].equal(Branch(Leaf("one"), Leaf("two")), Branch(Leaf("one"), Leaf("two")))
     }.assert(_ == true)
 
-    /*test("construction of Show instance for Leaf") {
+    test("construct a default value") {
+      Default.generic[Entity].default
+    }.assert(_ == (Company(""): Entity))
+
+    test("construction of Show instance for Leaf") {
       scalac"""
         import magnolia.examples._
         implicitly[Show[Leaf]]
       """
-    }.assert(_ == Returns(fqt"magnolia.examples.Show[magnolia.examples.Leaf]"))
+    }.assert(_ == (Returns(fqt"magnolia.examples.Show[magnolia.examples.Leaf]"): Compilation))
     
     test("construction of Show instance for Tree") {
       scalac"""
         import magnolia.examples._
         implicitly[Show[Tree]]
       """
-    }.assert(_ == Returns(fqt"magnolia.examples.Show[magnolia.examples.Tree]"))
+    }.assert(_ == (Returns(fqt"magnolia.examples.Show[magnolia.examples.Tree]"): Compilation))
     
     test("serialize a Leaf") {
-      import magnolia.examples._
       implicitly[Show[Leaf]].show(Leaf("testing"))
     }.assert(_ == "{value=testing}")
     
     test("serialize a Branch as a Tree") {
-      import magnolia.examples._
       implicitly[Show[Tree]].show(Branch(Leaf("LHS"), Leaf("RHS")))
     }.assert(_ == "{left={value=LHS},right={value=RHS}}")
+
+    /*test("construct a decoder") {
+      Decoder.generic[Tree].decode("string")
+    }.assert(_ == (Leaf("something"): Tree))*/
 
     test("show error stack") {
       scalac"""
         import magnolia.examples._
-        case class Alpha(integer: Int)
+        case class Alpha(integer: Double)
         case class Beta(alpha: Alpha)
         Show.generic[Beta]
       """
-    }.assert(_ == TypecheckError(txt"""magnolia: could not find typeclass for type Int
+    }.assert(_ == (TypecheckError(txt"""magnolia: could not find typeclass for type Double
                                       |    in parameter 'integer' of product type Alpha
                                       |    in parameter 'alpha' of product type Beta
-                                      |"""))*/
+                                      |"""): Compilation))
   }
 }

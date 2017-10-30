@@ -12,10 +12,11 @@ import scala.annotation.unchecked.uncheckedVariance
 
 
 object Show {
-  def join[T](construct: Any, className: String, elems: List[Param[Show, T]])(value: T): String =
-    elems.map { call => s"${call.label}=${call.typeclass.show(call.dereference(value))}" }.mkString(s"{", ",", "}")
+  def join[T](context: JoinContext[Show, T])(value: T): String = context.parameters.map { param =>
+    s"${param.label}=${param.typeclass.show(param.dereference(value))}"
+  }.mkString(s"{", ",", "}")
 
-  def split[T](subclasses: List[Magnolia.Subclass[Show, T]])(value: T): String =
+  def split[T](subclasses: List[Subclass[Show, T]])(value: T): String =
     subclasses.map { sub => sub.cast.andThen { value =>
       sub.typeclass.show(sub.cast(value))
     } }.reduce(_ orElse _)(value)
@@ -28,13 +29,13 @@ object Show {
 trait Show[T] { def show(value: T): String }
 
 object Eq {
-  def join[T](construct: Any, className: String, elems: List[Param[Eq, T]])(param1: T, param2: T): Boolean =
-    elems.forall { case call => call.typeclass.equal(call.dereference(param1), call.dereference(param2)) }
+  def join[T](context: JoinContext[Eq, T])(value1: T, value2: T): Boolean =
+    context.parameters.forall { param => param.typeclass.equal(param.dereference(value1), param.dereference(value2)) }
 
-  def split[T](subclasses: List[Magnolia.Subclass[Eq, T]])(param1: T, param2: T): Boolean =
+  def split[T](subclasses: List[Subclass[Eq, T]])(value1: T, value2: T): Boolean =
     subclasses.map { case subclass =>
-      subclass.cast.andThen { value => subclass.typeclass.equal(subclass.cast(param1), subclass.cast(param2)) }
-    }.reduce(_ orElse _)(param1)
+      subclass.cast.andThen { value => subclass.typeclass.equal(subclass.cast(value1), subclass.cast(value2)) }
+    }.reduce(_ orElse _)(value1)
 
   implicit val string: Eq[String] = _ == _
   implicit val int: Eq[Int] = _ == _
@@ -44,36 +45,31 @@ object Eq {
 trait Eq[T] { def equal(value: T, value2: T): Boolean }
 
 object Default {
-  case class Call[T](label: String, typeclass: Default[T])
-  case class Subclass[T](label: String, typeclass: Default[T], cast: PartialFunction[_ >: T, T])
-  
-  def join[T](construct: ((Call[R] => R) forSome { type R }) => T, className: String, elems: List[Call[_]]): T =
-    construct { call: Call[_] => call.typeclass.default }
+  def join[T](context: JoinContext[Default, T]): Default[T] = new Default[T] {
+    def default = context.construct { param => param.typeclass.default }
+  }
 
-  def split[T](subclasses: List[Subclass[T]])(param: T): T = subclasses.head.typeclass.default
+  def split[T](subclasses: List[Subclass[Default, T]])(): Default[T] = new Default[T] {
+    def default = subclasses.head.typeclass.default
+  }
 
-
-  implicit val string: Default[String] = new Default[String] { def default: String = "" }
-  implicit val int: Default[Int] = new Default[Int] { def default: Int = 0 }
+  implicit val string: Default[String] = new Default[String] { def default = "" }
+  implicit val int: Default[Int] = new Default[Int] { def default = 0 }
   implicit def generic[T]: Default[T] = macro Magnolia.generic[T]
 }
 
 trait Default[T] { def default: T }
 
 object Decoder {
-  case class Call[T](label: String, typeclass: Decoder[T], value: String)
-  
-  case class Subclass[T](label: String, typeclass: Decoder[T], cast: PartialFunction[_ >: T, T])
+  def join[T](context: JoinContext[Decoder, T])(value: String): T =
+    context.construct { param => param.typeclass.decode(value) }
 
-  def join[T](construct: ((Call[R] => R) forSome { type R }) => T, className: String, elems: List[Call[_]]): T =
-    construct { call: Call[_] => call.typeclass.decode(call.value) }
-
-  def split[T](subclasses: List[Subclass[T]])(param: String): T =
-    subclasses.map { case Subclass(name, typeclass, cast) =>
-      PartialFunction[String, T] { case _ if decodes(typeclass, param) => typeclass.decode(param) }
+  def split[T](subclasses: List[Subclass[Decoder, T]])(param: String): T =
+    subclasses.map { subclass =>
+      { case _ if decodes(subclass.typeclass, param) => subclass.typeclass.decode(param) }: PartialFunction[String, T]
     }.reduce(_ orElse _)(param)
 
-  def decodes[T](tc: Decoder[T], s: String): Boolean = try { decodes(tc, s); true } catch { case e: Exception => false }
+  def decodes[T](tc: Decoder[T], s: String): Boolean = try { tc.decode(s); true } catch { case e: Exception => false }
   
   implicit val string: Decoder[String] = new Decoder[String] { def decode(str: String): String = str }
   implicit val int: Decoder[Int] = new Decoder[Int] { def decode(str: String): Int = str.toInt }
