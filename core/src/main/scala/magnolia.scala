@@ -30,30 +30,14 @@ trait JoinContext[Tc[_], T] {
 object Magnolia {
   import CompileTimeState._
 
-  type Construct[Call[_], T] = ((Call[R] => R) forSome { type R }) => T
-
   def generic[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = {
     import c.universe._
     import scala.util.{Try, Success, Failure}
 
-    def javaClassName(sym: Symbol): String =
-      if(sym.owner.isPackage) sym.fullName
-      else if(sym.owner.isModuleClass) s"${javaClassName(sym.owner)}$$${sym.name}"
-      else s"${javaClassName(sym.owner)}.${sym.name}"
+    val typeConstructor: c.Type =
+      c.prefix.tree.tpe.member(TypeName("Typeclass")).asType.toType.typeConstructor
 
-    def getModule[M](tpe: Type): M = {
-      val typeName = javaClassName(tpe.typeSymbol)
-
-      try {
-        val cls = Class.forName(s"$typeName$$")
-        cls.getField("MODULE$").get(cls).asInstanceOf[M]
-      } catch {
-        case e: ClassNotFoundException =>
-          c.abort(c.enclosingPosition, s"""Class "${typeName}" could not be found. This usually means you are trying to use an interpolator in the same compilation unit as the one in which you defined it. Please try compiling interpolators first, separately from the code using them.""")
-      }
-    }
-    
-    val typeConstructor: c.Type = c.prefix.tree.tpe.companion.typeConstructor
+    println(typeConstructor)
 
     def findType(key: Type): Option[TermName] =
       recursionStack(c.enclosingPosition).frames.find(_.genericType == key).map(_.termName(c))

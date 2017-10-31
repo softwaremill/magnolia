@@ -12,23 +12,25 @@ import scala.annotation.unchecked.uncheckedVariance
 
 
 object Show {
-  def join[T](context: JoinContext[Show, T])(value: T): String = context.parameters.map { param =>
+  type Typeclass[T] = Show[String, T]
+  def join[T](context: JoinContext[Typeclass, T])(value: T): String = context.parameters.map { param =>
     s"${param.label}=${param.typeclass.show(param.dereference(value))}"
   }.mkString(s"${context.typeName.split("\\.").last}(", ",", ")")
 
-  def split[T](subclasses: List[Subclass[Show, T]])(value: T): String =
+  def split[T](subclasses: List[Subclass[Typeclass, T]])(value: T): String =
     subclasses.map { sub => sub.cast.andThen { value =>
       sub.typeclass.show(sub.cast(value))
     } }.reduce(_ orElse _)(value)
 
-  implicit val string: Show[String] = identity
-  implicit val int: Show[Int] = new Show[Int] { def show(s: Int): String = s.toString }
-  implicit def generic[T]: Show[T] = macro Magnolia.generic[T]
+  implicit val string: Show[String, String] = identity
+  implicit val int: Show[String, Int] = new Show[String, Int] { def show(s: Int): String = s.toString }
+  implicit def generic[T]: Show[String, T] = macro Magnolia.generic[T]
 }
 
-trait Show[T] { def show(value: T): String }
+trait Show[Out, T] { def show(value: T): Out }
 
 object Eq {
+  type Typeclass[T] = Eq[T]
   def join[T](context: JoinContext[Eq, T])(value1: T, value2: T): Boolean =
     context.parameters.forall { param => param.typeclass.equal(param.dereference(value1), param.dereference(value2)) }
 
@@ -45,6 +47,7 @@ object Eq {
 trait Eq[T] { def equal(value: T, value2: T): Boolean }
 
 object Default {
+  type Typeclass[T] = Default[T]
   def join[T](context: JoinContext[Default, T]): Default[T] = new Default[T] {
     def default = context.construct { param => param.typeclass.default }
   }
