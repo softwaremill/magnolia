@@ -23,11 +23,11 @@ object Tests extends TestApp {
       Show.generic[Person].show(Person("John Smith", 34))
     }.assert(_ == "Person(name=John Smith,age=34)")
     
-    Show.generic[Tree]
+    //Show.generic[Tree[String]]
 
     test("serialize a Branch") {
       import magnolia.examples._
-      implicitly[Show[String, Branch]].show(Branch(Leaf("LHS"), Leaf("RHS")))
+      implicitly[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
     }.assert(_ == "Branch(left=Leaf(value=LHS),right=Leaf(value=RHS))")
 
     test("test equality false") {
@@ -42,7 +42,7 @@ object Tests extends TestApp {
 
     test("test branch equality true") {
       import examples._
-      Eq.generic[Tree].equal(Branch(Leaf("one"), Leaf("two")), Branch(Leaf("one"), Leaf("two")))
+      Eq.generic[Tree[String]].equal(Branch(Leaf("one"), Leaf("two")), Branch(Leaf("one"), Leaf("two")))
     }.assert(_ == true)
 
     test("construct a default value") {
@@ -52,23 +52,23 @@ object Tests extends TestApp {
     test("construction of Show instance for Leaf") {
       scalac"""
         import magnolia.examples._
-        implicitly[Show[String, Leaf]]
+        implicitly[Show[String, Leaf[String]]]
       """
-    }.assert(_ == (Returns(fqt"magnolia.examples.Show[String,magnolia.examples.Leaf]"): Compilation))
+    }.assert(_ == (Returns(fqt"magnolia.examples.Show[String,magnolia.examples.Leaf[java.lang.String]]"): Compilation))
     
     test("construction of Show instance for Tree") {
       scalac"""
         import magnolia.examples._
-        implicitly[Show[String, Tree]]
+        implicitly[Show[String, Tree[String]]]
       """
-    }.assert(_ == (Returns(fqt"magnolia.examples.Show[String,magnolia.examples.Tree]"): Compilation))
+    }.assert(_ == (Returns(fqt"magnolia.examples.Show[String,magnolia.examples.Tree[String]]"): Compilation))
     
     test("serialize a Leaf") {
-      implicitly[Show[String, Leaf]].show(Leaf("testing"))
+      implicitly[Show[String, Leaf[String]]].show(Leaf("testing"))
     }.assert(_ == "Leaf(value=testing)")
     
     test("serialize a Branch as a Tree") {
-      implicitly[Show[String, Tree]].show(Branch(Leaf("LHS"), Leaf("RHS")))
+      implicitly[Show[String, Tree[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
     }.assert(_ == "Branch(left=Leaf(value=LHS),right=Leaf(value=RHS))")
 
     test("show error stack") {
@@ -84,8 +84,8 @@ object Tests extends TestApp {
                                       |"""): Compilation))
     
     //test("construct a decoder") {
-    //Decoder.generic[Tree].decode("string")
-    //}.assert(_ == (Leaf("something"): Tree))
+    //Decoder.generic[Tree[String]].decode("string")
+    //}.assert(_ == (Leaf("something"): Tree[String]))
 
   }
 }

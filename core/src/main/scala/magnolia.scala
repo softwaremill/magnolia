@@ -37,8 +37,6 @@ object Magnolia {
     val typeConstructor: c.Type =
       c.prefix.tree.tpe.member(TypeName("Typeclass")).asType.toType.typeConstructor
 
-    println(typeConstructor)
-
     def findType(key: Type): Option[TermName] =
       recursionStack(c.enclosingPosition).frames.find(_.genericType == key).map(_.termName(c))
 
@@ -113,6 +111,7 @@ object Magnolia {
 
       val resultType = appliedType(typeConstructor, genericType)
 
+      println(s"Deriving $genericType")
 
       // FIXME: Handle AnyVals
       if(isCaseObject) {
@@ -138,34 +137,35 @@ object Magnolia {
         }
         val className = genericType.toString
 
-        val implicits: List[(c.universe.MethodSymbol, c.Tree)] = caseClassParameters.map { param =>
+        val implicits: List[(c.universe.MethodSymbol, c.Tree, c.Type)] = caseClassParameters.map { param =>
           val paramName = param.name.encodedName.toString
+          val paramType = param.returnType.substituteTypes(genericType.etaExpand.typeParams, genericType.typeArgs)
 
           val derivedImplicit = recurse(ProductType(paramName, genericType.toString), genericType,
               assignedName) {
 
-            implicitTree(Some(paramName), param.returnType, typeConstructor, assignedName)
+            implicitTree(Some(paramName), paramType, typeConstructor, assignedName)
 
           }.getOrElse {
             c.abort(c.enclosingPosition, s"failed to get implicit for type $genericType")
           }
 
-          (param, derivedImplicit)
+          (param, derivedImplicit, paramType)
         }.to[List]
 
         Some {
-          val callables = implicits.map { case (param, imp) =>
+          val callables = implicits.map { case (param, imp, paramType) =>
             val label = param.name.toString
             q"""new _root_.magnolia.Param[$typeConstructor, ${genericType}] {
-              type S = ${param.returnType}
-              def typeclass: ${appliedType(typeConstructor, param.returnType)} = $imp
+              type S = ${paramType}
+              def typeclass: ${appliedType(typeConstructor, paramType)} = $imp
               def label: _root_.java.lang.String = $label
-              def dereference(param: ${genericType}): ${param.returnType} = param.${TermName(label)}
+              def dereference(param: ${genericType}): ${paramType} = param.${TermName(label)}
             }"""
           }
 
           val constructor = q"""new $genericType(..${callables.zip(implicits).map { case (call, imp) =>
-            q"fn($call).asInstanceOf[${imp._1.returnType}]"
+            q"fn($call).asInstanceOf[${imp._3}]"
           } })"""
 
           val impl = q"""
@@ -184,7 +184,12 @@ object Magnolia {
           """
         }
       } else if(isSealedTrait) {
-        val subtypes = classType.get.knownDirectSubclasses.to[List]
+        val genericSubtypes = classType.get.knownDirectSubclasses.to[List]
+        val subtypes = genericSubtypes.map { sub =>
+          val mapping = sub.asType.typeSignature.baseType(genericType.typeSymbol).typeArgs.zip(genericType.typeArgs).toMap
+          val newTypeParams = sub.asType.toType.typeArgs.map(mapping(_))
+          appliedType(sub.asType.toType.typeConstructor, newTypeParams)
+        }
 
         if(subtypes.isEmpty) {
           c.info(c.enclosingPosition,
@@ -195,7 +200,7 @@ object Magnolia {
         
         Some {
 
-          val subclasses = subtypes.map(_.asType.toType).map { searchType =>
+          val subclasses = subtypes.map { searchType =>
             recurse(CoproductType(genericType.toString), genericType, assignedName) {
               (searchType, implicitTree(None, searchType, typeConstructor, assignedName))
             }.getOrElse {
@@ -265,6 +270,7 @@ object Magnolia {
     result.map { tree =>
       val out = if(currentStack.frames.isEmpty) c.untypecheck(removeDeferred.transform(tree))
           else tree
+      println(out)
       out
     }.getOrElse {
       c.abort(c.enclosingPosition, s"magnolia: could not infer typeclass for type $genericType")

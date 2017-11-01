@@ -81,10 +81,9 @@ object Decoder {
 
 trait Decoder[T] { def decode(str: String): T }
 
-sealed trait Tree
-case class Leaf(value: String) extends Tree
-case class Branch(left: Tree, right: Tree) extends Tree
-case object Bud extends Tree
+sealed trait Tree[+T]
+case class Leaf[+L](value: L) extends Tree[L]
+case class Branch[+B](left: Tree[B], right: Tree[B]) extends Tree[B]
 
 sealed trait Entity
 
