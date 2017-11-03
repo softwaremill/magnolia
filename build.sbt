@@ -45,9 +45,23 @@ lazy val testsJVM = tests.jvm
 lazy val testsJS = tests.js
 lazy val testsNative = tests.native
 
+lazy val benchmarks = crossProject(JSPlatform, JVMPlatform, NativePlatform)
+  .crossType(CrossType.Pure)
+  .in(file("benchmarks"))
+  .settings(buildSettings: _*)
+  .settings(noPublishSettings: _*)
+  .settings(moduleName := "magnolia-benchmarks")
+  .settings(quasiQuotesDependencies)
+  .nativeSettings(nativeSettings)
+  .dependsOn(examples)
+
+lazy val benchmarksJVM = benchmarks.jvm
+lazy val benchmarksJS = benchmarks.js
+lazy val benchmarksNative = benchmarks.native
+
 lazy val buildSettings = Seq(
   organization := "com.propensive",
-  scalaVersion := "2.12.2",
+  scalaVersion := "2.12.4",
   name := "magnolia",
   version := "0.2.0",
   scalacOptions ++= Seq("-deprecation", "-feature", "-Ywarn-value-discard", "-Ywarn-dead-code", "-Ywarn-nullary-unit", "-Ywarn-numeric-widen", "-Ywarn-inaccessible", "-Ywarn-adapted-args"),

@@ -90,3 +90,32 @@ sealed trait Entity
 case class Company(name: String) extends Entity
 case class Person(name: String, age: Int) extends Entity
 case class Address(line1: String, occupant: Person)
+
+
+
+sealed trait Alphabet
+
+case class Greek(άλφα: Letter, βήτα: Letter, γάμα: Letter, δέλτα: Letter, έψιλον: Letter, ζήτα: Letter, ήτα: Letter, θήτα: Letter) extends Alphabet
+case class Cyrillic(б: Letter, в: Letter, г: Letter, д: Letter, ж: Letter, з: Letter) extends Alphabet
+case class Latin(a: Letter, b: Letter, c: Letter, d: Letter, e: Letter, f: Letter, g: Letter, h: Letter, i: Letter, j: Letter, k: Letter, l: Letter, m: Letter) extends Alphabet
+
+case class Letter(name: String, phonetic: String)
+//case class Country(name: String, language: Language, leader: Person)
+case class Language(name: String, code: String, alphabet: Alphabet)
+//case class Person(name: String, dateOfBirth: Date)
+case class Date(year: Int, month: Month, day: Int)
+
+sealed trait Month
+case object Jan extends Month
+case object Feb extends Month
+case object Mar extends Month
+case object Apr extends Month
+case object May extends Month
+case object Jun extends Month
+case object Jul extends Month
+case object Aug extends Month
+case object Sep extends Month
+case object Oct extends Month
+case object Nov extends Month
+case object Dec extends Month
+

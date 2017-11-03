@@ -28,7 +28,7 @@ object Tests extends TestApp {
     test("serialize a Branch") {
       import magnolia.examples._
       implicitly[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
-    }.assert(_ == "Branch(left=Leaf(value=LHS),right=Leaf(value=RHS))")
+    }.assert(_ == "Branch[String](left=Leaf[String](value=LHS),right=Leaf[String](value=RHS))")
 
     test("test equality false") {
       import examples._
@@ -52,9 +52,9 @@ object Tests extends TestApp {
     test("construction of Show instance for Leaf") {
       scalac"""
         import magnolia.examples._
-        implicitly[Show[String, Leaf[String]]]
+        implicitly[Show[String, Leaf[java.lang.String]]]
       """
-    }.assert(_ == (Returns(fqt"magnolia.examples.Show[String,magnolia.examples.Leaf[java.lang.String]]"): Compilation))
+    }.assert(_ == (Returns(fqt"magnolia.examples.Show[String,magnolia.examples.Leaf[String]]"): Compilation))
     
     test("construction of Show instance for Tree") {
       scalac"""
@@ -65,11 +65,11 @@ object Tests extends TestApp {
     
     test("serialize a Leaf") {
       implicitly[Show[String, Leaf[String]]].show(Leaf("testing"))
-    }.assert(_ == "Leaf(value=testing)")
+    }.assert(_ == "Leaf[String](value=testing)")
     
     test("serialize a Branch as a Tree") {
       implicitly[Show[String, Tree[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
-    }.assert(_ == "Branch(left=Leaf(value=LHS),right=Leaf(value=RHS))")
+    }.assert(_ == "Branch[String](left=Leaf[String](value=LHS),right=Leaf[String](value=RHS))")
 
     test("show error stack") {
       scalac"""
