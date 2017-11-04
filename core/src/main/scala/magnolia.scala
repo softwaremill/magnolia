@@ -78,11 +78,7 @@ object Magnolia {
             val genericTypeName: String = genericType.typeSymbol.name.encodedName.toString.toLowerCase
             val assignedName: TermName = TermName(c.freshName(s"${genericTypeName}Typeclass"))
             recurse(ChainedImplicit(genericType.toString), genericType, assignedName) {
-              val inferredImplicit = c.inferImplicitValue(searchType, false, false)
-              q"""{
-                def $assignedName: $searchType = $inferredImplicit
-                $assignedName
-              }"""
+              c.inferImplicitValue(searchType, false, false)
             }.get
           }.toOption.orElse(directInferImplicit(genericType, typeConstructor))
         }
@@ -116,7 +112,7 @@ object Magnolia {
       val resultType = appliedType(typeConstructor, genericType)
 
       // FIXME: Handle AnyVals
-      if(isCaseObject) {
+      val result = if(isCaseObject) {
         val termSym = genericType.typeSymbol.companionSymbol
         val obj = termSym.asTerm
         val className = obj.name.toString
@@ -128,11 +124,7 @@ object Magnolia {
             def isObject = true
           })
         """
-          
-        Some(q"""
-          def $assignedName: $resultType = $impl
-          $assignedName
-        """)
+        Some(impl)
       } else if(isCaseClass) {
         val caseClassParameters = genericType.decls.collect {
           case m: MethodSymbol if m.isCaseAccessor => m.asMethod
@@ -171,7 +163,7 @@ object Magnolia {
             q"fn($call).asInstanceOf[${imp._3}]"
           } })"""
 
-          val impl = q"""
+          q"""
             ${c.prefix}.join(new _root_.magnolia.JoinContext[$typeConstructor, $genericType] {
               def construct[R](fn: ((Param[${typeConstructor}, $genericType]) => Any)): $genericType = $constructor
               def typeName: _root_.java.lang.String = $className
@@ -179,11 +171,6 @@ object Magnolia {
                 _root_.scala.List(..$callables)
               def isObject = false
             })
-          """
-          
-          q"""
-            def $assignedName: $resultType = $impl
-            $assignedName
           """
         }
       } else if(isSealedTrait) {
@@ -224,16 +211,19 @@ object Magnolia {
             }"""
           }
           
-          val impl = q"""{
+          q"""{
             ${c.prefix}.split(_root_.scala.collection.immutable.List[_root_.magnolia.Subclass[$typeConstructor, $genericType]](..$subclasses))
           }"""
           
-          q"""
-            def $assignedName: $resultType = $impl
-            $assignedName
-          """
         }
       } else None
+
+      result.map { r =>
+        q"""{
+          def $assignedName: $resultType = $r
+          $assignedName
+        }"""
+      }
     }
 
     val genericType: Type = weakTypeOf[T]

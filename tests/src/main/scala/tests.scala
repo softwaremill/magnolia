@@ -13,6 +13,8 @@ object Tests extends TestApp {
   def tests() = {
     import examples._
 
+    compileTimeRestart()
+
     test("construct a Show product instance") {
       import examples._
       Show.generic[Person].show(Person("John Smith", 34))
@@ -86,6 +88,8 @@ object Tests extends TestApp {
     //test("construct a decoder") {
     //Decoder.generic[Tree[String]].decode("string")
     //}.assert(_ == (Leaf("something"): Tree[String]))
+    
+    compileTimeReport()
 
   }
 }

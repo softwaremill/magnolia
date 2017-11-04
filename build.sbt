@@ -9,6 +9,7 @@ lazy val core = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   .settings(buildSettings: _*)
   .settings(publishSettings: _*)
   .settings(scalaMacroDependencies: _*)
+  .settings(examplesDependencies)
   .settings(moduleName := "magnolia")
   .nativeSettings(nativeSettings)
 
@@ -149,7 +150,7 @@ lazy val scalaMacroDependencies: Seq[Setting[_]] = Seq(
 
 lazy val examplesDependencies: Seq[Setting[_]] = Seq(
   libraryDependencies += "org.typelevel" %% "cats-core" % "0.9.0",
-  libraryDependencies += "com.propensive" %% "estrapade" % "1.0.0",
+  libraryDependencies += "com.propensive" %% "estrapade" % "1.0.2",
   libraryDependencies += "com.propensive" %% "contextual-data" % "1.0.3"
 )
 

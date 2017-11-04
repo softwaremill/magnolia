@@ -13,9 +13,11 @@ import scala.annotation.unchecked.uncheckedVariance
 
 object Show {
   type Typeclass[T] = Show[String, T]
-  def join[T](context: JoinContext[Typeclass, T])(value: T): String = context.parameters.map { param =>
-    s"${param.label}=${param.typeclass.show(param.dereference(value))}"
-  }.mkString(s"${context.typeName.split("\\.").last}(", ",", ")")
+  def join[T](context: JoinContext[Typeclass, T]): Show[String, T] = new Show[String, T] {
+    def show(value: T) = context.parameters.map { param =>
+      s"${param.label}=${param.typeclass.show(param.dereference(value))}"
+    }.mkString(s"${context.typeName.split("\\.").last}(", ",", ")")
+  }
 
   def split[T](subclasses: List[Subclass[Typeclass, T]])(value: T): String =
     subclasses.map { sub => sub.cast.andThen { value =>
@@ -31,13 +33,17 @@ trait Show[Out, T] { def show(value: T): Out }
 
 object Eq {
   type Typeclass[T] = Eq[T]
-  def join[T](context: JoinContext[Eq, T])(value1: T, value2: T): Boolean =
-    context.parameters.forall { param => param.typeclass.equal(param.dereference(value1), param.dereference(value2)) }
+  def join[T](context: JoinContext[Eq, T]): Eq[T] = new Eq[T] {
+    def equal(value1: T, value2: T) =
+      context.parameters.forall { param => param.typeclass.equal(param.dereference(value1), param.dereference(value2)) }
+  }
 
-  def split[T](subclasses: List[Subclass[Eq, T]])(value1: T, value2: T): Boolean =
-    subclasses.map { case subclass =>
-      subclass.cast.andThen { value => subclass.typeclass.equal(subclass.cast(value1), subclass.cast(value2)) }
-    }.reduce(_ orElse _)(value1)
+  def split[T](subclasses: List[Subclass[Eq, T]]): Eq[T] = new Eq[T] {
+    def equal(value1: T, value2: T) =
+      subclasses.map { case subclass =>
+        subclass.cast.andThen { value => subclass.typeclass.equal(subclass.cast(value1), subclass.cast(value2)) }
+      }.reduce(_ orElse _)(value1)
+  }
 
   implicit val string: Eq[String] = _ == _
   implicit val int: Eq[Int] = _ == _
