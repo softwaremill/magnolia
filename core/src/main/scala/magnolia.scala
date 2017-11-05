@@ -6,25 +6,37 @@ import language.existentials
 import language.higherKinds
 import language.experimental.macros
 
-trait Subclass[Tc[_], T] {
+abstract class Subclass[Tc[_], T](label: String) {
   type S <: T
   def typeclass: Tc[S]
-  def label: String
   def cast: PartialFunction[T, S]
+}
+
+object Param {
+  def apply[Tc[_], T, S1](name: String, tc: Tc[S1], deref: T => S1) = new Param[Tc, T] {
+    type S = S1
+    def label = name
+    def typeclass: Tc[S] = tc
+    def dereference(t: T): S = deref(t)
+  }
 }
 
 trait Param[Tc[_], T] {
   type S
-  def typeclass: Tc[S]
   def label: String
+  def typeclass: Tc[S]
   def dereference(param: T): S
 }
 
-trait JoinContext[Tc[_], T] {
-  def construct[R](param: ((Param[Tc, T]) => Any)): T
-  def typeName: String
-  def parameters: List[Param[Tc, T]]
-  def isObject: Boolean
+object JoinContext {
+  def apply[Tc[_], T](name: String, obj: Boolean, params: Array[Param[Tc, T]], constructor: (Param[Tc, T] => Any) => T) =
+    new JoinContext[Tc, T](name, obj, params) {
+      def construct(param: Param[Tc, T] => Any): T = constructor(param)
+    }
+}
+
+abstract class JoinContext[Tc[_], T](val typeName: String, val isObject: Boolean, val parameters: Array[Param[Tc, T]]) {
+  def construct(param: ((Param[Tc, T]) => Any)): T
 }
 
 object Magnolia {
@@ -117,12 +129,7 @@ object Magnolia {
         val obj = termSym.asTerm
         val className = obj.name.toString
         val impl = q"""
-          ${c.prefix}.join(new _root_.magnolia.JoinContext[$typeConstructor, $genericType] {
-            def construct[R](fn: ((Param[${typeConstructor}, $genericType]) => Any)): $genericType = $obj
-            def typeName: _root_.java.lang.String = $className
-            def parameters: _root_.scala.List[Param[$typeConstructor, $genericType]] = _root_.scala.List()
-            def isObject = true
-          })
+          ${c.prefix}.join(_root_.magnolia.JoinContext[$typeConstructor, $genericType]($className, true, _root_.scala.Array(), $obj))
         """
         Some(impl)
       } else if(isCaseClass) {
@@ -146,27 +153,17 @@ object Magnolia {
         }.to[List]
 
         val callables = typeclasses.map { case (param, typeclass, paramType) =>
-          q"""new _root_.magnolia.Param[$typeConstructor, ${genericType}] {
-            type S = ${paramType}
-            def typeclass: ${appliedType(typeConstructor, paramType)} = $typeclass
-            def label: _root_.java.lang.String = ${param.name.toString}
-            def dereference(param: ${genericType}): ${paramType} =
-              param.${TermName(param.name.toString)}
-          }"""
+          q"""_root_.magnolia.Param[$typeConstructor, $genericType, $paramType](${param.name.toString}, $typeclass, p => p.${TermName(param.name.toString)})"""
         }
 
         Some {
           q"""
-            ${c.prefix}.join(new _root_.magnolia.JoinContext[$typeConstructor, $genericType] {
-              def construct[R](fn: ((Param[${typeConstructor}, $genericType]) => Any)): $genericType =
-                new $genericType(..${typeclasses.zipWithIndex.map { case (typeclass, idx) =>
-                  q"fn(parameters($idx)).asInstanceOf[${typeclass._3}]"
-                } })
-              def typeName: _root_.java.lang.String = $className
-              def parameters: _root_.scala.List[Param[$typeConstructor, $genericType]] =
-                _root_.scala.List(..$callables)
-              def isObject = false
-            })
+            val parameters: _root_.scala.Array[Param[$typeConstructor, $genericType]] = _root_.scala.Array(..$callables)
+            ${c.prefix}.join(_root_.magnolia.JoinContext[$typeConstructor, $genericType]($className, false, parameters,
+              (fn: (Param[$typeConstructor, $genericType] => Any)) => new $genericType(..${typeclasses.zipWithIndex.map { case (typeclass, idx) =>
+                q"fn(parameters($idx)).asInstanceOf[${typeclass._3}]"
+              } })
+            ))
           """
         }
       } else if(isSealedTrait) {
@@ -193,15 +190,13 @@ object Magnolia {
               c.abort(c.enclosingPosition, s"failed to get implicit for type $searchType")
             }
           }.map { case (typ, typeclass) =>
-            val caseClause = cq"(t: $typ) => t"
             val pf = q"""new _root_.scala.PartialFunction[$genericType, $typ] {
               def isDefinedAt(t: $genericType): Boolean = t.isInstanceOf[$typ]
               def apply(t: $genericType): $typ = t.asInstanceOf[$typ]
             }"""
 
-            q"""new _root_.magnolia.Subclass[$typeConstructor, $genericType] {
+            q"""new _root_.magnolia.Subclass[$typeConstructor, $genericType](${typ.typeSymbol.name.toString}) {
               type S = $typ
-              def label: _root_.java.lang.String = ${typ.typeSymbol.name.toString}
               def typeclass: ${appliedType(typeConstructor, typ)} = $typeclass
               def cast: _root_.scala.PartialFunction[$genericType, $typ] = $pf
             }"""
