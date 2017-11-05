@@ -14,11 +14,14 @@ trait Subclass[Tc[_], T] {
 }
 
 object Subclass {
-  def apply[Tc[_], T, S1 <: T](name: String, tc: => Tc[S1], pf: => PartialFunction[T, S1]) = new Subclass[Tc, T] {
+  def apply[Tc[_], T, S1 <: T](name: String, tc: => Tc[S1], isType: T => Boolean, asType: T => S1) = new Subclass[Tc, T] {
     type S = S1
     def label: String = name
     def typeclass: Tc[S] = tc
-    def cast: PartialFunction[T, S] = pf
+    def cast: PartialFunction[T, S] = new PartialFunction[T, S] {
+      def isDefinedAt(t: T) = isType(t)
+      def apply(t: T): S = asType(t)
+    }
   }
 }
 
@@ -198,13 +201,12 @@ object Magnolia {
             c.abort(c.enclosingPosition, s"failed to get implicit for type $searchType")
           }
         }.map { case (typ, typeclass) =>
-          val pf = q"""
-          new _root_.scala.PartialFunction[$genericType, $typ] {
-            def isDefinedAt(t: $genericType): Boolean = t.isInstanceOf[$typ]
-            def apply(t: $genericType): $typ = t.asInstanceOf[$typ]
-          }"""
-
-          q"""_root_.magnolia.Subclass[$typeConstructor, $genericType, $typ](${typ.typeSymbol.name.toString}, $typeclass, $pf)"""
+          q"""_root_.magnolia.Subclass[$typeConstructor, $genericType, $typ](
+            ${typ.typeSymbol.name.toString},
+            $typeclass,
+            (t: $genericType) => t.isInstanceOf[$typ],
+            (t: $genericType) => t.asInstanceOf[$typ]
+          )"""
         }
           
         Some {
