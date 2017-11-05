@@ -64,7 +64,7 @@ object Magnolia {
       }
     }
 
-    def implicitTree(paramName: Option[String],
+    def typeclassTree(paramName: Option[String],
                      genericType: Type,
                      typeConstructor: Type,
                      assignedName: TermName): Tree = {
@@ -131,41 +131,37 @@ object Magnolia {
         }
         val className = genericType.toString
 
-        val implicits: List[(c.universe.MethodSymbol, c.Tree, c.Type)] = caseClassParameters.map { param =>
+        val typeclasses: List[(c.universe.MethodSymbol, c.Tree, c.Type)] = caseClassParameters.map { param =>
           val paramName = param.name.encodedName.toString
           val paramType = param.returnType.substituteTypes(genericType.etaExpand.typeParams, genericType.typeArgs)
 
           val derivedImplicit = recurse(ProductType(paramName, genericType.toString), genericType,
               assignedName) {
 
-            implicitTree(Some(paramName), paramType, typeConstructor, assignedName)
+            typeclassTree(Some(paramName), paramType, typeConstructor, assignedName)
 
-          }.getOrElse {
-            c.abort(c.enclosingPosition, s"failed to get implicit for type $genericType")
-          }
+          }.getOrElse(c.abort(c.enclosingPosition, s"failed to get implicit for type $genericType"))
 
           (param, derivedImplicit, paramType)
         }.to[List]
 
+        val callables = typeclasses.map { case (param, typeclass, paramType) =>
+          q"""new _root_.magnolia.Param[$typeConstructor, ${genericType}] {
+            type S = ${paramType}
+            def typeclass: ${appliedType(typeConstructor, paramType)} = $typeclass
+            def label: _root_.java.lang.String = ${param.name.toString}
+            def dereference(param: ${genericType}): ${paramType} =
+              param.${TermName(param.name.toString)}
+          }"""
+        }
+
         Some {
-          val callables = implicits.map { case (param, imp, paramType) =>
-            val label = param.name.toString
-            q"""new _root_.magnolia.Param[$typeConstructor, ${genericType}] {
-              type S = ${paramType}
-              def typeclass: ${appliedType(typeConstructor, paramType)} = $imp
-              def label: _root_.java.lang.String = $label
-              def dereference(param: ${genericType}): ${paramType} = param.${TermName(label)}
-            }"""
-
-          }
-
-          val constructor = q"""new $genericType(..${callables.zip(implicits).map { case (call, imp) =>
-            q"fn($call).asInstanceOf[${imp._3}]"
-          } })"""
-
           q"""
             ${c.prefix}.join(new _root_.magnolia.JoinContext[$typeConstructor, $genericType] {
-              def construct[R](fn: ((Param[${typeConstructor}, $genericType]) => Any)): $genericType = $constructor
+              def construct[R](fn: ((Param[${typeConstructor}, $genericType]) => Any)): $genericType =
+                new $genericType(..${typeclasses.zipWithIndex.map { case (typeclass, idx) =>
+                  q"fn(parameters($idx)).asInstanceOf[${typeclass._3}]"
+                } })
               def typeName: _root_.java.lang.String = $className
               def parameters: _root_.scala.List[Param[$typeConstructor, $genericType]] =
                 _root_.scala.List(..$callables)
@@ -192,7 +188,7 @@ object Magnolia {
 
           val subclasses = subtypes.map { searchType =>
             recurse(CoproductType(genericType.toString), genericType, assignedName) {
-              (searchType, implicitTree(None, searchType, typeConstructor, assignedName))
+              (searchType, typeclassTree(None, searchType, typeConstructor, assignedName))
             }.getOrElse {
               c.abort(c.enclosingPosition, s"failed to get implicit for type $searchType")
             }
@@ -263,7 +259,7 @@ object Magnolia {
     result.map { tree =>
       if(currentStack.frames.isEmpty) {
         val out = c.untypecheck(removeDeferred.transform(tree))
-        //println(out)
+        println(s"Bytes: ${out.toString.size}")
         out
       } else tree
     }.getOrElse {
