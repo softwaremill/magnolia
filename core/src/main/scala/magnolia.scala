@@ -6,10 +6,20 @@ import language.existentials
 import language.higherKinds
 import language.experimental.macros
 
-abstract class Subclass[Tc[_], T](label: String) {
+trait Subclass[Tc[_], T] {
   type S <: T
+  def label: String
   def typeclass: Tc[S]
   def cast: PartialFunction[T, S]
+}
+
+object Subclass {
+  def apply[Tc[_], T, S1 <: T](name: String, tc: => Tc[S1], pf: => PartialFunction[T, S1]) = new Subclass[Tc, T] {
+    type S = S1
+    def label: String = name
+    def typeclass: Tc[S] = tc
+    def cast: PartialFunction[T, S] = pf
+  }
 }
 
 object Param {
@@ -180,32 +190,27 @@ object Magnolia {
           
           c.abort(c.enclosingPosition, "")
         }
-        
-        Some {
-
-          val subclasses = subtypes.map { searchType =>
-            recurse(CoproductType(genericType.toString), genericType, assignedName) {
-              (searchType, typeclassTree(None, searchType, typeConstructor, assignedName))
-            }.getOrElse {
-              c.abort(c.enclosingPosition, s"failed to get implicit for type $searchType")
-            }
-          }.map { case (typ, typeclass) =>
-            val pf = q"""new _root_.scala.PartialFunction[$genericType, $typ] {
-              def isDefinedAt(t: $genericType): Boolean = t.isInstanceOf[$typ]
-              def apply(t: $genericType): $typ = t.asInstanceOf[$typ]
-            }"""
-
-            q"""new _root_.magnolia.Subclass[$typeConstructor, $genericType](${typ.typeSymbol.name.toString}) {
-              type S = $typ
-              def typeclass: ${appliedType(typeConstructor, typ)} = $typeclass
-              def cast: _root_.scala.PartialFunction[$genericType, $typ] = $pf
-            }"""
+      
+        val subclasses = subtypes.map { searchType =>
+          recurse(CoproductType(genericType.toString), genericType, assignedName) {
+            (searchType, typeclassTree(None, searchType, typeConstructor, assignedName))
+          }.getOrElse {
+            c.abort(c.enclosingPosition, s"failed to get implicit for type $searchType")
           }
+        }.map { case (typ, typeclass) =>
+          val pf = q"""
+          new _root_.scala.PartialFunction[$genericType, $typ] {
+            def isDefinedAt(t: $genericType): Boolean = t.isInstanceOf[$typ]
+            def apply(t: $genericType): $typ = t.asInstanceOf[$typ]
+          }"""
+
+          q"""_root_.magnolia.Subclass[$typeConstructor, $genericType, $typ](${typ.typeSymbol.name.toString}, $typeclass, $pf)"""
+        }
           
+        Some {
           q"""{
             ${c.prefix}.split(_root_.scala.collection.immutable.List[_root_.magnolia.Subclass[$typeConstructor, $genericType]](..$subclasses))
           }"""
-          
         }
       } else None
 
