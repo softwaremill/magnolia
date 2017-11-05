@@ -25,8 +25,6 @@ object Tests extends TestApp {
       Show.generic[Person].show(Person("John Smith", 34))
     }.assert(_ == "Person(name=John Smith,age=34)")
     
-    //Show.generic[Tree[String]]
-
     test("serialize a Branch") {
       import magnolia.examples._
       implicitly[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))

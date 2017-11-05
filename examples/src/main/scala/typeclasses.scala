@@ -19,7 +19,7 @@ object Show {
     }.mkString(s"${context.typeName.split("\\.").last}(", ",", ")")
   }
 
-  def split[T](subclasses: List[Subclass[Typeclass, T]])(value: T): String =
+  def dispatch[T](subclasses: Seq[Subclass[Typeclass, T]])(value: T): String =
     subclasses.map { sub => sub.cast.andThen { value =>
       sub.typeclass.show(sub.cast(value))
     } }.reduce(_ orElse _)(value)
@@ -38,7 +38,7 @@ object Eq {
       context.parameters.forall { param => param.typeclass.equal(param.dereference(value1), param.dereference(value2)) }
   }
 
-  def split[T](subclasses: List[Subclass[Eq, T]]): Eq[T] = new Eq[T] {
+  def dispatch[T](subclasses: Seq[Subclass[Eq, T]]): Eq[T] = new Eq[T] {
     def equal(value1: T, value2: T) =
       subclasses.map { case subclass =>
         subclass.cast.andThen { value => subclass.typeclass.equal(subclass.cast(value1), subclass.cast(value2)) }
@@ -58,7 +58,7 @@ object Default {
     def default = context.construct { param => param.typeclass.default }
   }
 
-  def split[T](subclasses: List[Subclass[Default, T]])(): Default[T] = new Default[T] {
+  def dispatch[T](subclasses: Seq[Subclass[Default, T]])(): Default[T] = new Default[T] {
     def default = subclasses.head.typeclass.default
   }
 
@@ -73,7 +73,7 @@ object Decoder {
   def join[T](context: JoinContext[Decoder, T])(value: String): T =
     context.construct { param => param.typeclass.decode(value) }
 
-  def split[T](subclasses: List[Subclass[Decoder, T]])(param: String): T =
+  def dispatch[T](subclasses: Seq[Subclass[Decoder, T]])(param: String): T =
     subclasses.map { subclass =>
       { case _ if decodes(subclass.typeclass, param) => subclass.typeclass.decode(param) }: PartialFunction[String, T]
     }.reduce(_ orElse _)(param)
@@ -106,7 +106,7 @@ case class Cyrillic(б: Letter, в: Letter, г: Letter, д: Letter, ж: Letter, 
 case class Latin(a: Letter, b: Letter, c: Letter, d: Letter, e: Letter, f: Letter, g: Letter, h: Letter, i: Letter, j: Letter, k: Letter, l: Letter, m: Letter) extends Alphabet
 
 case class Letter(name: String, phonetic: String)
-//case class Country(name: String, language: Language, leader: Person)
+case class Country(name: String, language: Language, leader: Person)
 case class Language(name: String, code: String, alphabet: Alphabet)
 //case class Person(name: String, dateOfBirth: Date)
 case class Date(year: Int, month: Month, day: Int)
