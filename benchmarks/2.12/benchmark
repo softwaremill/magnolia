@@ -1,0 +1,22 @@
+#!/bin/bash
+
+COUNT="$1"
+shift
+
+benchmark() {
+  DERIVATION="$1"
+  TEST="$2"
+  echo "$DERIVATION/$TEST:"
+  echo "src/adt.scala" > .script
+  for I in $(seq 1 $COUNT); do
+    echo "src/$DERIVATION/$TEST.scala" >> .script
+  done
+  cat .script | scalac-2.12 -Xresident -d bin -cp $(ls lib/* | tr '\n' :)bin | ts -i -s '%M:%.S' > out.log
+  cat out.log | tail -n +2 | paste -d' ' - .script | sed 's/nsc.//g' | head -n -1
+  echo
+}
+
+for J in "$@"; do
+  benchmark magnolia "$J"
+  benchmark kittens "$J"
+done
