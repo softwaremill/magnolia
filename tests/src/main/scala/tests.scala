@@ -8,12 +8,25 @@ import contextual.data.txt._
 
 import scala.util._
 
+sealed trait Tree[+T]
+case class Leaf[+L](value: L) extends Tree[L]
+case class Branch[+B](left: Tree[B], right: Tree[B]) extends Tree[B]
+
+sealed trait Entity
+
+case class Company(name: String) extends Entity
+case class Person(name: String, age: Int) extends Entity
+case class Address(line1: String, occupant: Person)
+
+sealed trait Color
+case object Red extends Color
+case object Green extends Color
+case object Blue extends Color
+
 object Tests extends TestApp {
 
-  def tests() = {
+  def tests() = for(i <- 1 to 10000) {
     import examples._
-
-    compileTimeRestart()
 
     test("construct a Show product instance") {
       import examples._
@@ -47,21 +60,21 @@ object Tests extends TestApp {
 
     test("construct a default value") {
       Default.generic[Entity].default
-    }.assert(_ == (Company(""): Entity))
+    }.assert(_ == Company(""))
 
     test("construction of Show instance for Leaf") {
       scalac"""
         import magnolia.examples._
         implicitly[Show[String, Leaf[java.lang.String]]]
       """
-    }.assert(_ == (Returns(fqt"magnolia.examples.Show[String,magnolia.examples.Leaf[String]]"): Compilation))
+    }.assert(_ == Returns(fqt"magnolia.examples.Show[String,magnolia.tests.Leaf[String]]"))
     
     test("construction of Show instance for Tree") {
       scalac"""
         import magnolia.examples._
         implicitly[Show[String, Tree[String]]]
       """
-    }.assert(_ == (Returns(fqt"magnolia.examples.Show[String,magnolia.examples.Tree[String]]"): Compilation))
+    }.assert(_ == Returns(fqt"magnolia.examples.Show[String,magnolia.tests.Tree[String]]"))
     
     test("serialize a Leaf") {
       implicitly[Show[String, Leaf[String]]].show(Leaf("testing"))
@@ -70,6 +83,26 @@ object Tests extends TestApp {
     test("serialize a Branch as a Tree") {
       implicitly[Show[String, Tree[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
     }.assert(_ == "Branch[String](left=Leaf[String](value=LHS),right=Leaf[String](value=RHS))")
+    
+    test("serialize case object") {
+      implicitly[Show[String, Red.type]].show(Red)
+    }.assert(_ == "Red()")
+
+    test("serialize case object as a sealed trait") {
+      implicitly[Show[String, Color]].show(Blue)
+    }.assert(_ == "Blue()")
+
+    test("decode a company") {
+      implicitly[Decoder[Company]].decode("""Company(name=Acme Inc)""")
+    }.assert(_ == Company("Acme Inc"))
+
+    test("decode a Person as an Entity") {
+      implicitly[Decoder[Entity]].decode("""Person(name=John Smith,age=32)""")
+    }.assert(_ == Person("John Smith", 32))
+
+    test("decode a nested product") {
+      implicitly[Decoder[Address]].decode("""Address(line1=53 High Street,occupant=Person(name=Richard Jones,age=44))""")
+    }.assert(_ == Address("53 High Street", Person("Richard Jones", 44)))
 
     test("show error stack") {
       scalac"""
@@ -78,16 +111,10 @@ object Tests extends TestApp {
         case class Beta(alpha: Alpha)
         Show.generic[Beta]
       """
-    }.assert(_ == (TypecheckError(txt"""magnolia: could not find typeclass for type Double
+    }.assert(_ == TypecheckError(txt"""magnolia: could not find typeclass for type Double
                                       |    in parameter 'integer' of product type Alpha
                                       |    in parameter 'alpha' of product type Beta
-                                      |"""): Compilation))
+                                      |"""))
     
-    //test("construct a decoder") {
-    //Decoder.generic[Tree[String]].decode("string")
-    //}.assert(_ == (Leaf("something"): Tree[String]))
-    
-    compileTimeReport()
-
   }
 }

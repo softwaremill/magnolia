@@ -6,15 +6,15 @@ import language.existentials
 import language.higherKinds
 import language.experimental.macros
 
-trait Subclass[Tc[_], T] {
+trait Subtype[Tc[_], T] {
   type S <: T
   def label: String
   def typeclass: Tc[S]
   def cast: PartialFunction[T, S]
 }
 
-object Subclass {
-  def apply[Tc[_], T, S1 <: T](name: String, tc: => Tc[S1], isType: T => Boolean, asType: T => S1) = new Subclass[Tc, T] {
+object Subtype {
+  def apply[Tc[_], T, S1 <: T](name: String, tc: => Tc[S1], isType: T => Boolean, asType: T => S1) = new Subtype[Tc, T] {
     type S = S1
     def label: String = name
     def typeclass: Tc[S] = tc
@@ -51,6 +51,15 @@ object JoinContext {
 abstract class JoinContext[Tc[_], T](val typeName: String, val isObject: Boolean, params: Array[Param[Tc, T]]) {
   def construct(param: ((Param[Tc, T]) => Any)): T
   def parameters: Seq[Param[Tc, T]] = params
+}
+
+class DispatchContext[Tc[_], T](val typeName: String, subs: Array[Subtype[Tc, T]]) {
+  def subtypes: Seq[Subtype[Tc, T]] = subs
+  def dispatch[R](value: T)(fn: Subtype[Tc, T] => R): R =
+    subtypes.map { sub => sub.cast.andThen { v =>
+      fn(sub)
+    } }.reduce(_ orElse _)(value)
+    
 }
 
 object Magnolia {
@@ -141,10 +150,11 @@ object Magnolia {
 
       // FIXME: Handle AnyVals
       val result = if(isCaseObject) {
-        val obj = genericType.typeSymbol.companion.asTerm
+        // FIXME: look for an alternative which isn't deprecated on Scala 2.12+
+        val obj = genericType.typeSymbol.companionSymbol.asTerm
         val className = obj.name.toString
         val impl = q"""
-          ${c.prefix}.join(_root_.magnolia.JoinContext[$typeConstructor, $genericType]($className, true, new _root_.scala.Array(0), $obj))
+          ${c.prefix}.join(_root_.magnolia.JoinContext[$typeConstructor, $genericType]($className, true, new _root_.scala.Array(0), _ => $obj))
         """
         Some(Typeclass(genericType, impl))
       } else if(isCaseClass) {
@@ -218,7 +228,7 @@ object Magnolia {
           c.abort(c.enclosingPosition, "")
         }
         
-        val subclassesVal: TermName = TermName(c.freshName("subclasses"))
+        val subtypesVal: TermName = TermName(c.freshName("subtypes"))
       
         val assignments = subtypes.map { searchType =>
           recurse(CoproductType(genericType.toString), genericType, assignedName) {
@@ -227,7 +237,7 @@ object Magnolia {
             c.abort(c.enclosingPosition, s"failed to get implicit for type $searchType")
           }
         }.zipWithIndex.map { case ((typ, typeclass), idx) =>
-          q"""$subclassesVal($idx) = _root_.magnolia.Subclass[$typeConstructor, $genericType, $typ](
+          q"""$subtypesVal($idx) = _root_.magnolia.Subtype[$typeConstructor, $genericType, $typ](
             ${typ.typeSymbol.name.toString},
             $typeclass,
             (t: $genericType) => t.isInstanceOf[$typ],
@@ -237,12 +247,12 @@ object Magnolia {
           
         Some {
           Typeclass(genericType, q"""{
-            val $subclassesVal: _root_.scala.Array[_root_.magnolia.Subclass[$typeConstructor, $genericType]] =
+            val $subtypesVal: _root_.scala.Array[_root_.magnolia.Subtype[$typeConstructor, $genericType]] =
               new _root_.scala.Array(${assignments.size})
             
             ..$assignments
             
-            ${c.prefix}.dispatch($subclassesVal: _root_.scala.Seq[_root_.magnolia.Subclass[$typeConstructor, $genericType]])
+            ${c.prefix}.dispatch(new _root_.magnolia.DispatchContext($genericTypeName, $subtypesVal: _root_.scala.Array[_root_.magnolia.Subtype[$typeConstructor, $genericType]])): $resultType
           }""")
         }
       } else None
@@ -290,11 +300,7 @@ object Magnolia {
     if(currentStack.frames.isEmpty) recursionStack = ListMap()
 
     result.map { tree =>
-      if(currentStack.frames.isEmpty) {
-        val out = c.untypecheck(removeDeferred.transform(tree))
-        println(s"Bytes: ${out.toString.size}")
-        out
-      } else tree
+      if(currentStack.frames.isEmpty) c.untypecheck(removeDeferred.transform(tree)) else tree
     }.getOrElse {
       c.abort(c.enclosingPosition, s"magnolia: could not infer typeclass for type $genericType")
     }
