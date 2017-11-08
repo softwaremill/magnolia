@@ -12,18 +12,18 @@ object Decoder {
   
   implicit val string: Decoder[String] = new Decoder[String] { def decode(str: String): String = str }
   implicit val int: Decoder[Int] = new Decoder[Int] { def decode(str: String): Int = str.toInt }
-  implicit def generic[T]: Decoder[T] = macro Magnolia.generic[T]
+  implicit def gen[T]: Decoder[T] = macro Magnolia.gen[T]
 
   type Typeclass[T] = Decoder[T]
   
-  def join[T](ctx: JoinContext[Decoder, T]): Decoder[T] = new Decoder[T] {
+  def combine[T](ctx: CaseClass[Decoder, T]): Decoder[T] = new Decoder[T] {
     def decode(value: String) = {
       val (name, values) = parse(value)
       ctx.construct { param => param.typeclass.decode(values(param.label)) }
     }
   }
 
-  def dispatch[T](ctx: DispatchContext[Decoder, T]): Decoder[T] = new Decoder[T] {
+  def dispatch[T](ctx: SealedTrait[Decoder, T]): Decoder[T] = new Decoder[T] {
     def decode(param: String) = {
       val (name, values) = parse(param)
       val subtype = ctx.subtypes.find(_.label == name).get
@@ -60,6 +60,5 @@ object Decoder {
 
     (name, parts(value.substring(end + 1, value.length - 1)).map(keyValue).toMap)
   }
-
 }
 

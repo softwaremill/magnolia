@@ -4,68 +4,65 @@ import scala.reflect._, macros._
 import scala.collection.immutable.ListMap
 import language.existentials
 import language.higherKinds
-import language.experimental.macros
 
-trait Subtype[Tc[_], T] {
-  type S <: T
-  def label: String
-  def typeclass: Tc[S]
-  def cast: PartialFunction[T, S]
-}
-
-object Subtype {
-  def apply[Tc[_], T, S1 <: T](name: String, tc: => Tc[S1], isType: T => Boolean, asType: T => S1) = new Subtype[Tc, T] {
-    type S = S1
-    def label: String = name
-    def typeclass: Tc[S] = tc
-    def cast: PartialFunction[T, S] = new PartialFunction[T, S] {
-      def isDefinedAt(t: T) = isType(t)
-      def apply(t: T): S = asType(t)
-    }
-  }
-}
-
-object Param {
-  def apply[Tc[_], T, S1](name: String, tc: Tc[S1], deref: T => S1) = new Param[Tc, T] {
-    type S = S1
-    def label = name
-    def typeclass: Tc[S] = tc
-    def dereference(t: T): S = deref(t)
-  }
-}
-
-trait Param[Tc[_], T] {
-  type S
-  def label: String
-  def typeclass: Tc[S]
-  def dereference(param: T): S
-}
-
-object JoinContext {
-  def apply[Tc[_], T](name: String, obj: Boolean, params: Array[Param[Tc, T]], constructor: (Param[Tc, T] => Any) => T) =
-    new JoinContext[Tc, T](name, obj, params) {
-      def construct(param: Param[Tc, T] => Any): T = constructor(param)
-    }
-}
-
-abstract class JoinContext[Tc[_], T](val typeName: String, val isObject: Boolean, params: Array[Param[Tc, T]]) {
-  def construct(param: ((Param[Tc, T]) => Any)): T
-  def parameters: Seq[Param[Tc, T]] = params
-}
-
-class DispatchContext[Tc[_], T](val typeName: String, subs: Array[Subtype[Tc, T]]) {
-  def subtypes: Seq[Subtype[Tc, T]] = subs
-  def dispatch[R](value: T)(fn: Subtype[Tc, T] => R): R =
-    subtypes.map { sub => sub.cast.andThen { v =>
-      fn(sub)
-    } }.reduce(_ orElse _)(value)
-    
-}
-
+/** the object which defines the Magnolia macro */
 object Magnolia {
   import CompileTimeState._
 
-  def generic[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = {
+  /** derives a generic typeclass instance for the type `T`
+   *
+   *  This is a macro definition method which should be bound to a method defined inside a Magnolia
+   *  generic derivation object, that is, one which defines the methods `combine`, `dispatch` and
+   *  the type constructor, `Typeclass[_]`. This will typically look like,
+   *  <pre>
+   *  object Derivation {
+   *    // other definitions
+   *    implicit def gen[T]: Typeclass[T] = Magnolia.gen[T]
+   *  }
+   *  </pre>
+   *  which would support automatic derivation of typeclass instances by calling `Derivation.gen[T]`
+   *  or with `implicitly[Typeclass[T]]`, if the implicit method is imported into the current scope.
+   *
+   *  The definition expects a type constructor called `Typeclass`, taking one *-kinded type
+   *  parameter to be defined on the same object as a means of determining how the typeclass should
+   *  be genericized. While this may be obvious for typeclasses like `Show[T]` which take only a
+   *  single type parameter, Magnolia can also derive typeclass instances for types such as
+   *  `Decoder[Format, Type]` which would typically fix the `Format` parameter while varying the
+   *  `Type` parameter.
+   *
+   *  While there is no "interface" for a derivation, in the object-oriented sense, the Magnolia
+   *  macro expects to be able to call certain methods on the object within which it is bound to a
+   *  method.
+   *
+   *  Specifically, for deriving case classes (product types), the macro will attempt to call the
+   *  `combine` method with an instance of [[CaseClass]], like so,
+   *  <pre>
+   *    &lt;derivation&gt;.combine(&lt;caseClass&gt;): Typeclass[T]
+   *  </pre>
+   *  That is to say, the macro expects there to exist a method called `combine` on the derivation
+   *  object, which may be called with the code above, and for it to return a type which conforms to
+   *  the type `Typeclass[T]`. The implementation of `combine` will therefore typically look like
+   *  this,
+   *  <pre>
+   *    def combine[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T] = ...
+   *  </pre>
+   *  however, there is the flexibility to provide additional type parameters or additional implicit
+   *  parameters to the definition, provided these do not affect its ability to be invoked as
+   *  described above.
+   *
+   *  Likewise, for deriving sealed traits (coproduct or sum types), the macro will attempt to call
+   *  the `dispatch` method with an instance of [[SealedTrait]], like so,
+   *  <pre>
+   *    &lt;derivation&gt;.dispatch(&lt;sealedTrait&gt;): Typeclass[T]
+   *  </pre>
+   *  so a definition such as,
+   *  <pre>
+   *    def dispatch[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T] = ...
+   *  </pre>
+   *  will suffice, however the qualifications regarding additional type parameters and implicit
+   *  parameters apply equally to `dispatch` as to `combine`.
+   *  */
+  def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = {
     import c.universe._
     import scala.util.{Try, Success, Failure}
 
@@ -152,16 +149,18 @@ object Magnolia {
       val result = if(isCaseObject) {
         // FIXME: look for an alternative which isn't deprecated on Scala 2.12+
         val obj = genericType.typeSymbol.companionSymbol.asTerm
-        val className = obj.name.toString
+        val className = obj.fullName
         val impl = q"""
-          ${c.prefix}.join(_root_.magnolia.JoinContext[$typeConstructor, $genericType]($className, true, new _root_.scala.Array(0), _ => $obj))
+          ${c.prefix}.combine(_root_.magnolia.Magnolia.caseClass[$typeConstructor, $genericType](
+            $className, true, new _root_.scala.Array(0), _ => $obj)
+          )
         """
         Some(Typeclass(genericType, impl))
       } else if(isCaseClass) {
         val caseClassParameters = genericType.decls.collect {
           case m: MethodSymbol if m.isCaseAccessor => m.asMethod
         }
-        val className = genericType.toString
+        val className = genericType.typeSymbol.fullName
 
         case class CaseParam(sym: c.universe.MethodSymbol, typeclass: c.Tree, paramType: c.Type, ref: c.TermName)
 
@@ -188,9 +187,15 @@ object Magnolia {
         
         val preAssignments = caseParams.map(_.typeclass)
         
-        val assignments = caseParams.zipWithIndex.map { case (CaseParam(param, typeclass, paramType, ref), idx) =>
-          q"""$paramsVal($idx) = _root_.magnolia.Param[$typeConstructor, $genericType, $paramType](
-            ${param.name.toString}, $ref, _.${TermName(param.name.toString)}
+        val caseClassCompanion = genericType.companion
+        val defaults = caseClassCompanion.decl(TermName("apply")).asMethod.paramLists.head.map(_.asTerm).zipWithIndex.map { case (p, idx) =>
+          if(p.isParamWithDefault) q"_root_.scala.Some(${genericType.typeSymbol.companionSymbol.asTerm}.${TermName("apply$default$"+(idx + 1))})"
+          else q"_root_.scala.None"
+        }
+
+        val assignments = caseParams.zip(defaults).zipWithIndex.map { case ((CaseParam(param, typeclass, paramType, ref), defaultVal), idx) =>
+          q"""$paramsVal($idx) = _root_.magnolia.Magnolia.param[$typeConstructor, $genericType, $paramType](
+            ${param.name.toString}, $ref, $defaultVal, _.${TermName(param.name.toString)}
           )"""
         }
 
@@ -201,7 +206,7 @@ object Magnolia {
               new _root_.scala.Array(${assignments.length})
             ..$assignments
             
-            ${c.prefix}.join(_root_.magnolia.JoinContext[$typeConstructor, $genericType](
+            ${c.prefix}.combine(_root_.magnolia.Magnolia.caseClass[$typeConstructor, $genericType](
               $className,
               false,
               $paramsVal,
@@ -237,8 +242,8 @@ object Magnolia {
             c.abort(c.enclosingPosition, s"failed to get implicit for type $searchType")
           }
         }.zipWithIndex.map { case ((typ, typeclass), idx) =>
-          q"""$subtypesVal($idx) = _root_.magnolia.Subtype[$typeConstructor, $genericType, $typ](
-            ${typ.typeSymbol.name.toString},
+          q"""$subtypesVal($idx) = _root_.magnolia.Magnolia.subtype[$typeConstructor, $genericType, $typ](
+            ${typ.typeSymbol.fullName},
             $typeclass,
             (t: $genericType) => t.isInstanceOf[$typ],
             (t: $genericType) => t.asInstanceOf[$typ]
@@ -252,7 +257,10 @@ object Magnolia {
             
             ..$assignments
             
-            ${c.prefix}.dispatch(new _root_.magnolia.DispatchContext($genericTypeName, $subtypesVal: _root_.scala.Array[_root_.magnolia.Subtype[$typeConstructor, $genericType]])): $resultType
+            ${c.prefix}.dispatch(new _root_.magnolia.SealedTrait(
+              $genericTypeName,
+              $subtypesVal: _root_.scala.Array[_root_.magnolia.Subtype[$typeConstructor, $genericType]])
+            ): $resultType
           }""")
         }
       } else None
@@ -305,6 +313,41 @@ object Magnolia {
       c.abort(c.enclosingPosition, s"magnolia: could not infer typeclass for type $genericType")
     }
   }
+
+  /** constructs a new [[Subtype]] instance
+   *
+   *  This method is intended to be called only from code generated by the Magnolia macro, and
+   *  should not be called directly from users' code. */
+  def subtype[Tc[_], T, S <: T](name: String, tc: => Tc[S], isType: T => Boolean, asType: T => S) = new Subtype[Tc, T] {
+    type SType = S
+    def label: String = name
+    def typeclass: Tc[SType] = tc
+    def cast: PartialFunction[T, SType] = new PartialFunction[T, S] {
+      def isDefinedAt(t: T) = isType(t)
+      def apply(t: T): SType = asType(t)
+    }
+  }
+
+  /** constructs a new [[Param]] instance
+   *
+   *  This method is intended to be called only from code generated by the Magnolia macro, and
+   *  should not be called directly from users' code. */
+  def param[Tc[_], T, P](name: String, typeclassParam: Tc[P], defaultVal: => Option[P], deref: T => P) = new Param[Tc, T] {
+    type PType = P
+    def label: String = name
+    def default: Option[PType] = defaultVal
+    def typeclass: Tc[PType] = typeclassParam
+    def dereference(t: T): PType = deref(t)
+  }
+  
+  /** constructs a new [[CaseClass]] instance
+   *
+   *  This method is intended to be called only from code generated by the Magnolia macro, and
+   *  should not be called directly from users' code. */
+  def caseClass[Tc[_], T](name: String, obj: Boolean, params: Array[Param[Tc, T]], constructor: (Param[Tc, T] => Any) => T) =
+    new CaseClass[Tc, T](name, obj, params) {
+      def construct[R](param: Param[Tc, T] => R): T = constructor(param)
+    }
 }
 
 private[magnolia] case class DirectlyReentrantException() extends
