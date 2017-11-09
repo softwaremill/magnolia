@@ -9,7 +9,7 @@ import scala.language.experimental.macros
 /** shows one type as another, often as a string
  *
  *  Note that this is a more general form of `Show` than is usual, as it permits the return type to
- *  be something other than [[String]]. */
+ *  be something other than a string. */
 trait Show[Out, T] { def show(value: T): Out }
 
 /** companion object to [[Show]] */
@@ -17,7 +17,7 @@ object Show {
 
   /** the type constructor for new [[Show]] instances
    *
-   *  The first parameter is fixed as [[String]], and the second parameter varies generically. */
+   *  The first parameter is fixed as `String`, and the second parameter varies generically. */
   type Typeclass[T] = Show[String, T]
 
   /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of

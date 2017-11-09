@@ -9,7 +9,7 @@ import scala.language.experimental.macros
 /** very basic decoder for converting strings to other types */
 trait Decoder[T] { def decode(str: String): T }
 
-/** derivation object (and companion object) for [[Derivation]] instances */
+/** derivation object (and companion object) for [[Decoder]] instances */
 object Decoder {
   
   /** decodes strings */

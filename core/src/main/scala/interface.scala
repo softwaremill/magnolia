@@ -39,7 +39,8 @@ trait Param[Typeclass[_], Type] {
    *  case class Person(name: String, age: Int)
    *  </pre>
    *  the [[Param]] instance corresponding to the `age` parameter would have a [[PType]] equal to
-   *  the type [[Int]]. However, in practice, this type will never be universally quantified. */
+   *  the type [[scala.Int]]. However, in practice, this type will never be universally quantified.
+   */
   type PType
   
   /** the name of the parameter */
@@ -112,8 +113,8 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia](
   
   /** a sequence of [[Param]] objects representing all of the parameters in the case class
    *
-   *  For efficiency, this sequence is implemented by an `Array`, but upcast to a [[Seq]] to hide
-   *  the mutable collection API. */
+   *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
+   *  [[scala.collection.Seq]] to hide the mutable collection API. */
   def parameters: Seq[Param[Typeclass, Type]] = parametersArray
 }
 
