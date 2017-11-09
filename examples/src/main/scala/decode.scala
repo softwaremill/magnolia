@@ -6,16 +6,25 @@ import scala.language.higherKinds
 import magnolia._
 import scala.language.experimental.macros
 
+/** very basic decoder for converting strings to other types */
 trait Decoder[T] { def decode(str: String): T }
 
+/** derivation object (and companion object) for [[Derivation]] instances */
 object Decoder {
   
+  /** decodes strings */
   implicit val string: Decoder[String] = new Decoder[String] { def decode(str: String): String = str }
+
+  /** decodes ints */
   implicit val int: Decoder[Int] = new Decoder[Int] { def decode(str: String): Int = str.toInt }
+
+  /** binds the Magnolia macro to this derivation object */
   implicit def gen[T]: Decoder[T] = macro Magnolia.gen[T]
 
+  /** type constructor for new instances of the typeclass */
   type Typeclass[T] = Decoder[T]
   
+  /** defines how new [[Decoder]]s for case classes should be constructed */
   def combine[T](ctx: CaseClass[Decoder, T]): Decoder[T] = new Decoder[T] {
     def decode(value: String) = {
       val (name, values) = parse(value)
@@ -23,6 +32,7 @@ object Decoder {
     }
   }
 
+  /** defines how to choose which subtype of the sealed trait to use for decoding */
   def dispatch[T](ctx: SealedTrait[Decoder, T]): Decoder[T] = new Decoder[T] {
     def decode(param: String) = {
       val (name, values) = parse(param)
@@ -31,6 +41,7 @@ object Decoder {
     }
   }
 
+  /** very simple extractor for grabbing an entire parameter value, assuming matching parentheses */
   private def parse(value: String): (String, Map[String, String]) = {
     val end = value.indexOf('(')
     val name = value.substring(0, end)
