@@ -55,7 +55,7 @@ object Gen {
   Eq.generic[adt.GTree[String]]
   Eq.generic[adt.GTree[String]]
   Eq.generic[adt.GTree[String]]
-  
+
   Eq.generic[adt.GTree[String]]
   Eq.generic[adt.GTree[String]]
   Eq.generic[adt.GTree[String]]

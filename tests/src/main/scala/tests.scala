@@ -27,7 +27,7 @@ case object Blue extends Color
 
 object Tests extends TestApp {
 
-  def tests() = for(i <- 1 to 1000) {
+  def tests() = for (i <- 1 to 1000) {
     import examples._
 
     test("construct a Show product instance") {
@@ -39,7 +39,7 @@ object Tests extends TestApp {
       import examples._
       Show.gen[Person].show(Person("John Smith", 34))
     }.assert(_ == "Person(name=John Smith,age=34)")
-    
+
     test("serialize a Branch") {
       import magnolia.examples._
       implicitly[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
@@ -70,22 +70,22 @@ object Tests extends TestApp {
         implicitly[Show[String, Leaf[java.lang.String]]]
       """
     }.assert(_ == Returns(fqt"magnolia.examples.Show[String,magnolia.tests.Leaf[String]]"))
-    
+
     test("construction of Show instance for Tree") {
       scalac"""
         import magnolia.examples._
         implicitly[Show[String, Tree[String]]]
       """
     }.assert(_ == Returns(fqt"magnolia.examples.Show[String,magnolia.tests.Tree[String]]"))
-    
+
     test("serialize a Leaf") {
       implicitly[Show[String, Leaf[String]]].show(Leaf("testing"))
     }.assert(_ == "Leaf(value=testing)")
-    
+
     test("serialize a Branch as a Tree") {
       implicitly[Show[String, Tree[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
     }.assert(_ == "Branch(left=Leaf(value=LHS),right=Leaf(value=RHS))")
-    
+
     test("serialize case object") {
       implicitly[Show[String, Red.type]].show(Red)
     }.assert(_ == "Red()")
@@ -107,7 +107,9 @@ object Tests extends TestApp {
     }.assert(_ == Person("John Smith", 32))
 
     test("decode a nested product") {
-      implicitly[Decoder[Address]].decode("""Address(line1=53 High Street,occupant=Person(name=Richard Jones,age=44))""")
+      implicitly[Decoder[Address]].decode(
+        """Address(line1=53 High Street,occupant=Person(name=Richard Jones,age=44))"""
+      )
     }.assert(_ == Address("53 High Street", Person("Richard Jones", 44)))
 
     test("show error stack") {
@@ -121,6 +123,6 @@ object Tests extends TestApp {
                                       |    in parameter 'integer' of product type Alpha
                                       |    in parameter 'alpha' of product type Beta
                                       |"""))
-    
+
   }
 }

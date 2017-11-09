@@ -55,7 +55,7 @@ object Gen {
   Show.generic[adt.Letter]
   Show.generic[adt.Letter]
   Show.generic[adt.Letter]
-  
+
   Show.generic[adt.Letter]
   Show.generic[adt.Letter]
   Show.generic[adt.Letter]
