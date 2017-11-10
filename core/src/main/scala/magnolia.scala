@@ -125,7 +125,7 @@ object Magnolia {
       val searchType = appliedType(typeConstructor, genericType)
 
       val deferredRef = findType(genericType).map { methodName =>
-        val methodAsString = methodName.encodedName.toString
+        val methodAsString = methodName.decodedName.toString
         q"$magnoliaPkg.Deferred.apply[$searchType]($methodAsString)"
       }
 
@@ -134,7 +134,7 @@ object Magnolia {
           recursionStack(c.enclosingPosition).lookup(c)(searchType) {
             val implicitSearchTry = scala.util.Try {
               val genericTypeName: String =
-                genericType.typeSymbol.name.encodedName.toString.toLowerCase
+                genericType.typeSymbol.name.decodedName.toString.toLowerCase
 
               val assignedName: TermName = TermName(c.freshName(s"${genericTypeName}Typeclass"))
 
@@ -170,7 +170,7 @@ object Magnolia {
 
     def directInferImplicit(genericType: c.Type, typeConstructor: Type): Option[Typeclass] = {
 
-      val genericTypeName: String = genericType.typeSymbol.name.encodedName.toString.toLowerCase
+      val genericTypeName: String = genericType.typeSymbol.name.decodedName.toString.toLowerCase
       val assignedName: TermName = TermName(c.freshName(s"${genericTypeName}Typeclass"))
       val typeSymbol = genericType.typeSymbol
       val classType = if (typeSymbol.isClass) Some(typeSymbol.asClass) else None
@@ -185,7 +185,7 @@ object Magnolia {
       val result = if (isCaseObject) {
         // FIXME: look for an alternative which isn't deprecated on Scala 2.12+
         val obj = genericType.typeSymbol.companionSymbol.asTerm
-        val className = obj.fullName
+        val className = obj.name.decodedName.toString
         val impl = q"""
           ${c.prefix}.combine($magnoliaObj.caseClass[$typeConstructor, $genericType](
             $className, true, new $arrayCls(0), _ => $obj)
@@ -196,7 +196,7 @@ object Magnolia {
         val caseClassParameters = genericType.decls.collect {
           case m: MethodSymbol if m.isCaseAccessor => m.asMethod
         }
-        val className = genericType.typeSymbol.fullName
+        val className = genericType.typeSymbol.name.decodedName.toString
 
         case class CaseParam(sym: c.universe.MethodSymbol,
                              typeclass: c.Tree,
@@ -205,7 +205,7 @@ object Magnolia {
 
         val caseParamsReversed: List[CaseParam] = caseClassParameters.foldLeft(List[CaseParam]()) {
           case (acc, param) =>
-            val paramName = param.name.encodedName.toString
+            val paramName = param.name.decodedName.toString
             val paramType = param.returnType.substituteTypes(genericType.etaExpand.typeParams,
                                                              genericType.typeArgs)
 
@@ -252,7 +252,7 @@ object Magnolia {
           case ((CaseParam(param, typeclass, paramType, ref), defaultVal), idx) =>
             q"""$paramsVal($idx) = $magnoliaObj.param[$typeConstructor, $genericType,
                 $paramType](
-            ${param.name.toString}, $ref, $defaultVal, _.${TermName(param.name.toString)}
+            ${param.name.decodedName.toString}, $ref, $defaultVal, _.${param.name}
           )"""
         }
 
@@ -308,7 +308,7 @@ object Magnolia {
         val assignments = typeclasses.zipWithIndex.map {
           case ((typ, typeclass), idx) =>
             q"""$subtypesVal($idx) = $magnoliaObj.subtype[$typeConstructor, $genericType, $typ](
-            ${typ.typeSymbol.fullName},
+            ${typ.typeSymbol.fullName.toString},
             $typeclass,
             (t: $genericType) => t.isInstanceOf[$typ],
             (t: $genericType) => t.asInstanceOf[$typ]
