@@ -71,11 +71,16 @@ object Magnolia {
     val magnoliaObj = q"$magnoliaPkg.Magnolia"
     val arrayCls = tq"_root_.scala.Array"
 
-    val typeDefinitions =
-      c.prefix.tree.tpe.baseClasses.flatMap(_.asType.toType.decls).filter(_.isType)
+    val prefixType = c.prefix.tree.tpe
+    
+    val typeDefs = prefixType.baseClasses.flatMap { cls =>
+      cls.asType.toType.decls.filter(_.isType).find(_.name.toString == "Typeclass").map { tpe =>
+        tpe.asType.toType.asSeenFrom(prefixType, cls)
+      }
+    }
     
     val typeConstructorOpt =
-      typeDefinitions.find(_.name.toString == "Typeclass").map(_.asType.toType.typeConstructor)
+      typeDefs.headOption.map(_.typeConstructor)
 
     val typeConstructor = typeConstructorOpt.getOrElse {
       c.abort(c.enclosingPosition, "magnolia: the derivation object does not define the Typeclass "+
