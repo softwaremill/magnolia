@@ -94,6 +94,7 @@ trait Param[Typeclass[_], Type] {
 abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
   val typeName: String,
   val isObject: Boolean,
+  val isValueClass: Boolean,
   parametersArray: Array[Param[Typeclass, Type]]
 ) {
 
