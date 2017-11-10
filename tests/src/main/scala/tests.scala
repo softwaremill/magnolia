@@ -129,6 +129,10 @@ object Tests extends TestApp {
       implicitly[Default[Item]].default
     }.assert(_ == Item("", 1, 0))
 
+    test("functor works as expected") {
+      implicitly[Functor[Tree]].map(Branch(Leaf("Foo"), Leaf("Hello")))(_.length)
+    }.assert(_ == Branch(Leaf(3), Leaf(5)))
+
     test("serialize case object as a sealed trait") {
       implicitly[Show[String, Color]].show(Blue)
     }.assert(_ == "Blue()")
