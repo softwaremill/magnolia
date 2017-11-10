@@ -18,6 +18,8 @@ case class Company(name: String) extends Entity
 case class Person(name: String, age: Int) extends Entity
 case class Address(line1: String, occupant: Person)
 
+class Length(val value: Int) extends AnyVal
+
 case class Lunchbox(fruit: Fruit, drink: String)
 object Fruit {
   import examples._
@@ -170,5 +172,9 @@ object Tests extends TestApp {
     test("serialize a tuple") {
       tupleDerivation().show((42, "Hello World"))
     }.assert(_ == "Tuple2(_1=42,_2=Hello World)")
+
+    test("serialize a value class") {
+      Show.gen[Length].show(new Length(100))
+    }.assert(_ == "100")
   }
 }
