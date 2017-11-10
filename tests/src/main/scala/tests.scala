@@ -33,6 +33,8 @@ case object Red extends Color
 case object Green extends Color
 case object Blue extends Color
 
+case class `%%`(`/`: Int, `#`: String)
+
 object Tests extends TestApp {
 
   def tests() = for (i <- 1 to 1000) {
@@ -156,6 +158,10 @@ object Tests extends TestApp {
                                       |    in parameter 'integer' of product type Alpha
                                       |    in parameter 'alpha' of product type Beta
                                       |"""))
+
+    test("typenames and labels are not encoded") {
+      implicitly[Show[String, `%%`]].show(`%%`(1, "two"))
+    }.assert(_ == "%%(/=1,#=two)")
 
     val tupleDerivation = test("derive for a tuple") {
       implicitly[Show[String, (Int, String)]]
