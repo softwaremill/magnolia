@@ -10,12 +10,12 @@ import scala.language.experimental.macros
 trait Show[Out, T] { def show(value: T): Out }
 
 trait GenericShow[Out] {
-  
+
   /** the type constructor for new [[Show]] instances
     *
     *  The first parameter is fixed as `String`, and the second parameter varies generically. */
   type Typeclass[T] = Show[Out, T]
- 
+
   def join(typeName: String, strings: Seq[String]): Out
 
   /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of

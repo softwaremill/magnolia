@@ -55,7 +55,9 @@ object Tests extends TestApp {
 
     test("local implicit beats Magnolia") {
       import magnolia.examples._
-      implicit val showPerson: Show[String, Person] = new Show[String, Person] { def show(p: Person) = "nobody" }
+      implicit val showPerson: Show[String, Person] = new Show[String, Person] {
+        def show(p: Person) = "nobody"
+      }
       implicitly[Show[String, Address]].show(Address("Home", Person("John Smith", 44)))
     }.assert(_ == "Address(line1=Home,occupant=nobody)")
 
