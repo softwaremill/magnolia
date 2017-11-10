@@ -73,6 +73,14 @@ object Magnolia {
 
     val prefixType = c.prefix.tree.tpe
 
+    def companionRef(tpe: Type): Tree = {
+      val global = c.universe.asInstanceOf[scala.tools.nsc.Global]
+      val globalTpe = tpe.asInstanceOf[global.Type]
+      val companion = globalTpe.typeSymbol.companionSymbol
+      if(companion != NoSymbol) global.gen.mkAttributedRef(globalTpe.prefix, companion).asInstanceOf[Tree]
+      else q"${tpe.typeSymbol.name.toTermName}"
+    }
+    
     val typeDefs = prefixType.baseClasses.flatMap { cls =>
       cls.asType.toType.decls.filter(_.isType).find(_.name.toString == "Typeclass").map { tpe =>
         tpe.asType.toType.asSeenFrom(prefixType, cls)
@@ -188,8 +196,8 @@ object Magnolia {
       // FIXME: Handle AnyVals
       val result = if (isCaseObject) {
         // FIXME: look for an alternative which isn't deprecated on Scala 2.12+
-        val obj = genericType.typeSymbol.companionSymbol.asTerm
-        val className = obj.name.decodedName.toString
+        val obj = companionRef(genericType)
+        val className = genericType.typeSymbol.name.decodedName.toString
         val impl = q"""
           ${c.prefix}.combine($magnoliaObj.caseClass[$typeConstructor, $genericType](
             $className, true, false, new $arrayCls(0), _ => $obj)
@@ -251,7 +259,7 @@ object Magnolia {
             case (p, idx) =>
               if (p.isParamWithDefault) {
                 val method = TermName("apply$default$" + (idx + 1))
-                q"_root_.scala.Some(${genericType.typeSymbol.companionSymbol.asTerm}.$method)"
+                q"_root_.scala.Some(${genericType.typeSymbol.companion.asTerm}.$method)"
               } else q"_root_.scala.None"
           }
         } else List(q"_root_.scala.None")
