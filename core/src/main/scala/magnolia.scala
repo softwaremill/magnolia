@@ -77,16 +77,17 @@ object Magnolia {
       val global = c.universe match { case global: scala.tools.nsc.Global => global }
       val globalTpe = tpe.asInstanceOf[global.Type]
       val companion = globalTpe.typeSymbol.companionSymbol
-      if(companion != NoSymbol) global.gen.mkAttributedRef(globalTpe.prefix, companion).asInstanceOf[Tree]
+      if (companion != NoSymbol)
+        global.gen.mkAttributedRef(globalTpe.prefix, companion).asInstanceOf[Tree]
       else q"${tpe.typeSymbol.name.toTermName}"
     }
-    
+
     val typeDefs = prefixType.baseClasses.flatMap { cls =>
       cls.asType.toType.decls.filter(_.isType).find(_.name.toString == "Typeclass").map { tpe =>
         tpe.asType.toType.asSeenFrom(prefixType, cls)
       }
     }
-    
+
     val typeConstructorOpt =
       typeDefs.headOption.map(_.typeConstructor)
 
@@ -97,16 +98,22 @@ object Magnolia {
 
     def checkMethod(termName: String, category: String, expected: String) = {
       val term = TermName(termName)
-      val combineClass = c.prefix.tree.tpe.baseClasses.find { cls =>
-        cls.asType.toType.decl(term) != NoSymbol
-      }.getOrElse {
-        c.abort(c.enclosingPosition, s"magnolia: the method `$termName` must be defined on the derivation object to derive typeclasses for $category")
-      }
+      val combineClass = c.prefix.tree.tpe.baseClasses
+        .find { cls =>
+          cls.asType.toType.decl(term) != NoSymbol
+        }
+        .getOrElse {
+          c.abort(
+            c.enclosingPosition,
+            s"magnolia: the method `$termName` must be defined on the derivation object to derive typeclasses for $category"
+          )
+        }
       val firstParamBlock = combineClass.asType.toType.decl(term).asTerm.asMethod.paramLists.head
-      if(firstParamBlock.length != 1) c.abort(c.enclosingPosition,
-          s"magnolia: the method `combine` should take a single parameter of type $expected")
+      if (firstParamBlock.length != 1)
+        c.abort(c.enclosingPosition,
+                s"magnolia: the method `combine` should take a single parameter of type $expected")
     }
-    
+
     // FIXME: Only run these methods if they're used, particularly `dispatch`
     checkMethod("combine", "case classes", "CaseClass[Typeclass, _]")
     checkMethod("dispatch", "sealed traits", "SealedTrait[Typeclass, _]")
@@ -201,10 +208,16 @@ object Magnolia {
       val isCaseClass = classType.map(_.isCaseClass).getOrElse(false)
       val isCaseObject = classType.map(_.isModuleClass).getOrElse(false)
       val isSealedTrait = classType.map(_.isSealed).getOrElse(false)
-      
-      val primitives = Set(typeOf[Double], typeOf[Float], typeOf[Short], typeOf[Byte],
-          typeOf[Int], typeOf[Long], typeOf[Char], typeOf[Boolean])
-      
+
+      val primitives = Set(typeOf[Double],
+                           typeOf[Float],
+                           typeOf[Short],
+                           typeOf[Byte],
+                           typeOf[Int],
+                           typeOf[Long],
+                           typeOf[Char],
+                           typeOf[Boolean])
+
       val isValueClass = genericType <:< typeOf[AnyVal] && !primitives.exists(_ =:= genericType)
 
       val resultType = appliedType(typeConstructor, genericType)
@@ -213,7 +226,7 @@ object Magnolia {
         // FIXME: look for an alternative which isn't deprecated on Scala 2.12+
         val obj = companionRef(genericType)
         val className = genericType.typeSymbol.name.decodedName.toString
-        
+
         val impl = q"""
           ${c.prefix}.combine($magnoliaObj.caseClass[$typeConstructor, $genericType](
             $className, true, false, new $arrayCls(0), _ => $obj)
@@ -232,7 +245,6 @@ object Magnolia {
                              paramType: c.Type,
                              ref: c.TermName)
 
-
         val caseParamsReversed: List[CaseParam] = caseClassParameters.foldLeft(List[CaseParam]()) {
           case (acc, param) =>
             val paramName = param.name.decodedName.toString
@@ -244,7 +256,7 @@ object Magnolia {
             val caseParamOpt = predefinedRef.map { backRef =>
               CaseParam(param, q"()", paramType, backRef.ref) :: acc
             }
-            
+
             caseParamOpt.getOrElse {
               val derivedImplicit =
                 recurse(ProductType(paramName, genericType.toString), genericType, assignedName) {
@@ -266,10 +278,11 @@ object Magnolia {
 
         val preAssignments = caseParams.map(_.typeclass)
 
-        val defaults = if(!isValueClass) {
+        val defaults = if (!isValueClass) {
           val caseClassCompanion = genericType.companion
           val constructorMethod = caseClassCompanion.decl(TermName("apply")).asMethod
-          val indexedConstructorParams = constructorMethod.paramLists.head.map(_.asTerm).zipWithIndex
+          val indexedConstructorParams =
+            constructorMethod.paramLists.head.map(_.asTerm).zipWithIndex
 
           indexedConstructorParams.map {
             case (p, idx) =>
@@ -287,7 +300,7 @@ object Magnolia {
             ${param.name.decodedName.toString}, $ref, $defaultVal, _.${param.name}
           )"""
         }
-        
+
         Some(
           Typeclass(
             genericType,
@@ -347,7 +360,7 @@ object Magnolia {
             (t: $genericType) => t.asInstanceOf[$typ]
           )"""
         }
-        
+
         Some {
           Typeclass(
             genericType,
