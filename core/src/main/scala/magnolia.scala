@@ -71,8 +71,16 @@ object Magnolia {
     val magnoliaObj = q"$magnoliaPkg.Magnolia"
     val arrayCls = tq"_root_.scala.Array"
 
-    val typeConstructor: c.Type =
-      c.prefix.tree.tpe.member(TypeName("Typeclass")).asType.toType.typeConstructor
+    val typeDefinitions =
+      c.prefix.tree.tpe.baseClasses.flatMap(_.asType.toType.decls).filter(_.isType)
+    
+    val typeConstructorOpt =
+      typeDefinitions.find(_.name.toString == "Typeclass").map(_.asType.toType.typeConstructor)
+
+    val typeConstructor = typeConstructorOpt.getOrElse {
+      c.abort(c.enclosingPosition, "magnolia: the derivation object does not define the Typeclass "+
+          "type constructor")
+    }
 
     def findType(key: Type): Option[TermName] =
       recursionStack(c.enclosingPosition).frames.find(_.genericType == key).map(_.termName(c))

@@ -9,43 +9,51 @@ import scala.language.experimental.macros
   *  be something other than a string. */
 trait Show[Out, T] { def show(value: T): Out }
 
-/** companion object to [[Show]] */
-object Show {
-
+trait GenericShow[Out] {
+  
   /** the type constructor for new [[Show]] instances
     *
     *  The first parameter is fixed as `String`, and the second parameter varies generically. */
-  type Typeclass[T] = Show[String, T]
+  type Typeclass[T] = Show[Out, T]
+ 
+  def join(typeName: String, strings: Seq[String]): Out
 
   /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of
     *  showing each parameter, and prefixing it with the class name */
-  def combine[T](ctx: CaseClass[Typeclass, T]): Show[String, T] = new Show[String, T] {
+  def combine[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = new Show[Out, T] {
     def show(value: T) = {
       val paramStrings = ctx.parameters.map { param =>
         s"${param.label}=${param.typeclass.show(param.dereference(value))}"
       }
 
-      paramStrings.mkString(s"${ctx.typeName.split("\\.").last}(", ",", ")")
+      join(ctx.typeName.split("\\.").last, paramStrings)
     }
   }
 
   /** choose which typeclass to use based on the subtype of the sealed trait */
-  def dispatch[T](ctx: SealedTrait[Typeclass, T]): Show[String, T] = new Show[String, T] {
-    def show(value: T): String = ctx.dispatch(value) { sub =>
+  def dispatch[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = new Show[Out, T] {
+    def show(value: T): Out = ctx.dispatch(value) { sub =>
       sub.typeclass.show(sub.cast(value))
     }
   }
+
+  /** bind the Magnolia macro to this derivation object */
+  implicit def gen[T]: Show[Out, T] = macro Magnolia.gen[T]
+}
+
+/** companion object to [[Show]] */
+object Show extends GenericShow[String] {
 
   /** show typeclass for strings */
   implicit val string: Show[String, String] = new Show[String, String] {
     def show(s: String): String = s
   }
 
+  def join(typeName: String, params: Seq[String]): String =
+    params.mkString(s"$typeName(", ",", ")")
+
   /** show typeclass for integers */
   implicit val int: Show[String, Int] = new Show[String, Int] {
     def show(s: Int): String = s.toString
   }
-
-  /** bind the Magnolia macro to this derivation object */
-  implicit def gen[T]: Show[String, T] = macro Magnolia.gen[T]
 }
