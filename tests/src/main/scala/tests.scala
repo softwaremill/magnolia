@@ -136,7 +136,7 @@ object Tests extends TestApp {
     }.assert(_ == "Blue()")
 
     test("decode a company") {
-      implicitly[Decoder[Company]].decode("""Company(name=Acme Inc)""")
+      Decoder.gen[Company].decode("""Company(name=Acme Inc)""")
     }.assert(_ == Company("Acme Inc"))
 
     test("decode a Person as an Entity") {
