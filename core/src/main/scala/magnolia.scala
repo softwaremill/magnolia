@@ -71,8 +71,21 @@ object Magnolia {
     val magnoliaObj = q"$magnoliaPkg.Magnolia"
     val arrayCls = tq"_root_.scala.Array"
 
-    val typeConstructor: c.Type =
-      c.prefix.tree.tpe.member(TypeName("Typeclass")).asType.toType.typeConstructor
+    val prefixType = c.prefix.tree.tpe
+
+    val typeDefs = prefixType.baseClasses.flatMap { cls =>
+      cls.asType.toType.decls.filter(_.isType).find(_.name.toString == "Typeclass").map { tpe =>
+        tpe.asType.toType.asSeenFrom(prefixType, cls)
+      }
+    }
+
+    val typeConstructorOpt =
+      typeDefs.headOption.map(_.typeConstructor)
+
+    val typeConstructor = typeConstructorOpt.getOrElse {
+      c.abort(c.enclosingPosition,
+              "magnolia: the derivation object does not define the Typeclass type constructor")
+    }
 
     def findType(key: Type): Option[TermName] =
       recursionStack(c.enclosingPosition).frames.find(_.genericType == key).map(_.termName(c))
@@ -258,9 +271,9 @@ object Magnolia {
               $paramsVal,
               ($fnVal: Param[$typeConstructor, $genericType] => Any) =>
                 new $genericType(..${caseParams.zipWithIndex.map {
-                  case (typeclass, idx) =>
-                    q"$fnVal($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
-                } })
+              case (typeclass, idx) =>
+                q"$fnVal($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
+            }})
             ))
           }"""
           )

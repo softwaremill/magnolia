@@ -77,7 +77,10 @@ lazy val publishSettings = Seq(
 
 import java.io.File
 
-lazy val unmanagedSettings = unmanagedBase := (scalaVersion.value.split("\\.").map(_.toInt).to[List] match {
+lazy val unmanagedSettings = unmanagedBase := (scalaVersion.value
+  .split("\\.")
+  .map(_.toInt)
+  .to[List] match {
   case List(2, 12, _) => baseDirectory.value / "lib" / "2.12"
   case List(2, 11, _) => baseDirectory.value / "lib" / "2.11"
 })
