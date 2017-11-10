@@ -1,7 +1,5 @@
 package magnolia.examples
 
-import scala.language.higherKinds
-
 import magnolia._
 import scala.language.experimental.macros
 
