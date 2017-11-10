@@ -31,7 +31,7 @@ lazy val buildSettings = Seq(
   organization := "com.propensive",
   scalaVersion := "2.12.4",
   name := "magnolia",
-  version := "0.5.0",
+  version := "0.6.0",
   scalacOptions ++= Seq(
     "-deprecation",
     "-feature",
