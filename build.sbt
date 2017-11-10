@@ -1,20 +1,30 @@
 import com.typesafe.sbt.pgp.PgpKeys.publishSigned
 
-lazy val core = project
+lazy val core = crossProject
   .in(file("core"))
   .settings(buildSettings: _*)
   .settings(publishSettings: _*)
   .settings(scalaMacroDependencies: _*)
   .settings(moduleName := "magnolia")
 
-lazy val examples = project
+lazy val coreJVM = core.jvm
+lazy val coreJS = core.js
+
+lazy val examples = crossProject
   .in(file("examples"))
   .settings(buildSettings: _*)
   .settings(publishSettings: _*)
   .settings(moduleName := "magnolia-examples")
   .dependsOn(core)
 
-lazy val tests = project
+lazy val examplesJVM = examples.jvm
+lazy val examplesJS = examples.js
+
+lazy val root = project.in(file("."))
+  .aggregate(coreJVM, coreJS, examplesJVM, examplesJS)
+  .settings(noPublishSettings: _*)
+
+lazy val tests = crossProject
   .in(file("tests"))
   .settings(buildSettings: _*)
   .settings(noPublishSettings: _*)
@@ -22,7 +32,7 @@ lazy val tests = project
   .settings(moduleName := "magnolia-tests")
   .dependsOn(examples)
 
-lazy val benchmarks = project
+lazy val benchmarks = crossProject
   .in(file("benchmarks"))
   .settings(buildSettings: _*)
   .settings(noPublishSettings: _*)
