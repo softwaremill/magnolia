@@ -18,6 +18,14 @@ case class Company(name: String) extends Entity
 case class Person(name: String, age: Int) extends Entity
 case class Address(line1: String, occupant: Person)
 
+case class Lunchbox(fruit: Fruit, drink: String)
+object Fruit {
+  import examples._
+  implicit val showFruit: Show[String, Fruit] =
+    new Show[String, Fruit] { def show(f: Fruit): String = f.name }
+}
+case class Fruit(name: String)
+
 case class Item(name: String, quantity: Int = 1, price: Int)
 
 sealed trait Color
@@ -44,6 +52,29 @@ object Tests extends TestApp {
       import magnolia.examples._
       implicitly[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
     }.assert(_ == "Branch(left=Leaf(value=LHS),right=Leaf(value=RHS))")
+
+    test("local implicit beats Magnolia") {
+      import magnolia.examples._
+      implicit val showPerson: Show[String, Person] = new Show[String, Person] { def show(p: Person) = "nobody" }
+      implicitly[Show[String, Address]].show(Address("Home", Person("John Smith", 44)))
+    }.assert(_ == "Address(line1=Home,occupant=nobody)")
+
+    test("even low-priority implicit beats Magnolia for nested case") {
+      import magnolia.examples._
+      import Show.gen
+      implicitly[Show[String, Lunchbox]].show(Lunchbox(Fruit("apple"), "lemonade"))
+    }.assert(_ == "Lunchbox(fruit=apple,drink=lemonade)")
+
+    test("low-priority implicit does not beat Magnolia when not nested") {
+      import magnolia.examples._
+      import Show.gen
+      implicitly[Show[String, Fruit]].show(Fruit("apple"))
+    }.assert(_ == "Fruit(name=apple)")
+
+    test("typeclass implicit scope has lower priority than ADT implicit scope") {
+      import magnolia.examples._
+      implicitly[Show[String, Fruit]].show(Fruit("apple"))
+    }.assert(_ == "apple")
 
     test("test equality false") {
       import examples._
@@ -124,5 +155,12 @@ object Tests extends TestApp {
                                       |    in parameter 'alpha' of product type Beta
                                       |"""))
 
+    val tupleDerivation = test("derive for a tuple") {
+      implicitly[Show[String, (Int, String)]]
+    }.returns()
+
+    test("serialize a tuple") {
+      tupleDerivation().show((42, "Hello World"))
+    }.assert(_ == "Tuple2(_1=42,_2=Hello World)")
   }
 }

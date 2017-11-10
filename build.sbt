@@ -17,7 +17,6 @@ lazy val examples = project
 lazy val tests = project
   .in(file("tests"))
   .settings(buildSettings: _*)
-  .settings(noPublishSettings: _*)
   .settings(unmanagedSettings)
   .settings(moduleName := "magnolia-tests")
   .dependsOn(examples)
@@ -25,7 +24,6 @@ lazy val tests = project
 lazy val benchmarks = project
   .in(file("benchmarks"))
   .settings(buildSettings: _*)
-  .settings(noPublishSettings: _*)
   .settings(moduleName := "magnolia-benchmarks")
   .dependsOn(examples)
 
@@ -77,12 +75,6 @@ lazy val publishSettings = Seq(
   )
 )
 
-lazy val noPublishSettings = Seq(
-  publish := (()),
-  publishLocal := (()),
-  publishArtifact := false
-)
-
 import java.io.File
 
 lazy val unmanagedSettings = unmanagedBase := (scalaVersion.value.split("\\.").map(_.toInt).to[List] match {
@@ -91,16 +83,6 @@ lazy val unmanagedSettings = unmanagedBase := (scalaVersion.value.split("\\.").m
 })
 
 lazy val scalaMacroDependencies: Seq[Setting[_]] = Seq(
-  libraryDependencies += "org.typelevel" %% "macro-compat" % "1.1.1",
   libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-  libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value,
-  libraryDependencies += compilerPlugin(
-    "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
-  )
+  libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value
 )
-
-credentials ++= (for {
-  username <- Option(System.getenv().get("SONATYPE_USERNAME"))
-  password <- Option(System.getenv().get("SONATYPE_PASSWORD"))
-} yield
-  Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", username, password)).toSeq
