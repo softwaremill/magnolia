@@ -74,7 +74,7 @@ object Magnolia {
     val prefixType = c.prefix.tree.tpe
 
     def companionRef(tpe: Type): Tree = {
-      val global = c.universe.asInstanceOf[scala.tools.nsc.Global]
+      val global = c.universe match { case global: scala.tools.nsc.Global => global }
       val globalTpe = tpe.asInstanceOf[global.Type]
       val companion = globalTpe.typeSymbol.companionSymbol
       if(companion != NoSymbol) global.gen.mkAttributedRef(globalTpe.prefix, companion).asInstanceOf[Tree]
@@ -86,7 +86,7 @@ object Magnolia {
         tpe.asType.toType.asSeenFrom(prefixType, cls)
       }
     }
-
+    
     val typeConstructorOpt =
       typeDefs.headOption.map(_.typeConstructor)
 
@@ -94,6 +94,22 @@ object Magnolia {
       c.abort(c.enclosingPosition,
               "magnolia: the derivation object does not define the Typeclass type constructor")
     }
+
+    def checkMethod(termName: String, category: String, expected: String) = {
+      val term = TermName(termName)
+      val combineClass = c.prefix.tree.tpe.baseClasses.find { cls =>
+        cls.asType.toType.decl(term) != NoSymbol
+      }.getOrElse {
+        c.abort(c.enclosingPosition, s"magnolia: the method `$termName` must be defined on the derivation object to derive typeclasses for $category")
+      }
+      val firstParamBlock = combineClass.asType.toType.decl(term).asTerm.asMethod.paramLists.head
+      if(firstParamBlock.length != 1) c.abort(c.enclosingPosition,
+          s"magnolia: the method `combine` should take a single parameter of type $expected")
+    }
+    
+    // FIXME: Only run these methods if they're used, particularly `dispatch`
+    checkMethod("combine", "case classes", "CaseClass[Typeclass, _]")
+    checkMethod("dispatch", "sealed traits", "SealedTrait[Typeclass, _]")
 
     def findType(key: Type): Option[TermName] =
       recursionStack(c.enclosingPosition).frames.find(_.genericType == key).map(_.termName(c))
@@ -193,11 +209,11 @@ object Magnolia {
 
       val resultType = appliedType(typeConstructor, genericType)
 
-      // FIXME: Handle AnyVals
       val result = if (isCaseObject) {
         // FIXME: look for an alternative which isn't deprecated on Scala 2.12+
         val obj = companionRef(genericType)
         val className = genericType.typeSymbol.name.decodedName.toString
+        
         val impl = q"""
           ${c.prefix}.combine($magnoliaObj.caseClass[$typeConstructor, $genericType](
             $className, true, false, new $arrayCls(0), _ => $obj)
@@ -271,7 +287,7 @@ object Magnolia {
             ${param.name.decodedName.toString}, $ref, $defaultVal, _.${param.name}
           )"""
         }
-
+        
         Some(
           Typeclass(
             genericType,
@@ -331,7 +347,7 @@ object Magnolia {
             (t: $genericType) => t.asInstanceOf[$typ]
           )"""
         }
-
+        
         Some {
           Typeclass(
             genericType,
