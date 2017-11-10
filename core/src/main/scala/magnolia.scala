@@ -170,8 +170,7 @@ object Magnolia {
 
       // FIXME: Handle AnyVals
       val result = if (isCaseObject) {
-        // FIXME: look for an alternative which isn't deprecated on Scala 2.12+
-        val obj = genericType.typeSymbol.companionSymbol.asTerm
+        val obj = genericType.typeSymbol.companion.asTerm
         val className = obj.fullName
         val impl = q"""
           ${c.prefix}.combine($magnoliaObj.caseClass[$typeConstructor, $genericType](
@@ -231,7 +230,7 @@ object Magnolia {
           case (p, idx) =>
             if (p.isParamWithDefault) {
               val method = TermName("apply$default$" + (idx + 1))
-              q"_root_.scala.Some(${genericType.typeSymbol.companionSymbol.asTerm}.$method)"
+              q"_root_.scala.Some(${genericType.typeSymbol.companion.asTerm}.$method)"
             } else q"_root_.scala.None"
         }
 

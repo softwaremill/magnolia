@@ -44,7 +44,7 @@ lazy val buildSettings = Seq(
   ),
   scmInfo := Some(
     ScmInfo(url("https://github.com/propensive/magnolia"),
-            "scm:git:git@github.com:propensive/magnolia.git")
+      "scm:git:git@github.com:propensive/magnolia.git")
   )
 )
 
