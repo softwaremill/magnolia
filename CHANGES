@@ -1,0 +1,11 @@
+# Changelog
+
+## v0.6.0
+- Include warnings if the `combine` or `dispatch` methods are missing
+- Avoid compilation warnings from use of old macros API
+- Support for deriving for value classes
+- Type names and parameter labels are now passed to the API decoded
+- Allow the derivation objects to be made generic in other dimensions
+
+## v0.5.0
+- Initial release
