@@ -170,7 +170,7 @@ object Magnolia {
 
       // FIXME: Handle AnyVals
       val result = if (isCaseObject) {
-        val obj = genericType.typeSymbol.companion.asTerm
+        val obj = genericType.typeSymbol.companionSymbol.asTerm
         val className = obj.fullName
         val impl = q"""
           ${c.prefix}.combine($magnoliaObj.caseClass[$typeConstructor, $genericType](
