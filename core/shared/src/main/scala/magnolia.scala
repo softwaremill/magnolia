@@ -68,8 +68,7 @@ object Magnolia {
     import scala.util.{Try, Success, Failure}
 
     val magnoliaPkg = q"_root_.magnolia"
-    val magnoliaObj = q"$magnoliaPkg.Magnolia"
-    val arrayCls = tq"_root_.scala.Array"
+    val scalaPkg = q"_root_.scala"
 
     val prefixType = c.prefix.tree.tpe
 
@@ -228,8 +227,8 @@ object Magnolia {
         val className = genericType.typeSymbol.name.decodedName.toString
 
         val impl = q"""
-          ${c.prefix}.combine($magnoliaObj.caseClass[$typeConstructor, $genericType](
-            $className, true, false, new $arrayCls(0), _ => $obj)
+          ${c.prefix}.combine($magnoliaPkg.Magnolia.caseClass[$typeConstructor, $genericType](
+            $className, true, false, new $scalaPkg.Array(0), _ => $obj)
           )
         """
         Some(Typeclass(genericType, impl))
@@ -288,14 +287,14 @@ object Magnolia {
             case (p, idx) =>
               if (p.isParamWithDefault) {
                 val method = TermName("apply$default$" + (idx + 1))
-                q"_root_.scala.Some(${genericType.typeSymbol.companion.asTerm}.$method)"
-              } else q"_root_.scala.None"
+                q"$scalaPkg.Some(${genericType.typeSymbol.companion.asTerm}.$method)"
+              } else q"$scalaPkg.None"
           }
-        } else List(q"_root_.scala.None")
+        } else List(q"$scalaPkg.None")
 
         val assignments = caseParams.zip(defaults).zipWithIndex.map {
           case ((CaseParam(param, typeclass, paramType, ref), defaultVal), idx) =>
-            q"""$paramsVal($idx) = $magnoliaObj.param[$typeConstructor, $genericType,
+            q"""$paramsVal($idx) = $magnoliaPkg.Magnolia.param[$typeConstructor, $genericType,
                 $paramType](
             ${param.name.decodedName.toString}, $ref, $defaultVal, _.${param.name}
           )"""
@@ -306,16 +305,16 @@ object Magnolia {
             genericType,
             q"""{
             ..$preAssignments
-            val $paramsVal: $arrayCls[Param[$typeConstructor, $genericType]] =
-              new $arrayCls(${assignments.length})
+            val $paramsVal: $scalaPkg.Array[$magnoliaPkg.Param[$typeConstructor, $genericType]] =
+              new $scalaPkg.Array(${assignments.length})
             ..$assignments
             
-            ${c.prefix}.combine($magnoliaObj.caseClass[$typeConstructor, $genericType](
+            ${c.prefix}.combine($magnoliaPkg.Magnolia.caseClass[$typeConstructor, $genericType](
               $className,
               false,
               $isValueClass,
               $paramsVal,
-              ($fnVal: Param[$typeConstructor, $genericType] => Any) =>
+              ($fnVal: $magnoliaPkg.Param[$typeConstructor, $genericType] => Any) =>
                 new $genericType(..${caseParams.zipWithIndex.map {
               case (typeclass, idx) =>
                 q"$fnVal($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
@@ -353,7 +352,7 @@ object Magnolia {
 
         val assignments = typeclasses.zipWithIndex.map {
           case ((typ, typeclass), idx) =>
-            q"""$subtypesVal($idx) = $magnoliaObj.subtype[$typeConstructor, $genericType, $typ](
+            q"""$subtypesVal($idx) = $magnoliaPkg.Magnolia.subtype[$typeConstructor, $genericType, $typ](
             ${typ.typeSymbol.fullName.toString},
             $typeclass,
             (t: $genericType) => t.isInstanceOf[$typ],
@@ -365,14 +364,14 @@ object Magnolia {
           Typeclass(
             genericType,
             q"""{
-            val $subtypesVal: $arrayCls[_root_.magnolia.Subtype[$typeConstructor, $genericType]] =
-              new $arrayCls(${assignments.size})
+            val $subtypesVal: $scalaPkg.Array[$magnoliaPkg.Subtype[$typeConstructor, $genericType]] =
+              new $scalaPkg.Array(${assignments.size})
             
             ..$assignments
             
-            ${c.prefix}.dispatch(new _root_.magnolia.SealedTrait(
+            ${c.prefix}.dispatch(new $magnoliaPkg.SealedTrait(
               $genericTypeName,
-              $subtypesVal: $arrayCls[_root_.magnolia.Subtype[$typeConstructor, $genericType]])
+              $subtypesVal: $scalaPkg.Array[$magnoliaPkg.Subtype[$typeConstructor, $genericType]])
             ): $resultType
           }"""
           )
@@ -416,7 +415,7 @@ object Magnolia {
         case Some(enclosingRef) =>
           val methodAsString = enclosingRef.toString
           val searchType = appliedType(typeConstructor, genericType)
-          Some(q"_root_.magnolia.Deferred[$searchType]($methodAsString)")
+          Some(q"$magnoliaPkg.Deferred[$searchType]($methodAsString)")
       }
     } else directInferImplicit(genericType, typeConstructor).map(_.tree)
 
