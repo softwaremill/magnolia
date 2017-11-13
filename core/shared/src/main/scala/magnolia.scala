@@ -278,10 +278,9 @@ object Magnolia {
         val preAssignments = caseParams.map(_.typeclass)
 
         val defaults = if (!isValueClass) {
-          val caseClassParameters = genericType.decls.collect {
-            case m: MethodSymbol if m.isCaseAccessor => m.asMethod
-          }
-          val indexedConstructorParams = caseClassParameters.map(_.asTerm).zipWithIndex
+          val indexedConstructorParams = genericType.decls.collect {
+            case m: MethodSymbol if m.isCaseAccessor => m.asTerm
+          }.zipWithIndex
 
           indexedConstructorParams.map {
             case (p, idx) =>
