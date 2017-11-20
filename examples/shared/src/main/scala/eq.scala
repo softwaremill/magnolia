@@ -7,10 +7,7 @@ import scala.language.experimental.macros
 trait Eq[T] { def equal(value: T, value2: T): Boolean }
 
 /** companion object to [[Eq]] */
-object Eq {
-
-  /** type constructor for the equality typeclass */
-  type Typeclass[T] = Eq[T]
+object Eq extends TypeclassCompanion[Eq] {
 
   /** defines equality for this case class in terms of equality for all its parameters */
   def combine[T](ctx: CaseClass[Eq, T]): Eq[T] = new Eq[T] {
@@ -36,6 +33,4 @@ object Eq {
   /** equality typeclass instance for integers */
   implicit val int: Eq[Int] = new Eq[Int] { def equal(v1: Int, v2: Int) = v1 == v2 }
 
-  /** binds the Magnolia macro to the `gen` method */
-  implicit def gen[T]: Eq[T] = macro Magnolia.gen[T]
 }

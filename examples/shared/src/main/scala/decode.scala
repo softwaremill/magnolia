@@ -7,7 +7,7 @@ import scala.language.experimental.macros
 trait Decoder[T] { def decode(str: String): T }
 
 /** derivation object (and companion object) for [[Decoder]] instances */
-object Decoder {
+object Decoder extends TypeclassCompanion[Decoder] {
 
   /** decodes strings */
   implicit val string: Decoder[String] = new Decoder[String] {
@@ -16,12 +16,6 @@ object Decoder {
 
   /** decodes ints */
   implicit val int: Decoder[Int] = new Decoder[Int] { def decode(str: String): Int = str.toInt }
-
-  /** binds the Magnolia macro to this derivation object */
-  implicit def gen[T]: Decoder[T] = macro Magnolia.gen[T]
-
-  /** type constructor for new instances of the typeclass */
-  type Typeclass[T] = Decoder[T]
 
   /** defines how new [[Decoder]]s for case classes should be constructed */
   def combine[T](ctx: CaseClass[Decoder, T]): Decoder[T] = new Decoder[T] {

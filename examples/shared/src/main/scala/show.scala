@@ -9,12 +9,10 @@ import scala.language.experimental.macros
   *  be something other than a string. */
 trait Show[Out, T] { def show(value: T): Out }
 
-trait GenericShow[Out] {
-
-  /** the type constructor for new [[Show]] instances
-    *
-    *  The first parameter is fixed as `String`, and the second parameter varies generically. */
-  type Typeclass[T] = Show[Out, T]
+/**
+  * For the present example, a type lambda was needed to use the TypeclassCompanion
+  */
+trait GenericShow[Out] extends TypeclassCompanion[({type S[A] = Show[Out, A]})#S]{
 
   def join(typeName: String, strings: Seq[String]): Out
 
@@ -40,13 +38,12 @@ trait GenericShow[Out] {
       sub.typeclass.show(sub.cast(value))
     }
   }
-
-  /** bind the Magnolia macro to this derivation object */
-  implicit def gen[T]: Show[Out, T] = macro Magnolia.gen[T]
 }
 
 /** companion object to [[Show]] */
 object Show extends GenericShow[String] {
+
+  type S[A] = Show[String, A]
 
   /** show typeclass for strings */
   implicit val string: Show[String, String] = new Show[String, String] {
