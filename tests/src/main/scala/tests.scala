@@ -176,5 +176,13 @@ object Tests extends TestApp {
     test("serialize a value class") {
       Show.gen[Length].show(new Length(100))
     }.assert(_ == "100")
+
+    class ParentClass {
+      case class InnerClass(name: String)
+
+      test("serialize a case class inside another class") {
+        implicitly[Show[String, InnerClass]].show(InnerClass("foo"))
+      }.assert(_ == "InnerClass(name=foo)")
+    }
   }
 }

@@ -278,16 +278,26 @@ object Magnolia {
         val preAssignments = caseParams.map(_.typeclass)
 
         val defaults = if (!isValueClass) {
-          val indexedConstructorParams = genericType.decls.collect {
-            case m: MethodSymbol if m.isCaseAccessor => m.asTerm
-          }.zipWithIndex
+          val constructorParams = genericType.decls.collect {
+            case a: MethodSymbol if a.isConstructor => a
+          }.head.paramLists.head.map(_.asTerm)
+          val noDefaults = constructorParams.forall(!_.isParamWithDefault)
 
-          indexedConstructorParams.map {
-            case (p, idx) =>
-              if (p.isParamWithDefault) {
-                val method = TermName("apply$default$" + (idx + 1))
-                q"$scalaPkg.Some(${genericType.typeSymbol.companion.asTerm}.$method)"
-              } else q"$scalaPkg.None"
+          if (noDefaults) {
+            constructorParams.map(_ => q"$scalaPkg.None")
+          } else {
+            val caseClassCompanion = genericType.companion
+            val constructorMethod = caseClassCompanion.decl(TermName("apply")).asMethod
+            val indexedConstructorParams =
+              constructorMethod.paramLists.head.map(_.asTerm).zipWithIndex
+
+            indexedConstructorParams.map {
+              case (p, idx) =>
+                if (p.isParamWithDefault) {
+                  val method = TermName("apply$default$" + (idx + 1))
+                  q"$scalaPkg.Some(${genericType.typeSymbol.companion.asTerm}.$method)"
+                } else q"$scalaPkg.None"
+            }
           }
         } else List(q"$scalaPkg.None")
 
