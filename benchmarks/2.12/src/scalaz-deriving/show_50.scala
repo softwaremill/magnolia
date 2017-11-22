@@ -1,0 +1,61 @@
+import adt1._
+
+import scalaz._
+import Scalaz._
+
+object Gen {
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+  Show[Alphabet]
+}
