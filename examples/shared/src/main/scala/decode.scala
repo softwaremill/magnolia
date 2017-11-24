@@ -22,9 +22,10 @@ object Decoder {
 
   /** type constructor for new instances of the typeclass */
   type Typeclass[T] = Decoder[T]
+  type ParamType[T, P] = Param[Decoder, T] { type PType = P }
 
   /** defines how new [[Decoder]]s for case classes should be constructed */
-  def combine[T](ctx: CaseClass[Decoder, T]): Decoder[T] = new Decoder[T] {
+  def combine[T](ctx: CaseClass[Decoder, T, Param[Decoder, T]]): Decoder[T] = new Decoder[T] {
     def decode(value: String) = {
       val (name, values) = parse(value)
       ctx.construct { param =>

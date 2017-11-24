@@ -91,11 +91,11 @@ trait Param[Typeclass[_], Type] {
   *  @param parametersArray  an array of [[Param]] values for this case class
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type       generic type of this parameter */
-abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
+abstract class CaseClass[Typeclass[_], Type, ParamType] private[magnolia] (
   val typeName: String,
   val isObject: Boolean,
   val isValueClass: Boolean,
-  parametersArray: Array[Param[Typeclass, Type]]
+  parametersArray: Array[ParamType]
 ) {
 
   /** constructs a new instance of the case class type
@@ -111,13 +111,13 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
     *  @param makeParam  lambda for converting a generic [[Param]] into the value to be used for
     *                    this parameter in the construction of a new instance of the case class
     *  @return  a new instance of the case class */
-  def construct[Return](makeParam: Param[Typeclass, Type] => Return): Type
+  def construct[Return](makeParam: ParamType => Return): Type
 
   /** a sequence of [[Param]] objects representing all of the parameters in the case class
     *
     *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
     *  [[scala.collection.Seq]] to hide the mutable collection API. */
-  def parameters: Seq[Param[Typeclass, Type]] = parametersArray
+  def parameters: Seq[ParamType] = parametersArray
 }
 
 /** represents a sealed trait and the context required to construct a new typeclass instance

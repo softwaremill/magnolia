@@ -25,13 +25,6 @@ lazy val tests = project
   .settings(buildSettings: _*)
   .settings(unmanagedSettings)
   .settings(moduleName := "magnolia-tests")
-  .settings(
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),
-    libraryDependencies ++= Seq(
-      "com.fommil" %% "deriving-macro" % "0.9.0",
-      "com.fommil" %% "scalaz-deriving" % "0.9.0"
-    )
-  )
   .dependsOn(examplesJVM)
 
 lazy val benchmarks = project

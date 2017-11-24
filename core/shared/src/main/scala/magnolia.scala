@@ -81,41 +81,44 @@ object Magnolia {
       else q"${tpe.typeSymbol.name.toTermName}"
     }
 
-    val typeDefs = prefixType.baseClasses.flatMap { cls =>
-      cls.asType.toType.decls.filter(_.isType).find(_.name.toString == "Typeclass").map { tpe =>
-        tpe.asType.toType.asSeenFrom(prefixType, cls)
+
+    def getTypeMember(name: String) = {
+      val typeDefs = prefixType.baseClasses.flatMap { cls =>
+        cls.asType.toType.decls.filter(_.isType).find(_.name.toString == name).map { tpe =>
+          tpe.asType.toType.asSeenFrom(prefixType, cls)
+        }
+      }
+
+      val typeConstructorOpt = typeDefs.headOption.map(_.typeConstructor)
+
+      typeConstructorOpt.getOrElse {
+        c.abort(c.enclosingPosition,
+                s"magnolia: the derivation object does not define the $name type constructor")
       }
     }
 
-    val typeConstructorOpt =
-      typeDefs.headOption.map(_.typeConstructor)
+    val typeConstructor = getTypeMember("Typeclass")
+    val pTypeConstructor = getTypeMember("ParamType")
 
-    val typeConstructor = typeConstructorOpt.getOrElse {
-      c.abort(c.enclosingPosition,
-              "magnolia: the derivation object does not define the Typeclass type constructor")
-    }
-
-    def checkMethod(termName: String, category: String, expected: String) = {
+    def getMethod[T](termName: String): Option[MethodSymbol] = {
       val term = TermName(termName)
       val combineClass = c.prefix.tree.tpe.baseClasses
         .find { cls =>
           cls.asType.toType.decl(term) != NoSymbol
         }
-        .getOrElse {
-          c.abort(
-            c.enclosingPosition,
-            s"magnolia: the method `$termName` must be defined on the derivation object to derive typeclasses for $category"
-          )
-        }
-      val firstParamBlock = combineClass.asType.toType.decl(term).asTerm.asMethod.paramLists.head
-      if (firstParamBlock.length != 1)
-        c.abort(c.enclosingPosition,
-                s"magnolia: the method `combine` should take a single parameter of type $expected")
+      combineClass.map { c =>
+        c.asType.toType.decl(term).asTerm.asMethod
+      }
     }
 
     // FIXME: Only run these methods if they're used, particularly `dispatch`
-    checkMethod("combine", "case classes", "CaseClass[Typeclass, _]")
-    checkMethod("dispatch", "sealed traits", "SealedTrait[Typeclass, _]")
+    getMethod("combine").getOrElse(c.abort(c.enclosingPosition,
+        s"magnolia: the method `dispatch` should take a single parameter of type CaseClass[Typeclass, _]")
+    )
+    
+    getMethod("dispatch").getOrElse(c.abort(c.enclosingPosition,
+        s"magnolia: the method `combine` should take a single parameter of type SealedTrait[Typeclass, _]")
+    )
 
     def findType(key: Type): Option[TermName] =
       recursionStack(c.enclosingPosition).frames.find(_.genericType == key).map(_.termName(c))
@@ -226,8 +229,12 @@ object Magnolia {
         val obj = companionRef(genericType)
         val className = genericType.typeSymbol.name.decodedName.toString
 
+        val paramType: Tree = getMethod("param").map { sym =>
+          tq"${c.prefix}.ParamType[$genericType, _]"
+        }.getOrElse(tq"$magnoliaPkg.Param[$typeConstructor, $genericType]")
+        
         val impl = q"""
-          ${c.prefix}.combine($magnoliaPkg.Magnolia.caseClass[$typeConstructor, $genericType](
+          ${c.prefix}.combine($magnoliaPkg.Magnolia.caseClass[$typeConstructor, $genericType, $paramType](
             $className, true, false, new $scalaPkg.Array(0), _ => $obj)
           )
         """
@@ -294,10 +301,10 @@ object Magnolia {
 
         val assignments = caseParams.zip(defaults).zipWithIndex.map {
           case ((CaseParam(param, typeclass, paramType, ref), defaultVal), idx) =>
-            q"""$paramsVal($idx) = $magnoliaPkg.Magnolia.param[$typeConstructor, $genericType,
-                $paramType](
-            ${param.name.decodedName.toString}, $ref, $defaultVal, _.${param.name}
-          )"""
+            val paramMethod: Tree = getMethod("param").map { sym =>
+              q"${c.prefix}.param[$genericType, $paramType]"
+            }.getOrElse(q"$magnoliaPkg.Magnolia.param[$typeConstructor, $genericType, $paramType]")
+            q"""$paramsVal($idx) = $paramMethod(${param.name.decodedName.toString}, $ref, $defaultVal, _.${param.name})"""
         }
 
         Some(
@@ -305,20 +312,20 @@ object Magnolia {
             genericType,
             q"""{
             ..$preAssignments
-            val $paramsVal: $scalaPkg.Array[$magnoliaPkg.Param[$typeConstructor, $genericType]] =
+            val $paramsVal: $scalaPkg.Array[${c.prefix}.ParamType[$genericType, _]] =
               new $scalaPkg.Array(${assignments.length})
             ..$assignments
             
-            ${c.prefix}.combine($magnoliaPkg.Magnolia.caseClass[$typeConstructor, $genericType](
+            ${c.prefix}.combine($magnoliaPkg.Magnolia.caseClass[$typeConstructor, $genericType, ${c.prefix}.ParamType[$genericType, _]](
               $className,
               false,
               $isValueClass,
               $paramsVal,
-              ($fnVal: $magnoliaPkg.Param[$typeConstructor, $genericType] => Any) =>
+              ($fnVal: ${c.prefix}.ParamType[$genericType, _] => Any) =>
                 new $genericType(..${caseParams.zipWithIndex.map {
-              case (typeclass, idx) =>
-                q"$fnVal($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
-            }})
+                  case (typeclass, idx) =>
+                    q"$fnVal($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
+                }})
             ))
           }"""
           )
@@ -464,13 +471,13 @@ object Magnolia {
     *
     *  This method is intended to be called only from code generated by the Magnolia macro, and
     *  should not be called directly from users' code. */
-  def caseClass[Tc[_], T](name: String,
+  def caseClass[Tc[_], T, ParamType](name: String,
                           obj: Boolean,
                           valClass: Boolean,
-                          params: Array[Param[Tc, T]],
-                          constructor: (Param[Tc, T] => Any) => T) =
-    new CaseClass[Tc, T](name, obj, valClass, params) {
-      def construct[R](param: Param[Tc, T] => R): T = constructor(param)
+                          params: Array[ParamType],
+                          constructor: (ParamType => Any) => T) =
+    new CaseClass[Tc, T, ParamType](name, obj, valClass, params) {
+      def construct[R](param: ParamType => R): T = constructor(param)
     }
 }
 

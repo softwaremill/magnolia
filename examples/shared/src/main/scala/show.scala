@@ -9,25 +9,41 @@ import scala.language.experimental.macros
   *  be something other than a string. */
 trait Show[Out, T] { def show(value: T): Out }
 
+case class ShowParam[Out, T, P](label: String, typeclass: Show[Out, P], deref: T => P) {
+  type PType = P
+  def show: Show[Out, PType] = typeclass
+  def dereference(t: T): PType = deref(t)
+}
+
+object Dflt {
+  implicit def any[T]: Dflt[T] = new Dflt[T] { def default: T = null.asInstanceOf[T] }
+}
+
+trait Dflt[T] { def default: T }
+
 trait GenericShow[Out] {
 
   /** the type constructor for new [[Show]] instances
     *
     *  The first parameter is fixed as `String`, and the second parameter varies generically. */
   type Typeclass[T] = Show[Out, T]
+  type ParamType[T, P] = ShowParam[Out, T, P]
 
   def join(typeName: String, strings: Seq[String]): Out
 
+  def param[T, P](name: String, typeclassParam: Show[Out, P], default: Option[P], deref: T => P)(implicit auto: Dflt[P]) =
+    ShowParam[Out, T, P](name, typeclassParam, deref)
+
   /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of
     *  showing each parameter, and prefixing it with the class name */
-  def combine[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = new Show[Out, T] {
+  def combine[T](ctx: CaseClass[Typeclass, T, ParamType[T, _]]): Show[Out, T] = new Show[Out, T] {
     def show(value: T) =
       if (ctx.isValueClass) {
         val param = ctx.parameters.head
-        param.typeclass.show(param.dereference(value))
+        param.show.show(param.dereference(value))
       } else {
         val paramStrings = ctx.parameters.map { param =>
-          s"${param.label}=${param.typeclass.show(param.dereference(value))}"
+          s"${param.label}=${param.show.show(param.dereference(value))}"
         }
 
         join(ctx.typeName.split("\\.").last, paramStrings)
