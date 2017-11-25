@@ -37,10 +37,25 @@ case object Blue extends Color
 
 case class `%%`(`/`: Int, `#`: String)
 
+case class Param(a: String, b: String)
+case class Test(param: Param)
+object Test {
+  def apply(): Test = Test(Param("", ""))
+
+  def apply(a: String)(implicit b: Int): Test = Test(Param(a, b.toString))
+
+  def apply(a: String, b: String): Test = Test(Param(a, b))
+}
+
 object Tests extends TestApp {
 
   def tests() = for (i <- 1 to 1000) {
     import examples._
+
+    test("construct a Show product instance with alternative apply functions") {
+      import examples._
+      Show.gen[Test].show(Test("a", "b"))
+    }.assert(_ == """Test(param=Param(a=a,b=b))""")
 
     test("construct a Show product instance") {
       import examples._

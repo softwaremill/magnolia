@@ -2,3 +2,4 @@ target
 .jvm
 .js
 .native
+.idea
