@@ -161,6 +161,16 @@ object Tests extends TestApp {
                                       |    in parameter 'alpha' of product type Beta
                                       |"""))
 
+    test("not attempt to instantiate Unit when producing error stack") {
+      scalac"""
+        import magnolia.examples._
+        case class Gamma(unit: Unit)
+        Show.gen[Gamma]
+      """
+    }.assert(_ == TypecheckError(txt"""magnolia: could not find typeclass for type Unit
+                                      |    in parameter 'unit' of product type Gamma
+                                      |"""))
+
     test("typenames and labels are not encoded") {
       implicitly[Show[String, `%%`]].show(`%%`(1, "two"))
     }.assert(_ == "%%(/=1,#=two)")

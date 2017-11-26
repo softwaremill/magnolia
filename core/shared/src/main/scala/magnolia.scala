@@ -215,7 +215,8 @@ object Magnolia {
                            typeOf[Int],
                            typeOf[Long],
                            typeOf[Char],
-                           typeOf[Boolean])
+                           typeOf[Boolean],
+                           typeOf[Unit])
 
       val isValueClass = genericType <:< typeOf[AnyVal] && !primitives.exists(_ =:= genericType)
 
