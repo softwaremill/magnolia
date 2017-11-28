@@ -39,7 +39,7 @@ case class `%%`(`/`: Int, `#`: String)
 
 object Tests extends TestApp {
 
-  def tests() = for (i <- 1 to 1000) {
+  def tests() = for(i <- 1 to 1000) {
     import examples._
 
     test("construct a Show product instance") {
@@ -176,5 +176,7 @@ object Tests extends TestApp {
     test("serialize a value class") {
       Show.gen[Length].show(new Length(100))
     }.assert(_ == "100")
+
+    ()
   }
 }

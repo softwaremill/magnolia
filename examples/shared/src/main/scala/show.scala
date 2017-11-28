@@ -28,15 +28,32 @@ trait GenericShow[Out] {
     *  The first parameter is fixed as `String`, and the second parameter varies generically. */
   type Typeclass[T] = Show[Out, T]
   type ParamType[T, P] = ShowParam[Out, T, P]
+  type SubtypeType[T, P] = Subtype[Typeclass, T]
+
+  case class Derivation[T, P](name: String, isValueClass: Boolean, parameters: Seq[P])
 
   def join(typeName: String, strings: Seq[String]): Out
 
-  def param[T, P](name: String, typeclassParam: Show[Out, P], default: Option[P], deref: T => P)(implicit auto: Dflt[P]) =
-    ShowParam[Out, T, P](name, typeclassParam, deref)
+  def param[T, P](name: String, typeclass: Show[Out, P], dereference: T => P)(implicit auto: Dflt[P]) =
+    ShowParam[Out, T, P](name, typeclass, dereference)
+
+  def caseClass[T, P](name: String, parameters: Array[P], isValueClass: Boolean): Derivation[T, P] =
+    Derivation(name, isValueClass, parameters)
+
+  /*def subtype[T, S <: T](name: String, typeclassParam: => Show[Out, S], isType: T => Boolean, asType: T => S): Subtype[Typeclass, T] =
+    new Subtype[Typeclass, T] {
+      type SType = S
+      def label = name
+      def typeclass = typeclassParam
+      def cast = new PartialFunction[T, S] {
+        def isDefinedAt(t: T) = isType(t)
+        def apply(t: T): SType = asType(t)
+      }
+    }*/
 
   /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of
     *  showing each parameter, and prefixing it with the class name */
-  def combine[T](ctx: CaseClass[Typeclass, T, ParamType[T, _]]): Show[Out, T] = new Show[Out, T] {
+  def combine[T](ctx: Derivation[T, ShowParam[Out, T, _]]): Show[Out, T] = new Show[Out, T] {
     def show(value: T) =
       if (ctx.isValueClass) {
         val param = ctx.parameters.head
@@ -46,7 +63,7 @@ trait GenericShow[Out] {
           s"${param.label}=${param.show.show(param.dereference(value))}"
         }
 
-        join(ctx.typeName.split("\\.").last, paramStrings)
+        join(ctx.name.split("\\.").last, paramStrings)
       }
   }
 

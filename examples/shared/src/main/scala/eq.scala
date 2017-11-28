@@ -11,7 +11,6 @@ object Eq {
 
   /** type constructor for the equality typeclass */
   type Typeclass[T] = Eq[T]
-  type ParamType[T, P] = Param[Eq, T] { type PType = P }
 
   /** defines equality for this case class in terms of equality for all its parameters */
   def combine[T](ctx: CaseClass[Eq, T, Param[Eq, T]]): Eq[T] = new Eq[T] {
