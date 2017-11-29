@@ -280,9 +280,16 @@ object Magnolia {
 
         val defaults = if (!isValueClass) {
           val caseClassCompanion = genericType.companion
-          val constructorMethod = caseClassCompanion.decl(TermName("apply")).asMethod
+
+          // If a companion object is defined with alternative apply methods
+          // it is needed get all the alternatives
+          val constructorMethods =
+            caseClassCompanion.decl(TermName("apply")).alternatives.map(_.asMethod)
+
+          // The last apply method in the alternatives is the one that belongs
+          // to the case class, not the user defined companion object
           val indexedConstructorParams =
-            constructorMethod.paramLists.head.map(_.asTerm).zipWithIndex
+            constructorMethods.last.paramLists.head.map(_.asTerm).zipWithIndex
 
           indexedConstructorParams.map {
             case (p, idx) =>
