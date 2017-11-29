@@ -65,7 +65,6 @@ object Magnolia {
     *  */
   def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = {
     import c.universe._
-    import scala.util.{Try, Success, Failure}
 
     val magnoliaPkg = q"_root_.magnolia"
     val scalaPkg = q"_root_.scala"
@@ -95,7 +94,7 @@ object Magnolia {
               "magnolia: the derivation object does not define the Typeclass type constructor")
     }
 
-    def checkMethod(termName: String, category: String, expected: String) = {
+    def checkMethod(termName: String, category: String, expected: String): Unit = {
       val term = TermName(termName)
       val combineClass = c.prefix.tree.tpe.baseClasses
         .find { cls =>
@@ -204,9 +203,9 @@ object Magnolia {
       val assignedName: TermName = TermName(c.freshName(s"${genericTypeName}Typeclass"))
       val typeSymbol = genericType.typeSymbol
       val classType = if (typeSymbol.isClass) Some(typeSymbol.asClass) else None
-      val isCaseClass = classType.map(_.isCaseClass).getOrElse(false)
-      val isCaseObject = classType.map(_.isModuleClass).getOrElse(false)
-      val isSealedTrait = classType.map(_.isSealed).getOrElse(false)
+      val isCaseClass = classType.exists(_.isCaseClass)
+      val isCaseObject = classType.exists(_.isModuleClass)
+      val isSealedTrait = classType.exists(_.isSealed)
 
       val primitives = Set(typeOf[Double],
                            typeOf[Float],
@@ -223,7 +222,6 @@ object Magnolia {
       val resultType = appliedType(typeConstructor, genericType)
 
       val result = if (isCaseObject) {
-        // FIXME: look for an alternative which isn't deprecated on Scala 2.12+
         val obj = companionRef(genericType)
         val className = genericType.typeSymbol.name.decodedName.toString
 
@@ -245,8 +243,8 @@ object Magnolia {
                              paramType: c.Type,
                              ref: c.TermName)
 
-        val caseParamsReversed: List[CaseParam] = caseClassParameters.foldLeft(List[CaseParam]()) {
-          case (acc, param) =>
+        val caseParamsReversed = caseClassParameters.foldLeft[List[CaseParam]](Nil) {
+          (acc, param) =>
             val paramName = param.name.decodedName.toString
             val paramType = param.returnType.substituteTypes(genericType.etaExpand.typeParams,
                                                              genericType.typeArgs)
@@ -398,9 +396,9 @@ object Magnolia {
     val genericType: Type = weakTypeOf[T]
 
     val currentStack: Stack =
-      recursionStack.get(c.enclosingPosition).getOrElse(Stack(Map(), List(), List()))
+      recursionStack.getOrElse(c.enclosingPosition, Stack(Map(), List(), List()))
 
-    val directlyReentrant = Some(genericType) == currentStack.frames.headOption.map(_.genericType)
+    val directlyReentrant = currentStack.frames.headOption.exists(_.genericType == genericType)
 
     if (directlyReentrant) throw DirectlyReentrantException()
 
@@ -409,14 +407,14 @@ object Magnolia {
         emittedErrors += error
         val trace = error.path.mkString("\n    in ", "\n    in ", "\n \n")
 
-        val msg = s"magnolia: could not derive ${typeConstructor} instance for type " +
+        val msg = s"magnolia: could not derive $typeConstructor instance for type " +
           s"${error.genericType}"
 
         c.info(c.enclosingPosition, msg + trace, true)
       }
     }
 
-    val result: Option[Tree] = if (!currentStack.frames.isEmpty) {
+    val result: Option[Tree] = if (currentStack.frames.nonEmpty) {
       findType(genericType) match {
         case None =>
           directInferImplicit(genericType, typeConstructor).map(_.tree)
