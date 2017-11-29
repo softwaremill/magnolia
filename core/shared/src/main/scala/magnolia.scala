@@ -65,6 +65,7 @@ object Magnolia {
     *  */
   def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = {
     import c.universe._
+    import internal._
 
     val magnoliaPkg = q"_root_.magnolia"
     val scalaPkg = q"_root_.scala"
@@ -246,9 +247,7 @@ object Magnolia {
         val caseParamsReversed = caseClassParameters.foldLeft[List[CaseParam]](Nil) {
           (acc, param) =>
             val paramName = param.name.decodedName.toString
-            val paramType = param.returnType.substituteTypes(genericType.etaExpand.typeParams,
-                                                             genericType.typeArgs)
-
+            val paramType = param.typeSignatureIn(genericType).resultType
             val predefinedRef = acc.find(_.paramType == paramType)
 
             val caseParamOpt = predefinedRef.map { backRef =>
@@ -332,10 +331,13 @@ object Magnolia {
       } else if (isSealedTrait) {
         val genericSubtypes = classType.get.knownDirectSubclasses.to[List]
         val subtypes = genericSubtypes.map { sub =>
-          val typeArgs = sub.asType.typeSignature.baseType(genericType.typeSymbol).typeArgs
-          val mapping = typeArgs.zip(genericType.typeArgs).toMap
-          val newTypeParams = sub.asType.toType.typeArgs.map(mapping(_))
-          appliedType(sub.asType.toType.typeConstructor, newTypeParams)
+          val subType = sub.asType.toType // FIXME: Broken for path dependent types
+          val typeParams = sub.asType.typeParams
+          val typeArgs = thisType(sub).baseType(genericType.typeSymbol).typeArgs
+          val mapping = (typeArgs.map(_.typeSymbol), genericType.typeArgs).zipped.toMap
+          val newTypeArgs = typeParams.map(mapping.withDefault(_.asType.toType))
+          val applied = appliedType(subType.typeConstructor, newTypeArgs)
+          existentialAbstraction(typeParams, applied)
         }
 
         if (subtypes.isEmpty) {

@@ -47,6 +47,14 @@ object Test {
   def apply(a: String, b: String): Test = Test(Param(a, b))
 }
 
+sealed trait Politician[+S]
+case class Accountable[+S](slogan: S) extends Politician[S]
+case class Corrupt[+S, +L <: Seq[Company]](slogan: S, lobby: L) extends Politician[S]
+
+sealed trait Box[+A]
+case class SimpleBox[+A](value: A) extends Box[A]
+case class LabelledBox[+A, L <: String](value: A, var label: L) extends Box[A]
+
 object Tests extends TestApp {
 
   def tests() = for (i <- 1 to 1000) {
@@ -201,5 +209,20 @@ object Tests extends TestApp {
     test("serialize a value class") {
       Show.gen[Length].show(new Length(100))
     }.assert(_ == "100")
+
+    // Corrupt being covariant in L <: Seq[Company] enables the derivation for Corrupt[String, _]
+    test("show a Politician with covariant lobby") {
+      Show.gen[Politician[String]].show(Corrupt("wall", Seq(Company("Alice Inc"))))
+    }.assert(_ == "Corrupt(slogan=wall,lobby=[Company(name=Alice Inc)])")
+
+    // LabelledBox being invariant in L <: String prohibits the derivation for LabelledBox[Int, _]
+    test("can't show a Box with invariant label") {
+      scalac"Show.gen[Box[Int]]"
+    }.assert { _ == TypecheckError(
+      txt"""magnolia: could not find typeclass for type L
+        |    in parameter 'label' of product type magnolia.tests.LabelledBox[Int, _ <: String]
+        |    in coproduct type magnolia.tests.Box[Int]
+        |""")
+    }
   }
 }
