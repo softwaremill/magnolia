@@ -34,7 +34,7 @@ trait Param[Typeclass[_], Type] {
 
   /** the type of the parameter being represented
     *
-    *  For exmaple, for a case class,
+    *  For example, for a case class,
     *  <pre>
     *  case class Person(name: String, age: Int)
     *  </pre>
