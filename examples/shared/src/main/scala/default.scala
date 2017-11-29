@@ -7,9 +7,7 @@ import scala.language.experimental.macros
 trait Default[T] { def default: T }
 
 /** companion object and derivation object for [[Default]] */
-object Default {
-
-  type Typeclass[T] = Default[T]
+object Default extends TypeclassCompanion[Default] {
 
   /** constructs a default for each parameter, using the constructor default (if provided),
     *  otherwise using a typeclass-provided default */
@@ -20,7 +18,7 @@ object Default {
   }
 
   /** chooses which subtype to delegate to */
-  def dispatch[T](ctx: SealedTrait[Default, T])(): Default[T] = new Default[T] {
+  def dispatch[T](ctx: SealedTrait[Default, T]): Default[T] = new Default[T] {
     def default: T = ctx.subtypes.head.typeclass.default
   }
 
@@ -29,7 +27,4 @@ object Default {
 
   /** default value for ints; 0 */
   implicit val int: Default[Int] = new Default[Int] { def default = 0 }
-
-  /** generates default instances of [[Default]] for case classes and sealed traits */
-  implicit def gen[T]: Default[T] = macro Magnolia.gen[T]
 }
