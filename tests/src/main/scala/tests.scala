@@ -184,5 +184,7 @@ object Tests extends TestApp {
         implicitly[Show[String, InnerClass]].show(InnerClass("foo"))
       }.assert(_ == "InnerClass(name=foo)")
     }
+    
+    new ParentClass
   }
 }
