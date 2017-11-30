@@ -1,5 +1,7 @@
 package magnolia.tests
 
+import language.experimental.macros
+
 import magnolia._
 import estrapade._
 import contextual.data.scalac._
@@ -51,7 +53,7 @@ case class Portfolio(companies: Company*)
 
 object Tests extends TestApp {
 
-  def tests() = for (i <- 1 to 1000) {
+  def tests() = for (i <- 1 to 1) {
     import examples._
 
     test("construct a Show product instance with alternative apply functions") {
@@ -215,5 +217,15 @@ object Tests extends TestApp {
     test("show a Portfolio of Companies") {
       Show.gen[Portfolio].show(Portfolio(Company("Alice Inc"), Company("Bob & Co")))
     }.assert(_ == "Portfolio(companies=[Company(name=Alice Inc),Company(name=Bob & Co)])")
+    
+    test("sealed trait typeName should be complete and unchanged") {
+      TypeName.gen[Color].name
+    }.assert(_ == "magnolia.tests.Color")
+
+    test("case class typeName should be complete and unchanged") {
+      implicit val stringTypeName: TypeName[String] = new TypeName[String] { def name = "" }
+      TypeName.gen[Fruit].name
+    }.assert(_ == "magnolia.tests.Fruit")
+
   }
 }
