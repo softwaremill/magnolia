@@ -251,7 +251,7 @@ object Magnolia {
         val caseParamsReversed = caseClassParameters.foldLeft[List[CaseParam]](Nil) {
           (acc, param) =>
             val paramName = param.name.decodedName.toString
-            val paramTypeSubstituted = param.returnType.typeSignatureIn(genericType).resultType
+            val paramTypeSubstituted = param.typeSignatureIn(genericType).resultType
 
             val (repeated, paramType) = paramTypeSubstituted match {
               case TypeRef(_, `repeatedParamClass`, typeArgs) =>
