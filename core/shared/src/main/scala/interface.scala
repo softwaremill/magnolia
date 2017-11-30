@@ -46,6 +46,17 @@ trait Param[Typeclass[_], Type] {
   /** the name of the parameter */
   def label: String
 
+  /** flag indicating a repeated (aka. vararg) parameter
+    *
+    * For example, for a case class,
+    * <pre>
+    * case class Account(id: String, emails: String*)
+    * </pre>
+    * the [[Param]] instance corresponding to the `emails` parameter would be `repeated` and have a
+    * [[PType]] equal to the type `Seq[String]`. Note that only the last parameter of a case class
+    * can be repeated. */
+  def repeated: Boolean
+
   /** the typeclass instance associated with this parameter
     *
     *  This is the instance of the type `Typeclass[PType]` which will have been discovered by

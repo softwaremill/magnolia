@@ -1,12 +1,12 @@
 package magnolia.tests
 
+import language.experimental.macros
+
 import magnolia._
 import estrapade._
 import contextual.data.scalac._
 import contextual.data.fqt._
 import contextual.data.txt._
-
-import scala.util._
 
 sealed trait Tree[+T]
 case class Leaf[+L](value: L) extends Tree[L]
@@ -55,9 +55,14 @@ sealed trait Box[+A]
 case class SimpleBox[+A](value: A) extends Box[A]
 case class LabelledBox[+A, L <: String](value: A, var label: L) extends Box[A]
 
+case class Account(id: String, emails: String*)
+
+case class Portfolio(companies: Company*)
+
+
 object Tests extends TestApp {
 
-  def tests() = for (i <- 1 to 1000) {
+  def tests() = for (i <- 1 to 1) {
     import examples._
 
     test("construct a Show product instance with alternative apply functions") {
@@ -210,6 +215,7 @@ object Tests extends TestApp {
       Show.gen[Length].show(new Length(100))
     }.assert(_ == "100")
 
+
     // Corrupt being covariant in L <: Seq[Company] enables the derivation for Corrupt[String, _]
     test("show a Politician with covariant lobby") {
       Show.gen[Politician[String]].show(Corrupt("wall", Seq(Company("Alice Inc"))))
@@ -224,5 +230,27 @@ object Tests extends TestApp {
         |    in coproduct type magnolia.tests.Box[Int]
         |""")
     }
+
+    test("show an Account") {
+      Show.gen[Account].show(Account("john_doe", "john.doe@yahoo.com", "john.doe@gmail.com"))
+    }.assert(_ == "Account(id=john_doe,emails=[john.doe@yahoo.com,john.doe@gmail.com])")
+
+    test("construct a default Account") {
+      Default.gen[Account].default
+    }.assert(_ == Account(""))
+
+    test("show a Portfolio of Companies") {
+      Show.gen[Portfolio].show(Portfolio(Company("Alice Inc"), Company("Bob & Co")))
+    }.assert(_ == "Portfolio(companies=[Company(name=Alice Inc),Company(name=Bob & Co)])")
+    
+    test("sealed trait typeName should be complete and unchanged") {
+      TypeName.gen[Color].name
+    }.assert(_ == "magnolia.tests.Color")
+
+    test("case class typeName should be complete and unchanged") {
+      implicit val stringTypeName: TypeName[String] = new TypeName[String] { def name = "" }
+      TypeName.gen[Fruit].name
+    }.assert(_ == "magnolia.tests.Fruit")
+    ()
   }
 }

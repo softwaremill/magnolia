@@ -70,6 +70,9 @@ object Magnolia {
     val magnoliaPkg = q"_root_.magnolia"
     val scalaPkg = q"_root_.scala"
 
+    val repeatedParamClass = definitions.RepeatedParamClass
+    val scalaSeqType = typeOf[Seq[_]].typeConstructor
+
     val prefixType = c.prefix.tree.tpe
 
     def companionRef(tpe: Type): Tree = {
@@ -221,10 +224,11 @@ object Magnolia {
       val isValueClass = genericType <:< typeOf[AnyVal] && !primitives.exists(_ =:= genericType)
 
       val resultType = appliedType(typeConstructor, genericType)
+        
+      val className = s"${genericType.typeSymbol.owner.fullName}.${genericType.typeSymbol.name.decodedName}"
 
       val result = if (isCaseObject) {
         val obj = companionRef(genericType)
-        val className = genericType.typeSymbol.name.decodedName.toString
 
         val impl = q"""
           ${c.prefix}.combine($magnoliaPkg.Magnolia.caseClass[$typeConstructor, $genericType](
@@ -237,9 +241,9 @@ object Magnolia {
           case m: MethodSymbol if m.isCaseAccessor || (isValueClass && m.isParamAccessor) =>
             m.asMethod
         }
-        val className = genericType.typeSymbol.name.decodedName.toString
 
         case class CaseParam(sym: c.universe.MethodSymbol,
+                             repeated: Boolean,
                              typeclass: c.Tree,
                              paramType: c.Type,
                              ref: c.TermName)
@@ -247,11 +251,19 @@ object Magnolia {
         val caseParamsReversed = caseClassParameters.foldLeft[List[CaseParam]](Nil) {
           (acc, param) =>
             val paramName = param.name.decodedName.toString
-            val paramType = param.typeSignatureIn(genericType).resultType
+            val paramTypeSubstituted = param.returnType.typeSignatureIn(genericType).resultType
+
+            val (repeated, paramType) = paramTypeSubstituted match {
+              case TypeRef(_, `repeatedParamClass`, typeArgs) =>
+                true -> appliedType(scalaSeqType, typeArgs)
+              case tpe =>
+                false -> tpe
+            }
+
             val predefinedRef = acc.find(_.paramType == paramType)
 
             val caseParamOpt = predefinedRef.map { backRef =>
-              CaseParam(param, q"()", paramType, backRef.ref) :: acc
+              CaseParam(param, repeated, q"()", paramType, backRef.ref) :: acc
             }
 
             caseParamOpt.getOrElse {
@@ -264,7 +276,7 @@ object Magnolia {
 
               val ref = TermName(c.freshName("paramTypeclass"))
               val assigned = q"""val $ref = $derivedImplicit"""
-              CaseParam(param, assigned, paramType, ref) :: acc
+              CaseParam(param, repeated, assigned, paramType, ref) :: acc
             }
         }
 
@@ -298,10 +310,10 @@ object Magnolia {
         } else List(q"$scalaPkg.None")
 
         val assignments = caseParams.zip(defaults).zipWithIndex.map {
-          case ((CaseParam(param, typeclass, paramType, ref), defaultVal), idx) =>
+          case ((CaseParam(param, repeated, typeclass, paramType, ref), defaultVal), idx) =>
             q"""$paramsVal($idx) = $magnoliaPkg.Magnolia.param[$typeConstructor, $genericType,
                 $paramType](
-            ${param.name.decodedName.toString}, $ref, $defaultVal, _.${param.name}
+            ${param.name.decodedName.toString}, $repeated, $ref, $defaultVal, _.${param.name}
           )"""
         }
 
@@ -322,7 +334,8 @@ object Magnolia {
               ($fnVal: $magnoliaPkg.Param[$typeConstructor, $genericType] => Any) =>
                 new $genericType(..${caseParams.zipWithIndex.map {
               case (typeclass, idx) =>
-                q"$fnVal($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
+                val arg = q"$fnVal($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
+                if (typeclass.repeated) q"$arg: _*" else arg
             }})
             ))
           }"""
@@ -361,13 +374,13 @@ object Magnolia {
         val assignments = typeclasses.zipWithIndex.map {
           case ((typ, typeclass), idx) =>
             q"""$subtypesVal($idx) = $magnoliaPkg.Magnolia.subtype[$typeConstructor, $genericType, $typ](
-            ${typ.typeSymbol.fullName.toString},
+            ${s"${typ.typeSymbol.owner.fullName}.${typ.typeSymbol.name.decodedName}"},
             $typeclass,
             (t: $genericType) => t.isInstanceOf[$typ],
             (t: $genericType) => t.asInstanceOf[$typ]
           )"""
         }
-
+            
         Some {
           Typeclass(
             genericType,
@@ -378,7 +391,7 @@ object Magnolia {
             ..$assignments
             
             ${c.prefix}.dispatch(new $magnoliaPkg.SealedTrait(
-              $genericTypeName,
+              $className,
               $subtypesVal: $scalaPkg.Array[$magnoliaPkg.Subtype[$typeConstructor, $genericType]])
             ): $resultType
           }"""
@@ -458,11 +471,13 @@ object Magnolia {
     *  This method is intended to be called only from code generated by the Magnolia macro, and
     *  should not be called directly from users' code. */
   def param[Tc[_], T, P](name: String,
+                         isRepeated: Boolean,
                          typeclassParam: Tc[P],
                          defaultVal: => Option[P],
                          deref: T => P) = new Param[Tc, T] {
     type PType = P
     def label: String = name
+    def repeated: Boolean = isRepeated
     def default: Option[PType] = defaultVal
     def typeclass: Tc[PType] = typeclassParam
     def dereference(t: T): PType = deref(t)
