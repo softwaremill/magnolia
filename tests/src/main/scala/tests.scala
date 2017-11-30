@@ -6,8 +6,6 @@ import contextual.data.scalac._
 import contextual.data.fqt._
 import contextual.data.txt._
 
-import scala.util._
-
 sealed trait Tree[+T]
 case class Leaf[+L](value: L) extends Tree[L]
 case class Branch[+B](left: Tree[B], right: Tree[B]) extends Tree[B]
@@ -37,10 +35,29 @@ case object Blue extends Color
 
 case class `%%`(`/`: Int, `#`: String)
 
+case class Param(a: String, b: String)
+case class Test(param: Param)
+object Test {
+  def apply(): Test = Test(Param("", ""))
+
+  def apply(a: String)(implicit b: Int): Test = Test(Param(a, b.toString))
+
+  def apply(a: String, b: String): Test = Test(Param(a, b))
+}
+
+case class Account(id: String, emails: String*)
+
+case class Portfolio(companies: Company*)
+
 object Tests extends TestApp {
 
   def tests() = for (i <- 1 to 1000) {
     import examples._
+
+    test("construct a Show product instance with alternative apply functions") {
+      import examples._
+      Show.gen[Test].show(Test("a", "b"))
+    }.assert(_ == """Test(param=Param(a=a,b=b))""")
 
     test("construct a Show product instance") {
       import examples._
@@ -161,6 +178,16 @@ object Tests extends TestApp {
                                       |    in parameter 'alpha' of product type Beta
                                       |"""))
 
+    test("not attempt to instantiate Unit when producing error stack") {
+      scalac"""
+        import magnolia.examples._
+        case class Gamma(unit: Unit)
+        Show.gen[Gamma]
+      """
+    }.assert(_ == TypecheckError(txt"""magnolia: could not find typeclass for type Unit
+                                      |    in parameter 'unit' of product type Gamma
+                                      |"""))
+
     test("typenames and labels are not encoded") {
       implicitly[Show[String, `%%`]].show(`%%`(1, "two"))
     }.assert(_ == "%%(/=1,#=two)")
@@ -177,6 +204,7 @@ object Tests extends TestApp {
       Show.gen[Length].show(new Length(100))
     }.assert(_ == "100")
 
+
     class ParentClass {
       case class InnerClass(name: String)
 
@@ -186,5 +214,18 @@ object Tests extends TestApp {
     }
     
     new ParentClass
+
+    test("show an Account") {
+      Show.gen[Account].show(Account("john_doe", "john.doe@yahoo.com", "john.doe@gmail.com"))
+    }.assert(_ == "Account(id=john_doe,emails=[john.doe@yahoo.com,john.doe@gmail.com])")
+
+    test("construct a default Account") {
+      Default.gen[Account].default
+    }.assert(_ == Account(""))
+
+    test("show a Portfolio of Companies") {
+      Show.gen[Portfolio].show(Portfolio(Company("Alice Inc"), Company("Bob & Co")))
+    }.assert(_ == "Portfolio(companies=[Company(name=Alice Inc),Company(name=Bob & Co)])")
+
   }
 }
