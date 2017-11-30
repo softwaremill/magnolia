@@ -6,8 +6,6 @@ import contextual.data.scalac._
 import contextual.data.fqt._
 import contextual.data.txt._
 
-import scala.util._
-
 sealed trait Tree[+T]
 case class Leaf[+L](value: L) extends Tree[L]
 case class Branch[+B](left: Tree[B], right: Tree[B]) extends Tree[B]
@@ -46,6 +44,10 @@ object Test {
 
   def apply(a: String, b: String): Test = Test(Param(a, b))
 }
+
+case class Account(id: String, emails: String*)
+
+case class Portfolio(companies: Company*)
 
 object Tests extends TestApp {
 
@@ -201,5 +203,17 @@ object Tests extends TestApp {
     test("serialize a value class") {
       Show.gen[Length].show(new Length(100))
     }.assert(_ == "100")
+
+    test("show an Account") {
+      Show.gen[Account].show(Account("john_doe", "john.doe@yahoo.com", "john.doe@gmail.com"))
+    }.assert(_ == "Account(id=john_doe,emails=[john.doe@yahoo.com,john.doe@gmail.com])")
+
+    test("construct a default Account") {
+      Default.gen[Account].default
+    }.assert(_ == Account(""))
+
+    test("show a Portfolio of Companies") {
+      Show.gen[Portfolio].show(Portfolio(Company("Alice Inc"), Company("Bob & Co")))
+    }.assert(_ == "Portfolio(companies=[Company(name=Alice Inc),Company(name=Bob & Co)])")
   }
 }
