@@ -231,6 +231,5 @@ object Tests extends TestApp {
     test("show a Portfolio of Companies") {
       Show.gen[Portfolio].show(Portfolio(Company("Alice Inc"), Company("Bob & Co")))
     }.assert(_ == "Portfolio(companies=[Company(name=Alice Inc),Company(name=Bob & Co)])")
-
   }
 }
