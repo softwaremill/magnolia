@@ -215,7 +215,6 @@ object Tests extends TestApp {
       Show.gen[Length].show(new Length(100))
     }.assert(_ == "100")
 
-
     // Corrupt being covariant in L <: Seq[Company] enables the derivation for Corrupt[String, _]
     test("show a Politician with covariant lobby") {
       Show.gen[Politician[String]].show(Corrupt("wall", Seq(Company("Alice Inc"))))
@@ -230,6 +229,22 @@ object Tests extends TestApp {
         |    in coproduct type magnolia.tests.Box[Int]
         |""")
     }
+
+    class ParentClass() {
+      case class LocalClass(name: String)
+
+      test("serialize a case class inside another class") {
+        implicitly[Show[String, LocalClass]].show(LocalClass("foo"))
+      }.assert(_ == "LocalClass(name=foo)")
+
+      case class LocalClassWithDefault(name: String = "foo")
+
+      test("construct a default case class inside another class") {
+        Default.gen[LocalClassWithDefault].default
+      }.assert(_ == LocalClassWithDefault("foo"))
+    }
+    
+    new ParentClass()
 
     test("show an Account") {
       Show.gen[Account].show(Account("john_doe", "john.doe@yahoo.com", "john.doe@gmail.com"))
