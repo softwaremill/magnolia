@@ -204,13 +204,18 @@ object Tests extends TestApp {
       Show.gen[Length].show(new Length(100))
     }.assert(_ == "100")
 
-
     class ParentClass {
-      case class InnerClass(name: String)
+      case class LocalClass(name: String)
 
       test("serialize a case class inside another class") {
-        implicitly[Show[String, InnerClass]].show(InnerClass("foo"))
-      }.assert(_ == "InnerClass(name=foo)")
+        implicitly[Show[String, LocalClass]].show(LocalClass("foo"))
+      }.assert(_ == "LocalClass(name=foo)")
+
+      case class LocalClassWithDefault(name: String = "foo")
+
+      test("construct a default case class inside another class") {
+        Default.gen[LocalClassWithDefault].default
+      }.assert(_ == LocalClassWithDefault("foo"))
     }
     
     new ParentClass
