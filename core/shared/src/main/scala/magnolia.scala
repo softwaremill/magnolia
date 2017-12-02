@@ -65,10 +65,13 @@ object Magnolia {
     *  */
   def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = {
     import c.universe._
-    import scala.util.{Try, Success, Failure}
+    import internal._
 
     val magnoliaPkg = q"_root_.magnolia"
     val scalaPkg = q"_root_.scala"
+
+    val repeatedParamClass = definitions.RepeatedParamClass
+    val scalaSeqType = typeOf[Seq[_]].typeConstructor
 
     val prefixType = c.prefix.tree.tpe
 
@@ -99,7 +102,7 @@ object Magnolia {
 
     val typeConstructor = getTypeMember("Typeclass")
 
-    def getMethod[T](termName: String): Option[MethodSymbol] = {
+    def getMethod(termName: String): Option[MethodSymbol] = {
       val term = TermName(termName)
       val cls = c.prefix.tree.tpe.baseClasses.find(_.asType.toType.decl(term) != NoSymbol)
       cls.map { c =>
@@ -197,15 +200,65 @@ object Magnolia {
       }
     }
 
+    // From Shapeless: https://github.com/milessabin/shapeless/blob/master/core/src/main/scala/shapeless/generic.scala#L698
+    // Cut-n-pasted (with most original comments) and slightly adapted from
+    // https://github.com/scalamacros/paradise/blob/c14c634923313dd03f4f483be3d7782a9b56de0e/plugin/src/main/scala/org/scalamacros/paradise/typechecker/Namers.scala#L568-L613
+    def patchedCompanionSymbolOf(original: c.Symbol): c.Symbol = {
+      // see https://github.com/scalamacros/paradise/issues/7
+      // also see https://github.com/scalamacros/paradise/issues/64
+
+      val global = c.universe.asInstanceOf[scala.tools.nsc.Global]
+      val typer = c.asInstanceOf[scala.reflect.macros.runtime.Context].callsiteTyper.asInstanceOf[global.analyzer.Typer]
+      val ctx = typer.context
+      val owner = original.owner
+
+      import global.analyzer.Context
+
+      original.companion.orElse {
+        import global.{ abort => aabort, _ }
+        implicit class PatchedContext(ctx: Context) {
+          trait PatchedLookupResult { def suchThat(criterion: Symbol => Boolean): Symbol }
+          def patchedLookup(name: Name, expectedOwner: Symbol) = new PatchedLookupResult {
+            override def suchThat(criterion: Symbol => Boolean): Symbol = {
+              var res: Symbol = NoSymbol
+              var ctx = PatchedContext.this.ctx
+              while (res == NoSymbol && ctx.outer != ctx) {
+                // NOTE: original implementation says `val s = ctx.scope lookup name`
+                // but we can't use it, because Scope.lookup returns wrong results when the lookup is ambiguous
+                // and that triggers https://github.com/scalamacros/paradise/issues/64
+                val s = {
+                  val lookupResult = ctx.scope.lookupAll(name).filter(criterion).toList
+                  lookupResult match {
+                    case Nil => NoSymbol
+                    case List(unique) => unique
+                    case _ => aabort(s"unexpected multiple results for a companion symbol lookup for $original#{$original.id}")
+                  }
+                }
+                if (s != NoSymbol && s.owner == expectedOwner)
+                  res = s
+                else
+                  ctx = ctx.outer
+              }
+              res
+            }
+          }
+        }
+        ctx.patchedLookup(original.asInstanceOf[global.Symbol].name.companionName, owner.asInstanceOf[global.Symbol]).suchThat(sym =>
+          (original.isTerm || sym.hasModuleFlag) &&
+            (sym isCoDefinedWith original.asInstanceOf[global.Symbol])
+        ).asInstanceOf[c.universe.Symbol]
+      }
+    }
+
     def directInferImplicit(genericType: c.Type, typeConstructor: Type): Option[Typeclass] = {
 
       val genericTypeName: String = genericType.typeSymbol.name.decodedName.toString.toLowerCase
       lazy val assignedName: TermName = TermName(c.freshName(s"${genericTypeName}Typeclass"))
       lazy val typeSymbol = genericType.typeSymbol
       lazy val classType = if (typeSymbol.isClass) Some(typeSymbol.asClass) else None
-      lazy val isCaseClass = classType.map(_.isCaseClass).getOrElse(false)
-      lazy val isCaseObject = classType.map(_.isModuleClass).getOrElse(false)
-      lazy val isSealedTrait = classType.map(_.isSealed).getOrElse(false)
+      lazy val isCaseClass = classType.exists(_.isCaseClass)
+      lazy val isCaseObject = classType.exists(_.isModuleClass)
+      lazy val isSealedTrait = classType.exists(_.isSealed)
 
       lazy val primitives = Set(typeOf[Double],
                            typeOf[Float],
@@ -214,7 +267,8 @@ object Magnolia {
                            typeOf[Int],
                            typeOf[Long],
                            typeOf[Char],
-                           typeOf[Boolean])
+                           typeOf[Boolean],
+                           typeOf[Unit])
 
       lazy val isValueClass = genericType <:< typeOf[AnyVal] && !primitives.exists(_ =:= genericType)
 
@@ -244,9 +298,10 @@ object Magnolia {
         sym.paramLists.head.map(_.name.decodedName.toString)
       }.getOrElse(List("name", "subtypes"))
       
+      val className = s"${genericType.typeSymbol.owner.fullName}.${genericType.typeSymbol.name.decodedName}"
+
       val result = if (isCaseObject) {
         val obj = companionRef(genericType)
-        val className = genericType.typeSymbol.name.decodedName.toString
 
         val parameters = caseClassParamNames.map {
           case "name" => q"$className"
@@ -263,23 +318,29 @@ object Magnolia {
           case m: MethodSymbol if m.isCaseAccessor || (isValueClass && m.isParamAccessor) =>
             m.asMethod
         }
-        val className = genericType.typeSymbol.name.decodedName.toString
 
         case class CaseParam(sym: c.universe.MethodSymbol,
+                             repeated: Boolean,
                              typeclass: c.Tree,
                              paramType: c.Type,
                              ref: c.TermName)
 
-        val caseParamsReversed: List[CaseParam] = caseClassParameters.foldLeft(List[CaseParam]()) {
-          case (acc, param) =>
+        val caseParamsReversed = caseClassParameters.foldLeft[List[CaseParam]](Nil) {
+          (acc, param) =>
             val paramName = param.name.decodedName.toString
-            val paramType = param.returnType.substituteTypes(genericType.etaExpand.typeParams,
-                                                             genericType.typeArgs)
+            val paramTypeSubstituted = param.typeSignatureIn(genericType).resultType
+
+            val (repeated, paramType) = paramTypeSubstituted match {
+              case TypeRef(_, `repeatedParamClass`, typeArgs) =>
+                true -> appliedType(scalaSeqType, typeArgs)
+              case tpe =>
+                false -> tpe
+            }
 
             val predefinedRef = acc.find(_.paramType == paramType)
 
             val caseParamOpt = predefinedRef.map { backRef =>
-              CaseParam(param, q"()", paramType, backRef.ref) :: acc
+              CaseParam(param, repeated, q"()", paramType, backRef.ref) :: acc
             }
 
             caseParamOpt.getOrElse {
@@ -292,7 +353,7 @@ object Magnolia {
 
               val ref = TermName(c.freshName("paramTypeclass"))
               val assigned = q"""val $ref = $derivedImplicit"""
-              CaseParam(param, assigned, paramType, ref) :: acc
+              CaseParam(param, repeated, assigned, paramType, ref) :: acc
             }
         }
 
@@ -304,10 +365,17 @@ object Magnolia {
         val preAssignments = caseParams.map(_.typeclass)
 
         val defaults = if (!isValueClass) {
-          val caseClassCompanion = genericType.companion
-          val constructorMethod = caseClassCompanion.decl(TermName("apply")).asMethod
+          val caseClassCompanion = patchedCompanionSymbolOf(genericType.typeSymbol).asModule.info
+
+          // If a companion object is defined with alternative apply methods
+          // it is needed get all the alternatives
+          val constructorMethods =
+            caseClassCompanion.decl(TermName("apply")).alternatives.map(_.asMethod)
+
+          // The last apply method in the alternatives is the one that belongs
+          // to the case class, not the user defined companion object
           val indexedConstructorParams =
-            constructorMethod.paramLists.head.map(_.asTerm).zipWithIndex
+            constructorMethods.last.paramLists.head.map(_.asTerm).zipWithIndex
 
           indexedConstructorParams.map {
             case (p, idx) =>
@@ -319,22 +387,23 @@ object Magnolia {
         } else List(q"$scalaPkg.None")
 
         val assignments = caseParams.zip(defaults).zipWithIndex.map {
-          case ((CaseParam(param, typeclass, paramType, ref), defaultVal), idx) =>
+          case ((CaseParam(param, repeated, typeclass, paramType, ref), defaultVal), idx) =>
             val paramMethod: Tree = getMethod("param").map { sym =>
               q"${c.prefix}.param"
             }.getOrElse(q"$magnoliaPkg.Magnolia.param[$typeConstructor, $genericType, $paramType]")
 
             val paramNames = getMethod("param").map { sym =>
               sym.paramLists.head.map(_.name.decodedName.toString)
-            }.getOrElse(List("name", "typeclass", "default", "dereference"))
+            }.getOrElse(List("name", "repeated", "typeclass", "default", "dereference"))
 
             val parameters: List[Tree] = paramNames.map {
               case "name" => q"${param.name.decodedName.toString}"
+              case "repeated" => q"$repeated"
               case "typeclass" => q"$ref"
               case "default" => q"$defaultVal"
               case "dereference" => q"_.${param.name}"
               case other =>
-                c.abort(c.enclosingPosition, s"magnolia: method 'param' has an unexpected parameter with name '$other'; permitted parameter names: name, typeclass, default, dereference")
+                c.abort(c.enclosingPosition, s"magnolia: method 'param' has an unexpected parameter with name '$other'; permitted parameter names: default, dereference, name, repeated, typeclass")
             }
             q"""$paramsVal($idx) = $paramMethod(..$parameters)"""
         }
@@ -348,7 +417,8 @@ object Magnolia {
             ($fnVal: $liftedParamType => Any) =>
               new $genericType(..${caseParams.zipWithIndex.map {
                 case (typeclass, idx) =>
-                  q"$fnVal($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
+                  val arg = q"$fnVal($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
+                  if (typeclass.repeated) q"$arg: _*" else arg
               }})
           """
         }
@@ -370,10 +440,13 @@ object Magnolia {
       } else if (isSealedTrait) {
         val genericSubtypes = classType.get.knownDirectSubclasses.to[List]
         val subtypes = genericSubtypes.map { sub =>
-          val typeArgs = sub.asType.typeSignature.baseType(genericType.typeSymbol).typeArgs
-          val mapping = typeArgs.zip(genericType.typeArgs).toMap
-          val newTypeParams = sub.asType.toType.typeArgs.map(mapping(_))
-          appliedType(sub.asType.toType.typeConstructor, newTypeParams)
+          val subType = sub.asType.toType // FIXME: Broken for path dependent types
+          val typeParams = sub.asType.typeParams
+          val typeArgs = thisType(sub).baseType(genericType.typeSymbol).typeArgs
+          val mapping = (typeArgs.map(_.typeSymbol), genericType.typeArgs).zipped.toMap
+          val newTypeArgs = typeParams.map(mapping.withDefault(_.asType.toType))
+          val applied = appliedType(subType.typeConstructor, newTypeArgs)
+          existentialAbstraction(typeParams, applied)
         }
 
         if (subtypes.isEmpty) {
@@ -415,10 +488,10 @@ object Magnolia {
         }
 
         val parameters = sealedTraitParamNames.map {
-          case "name" => q"$genericTypeName"
+          case "name" => q"""${s"${genericType.typeSymbol.owner.fullName}.${genericType.typeSymbol.name.decodedName}"}"""
           case "subtypes" => q"$subtypesVal: $scalaPkg.Array[$liftedSubtypeType]"
         }
-
+            
         Some {
           Typeclass(
             genericType,
@@ -446,9 +519,9 @@ object Magnolia {
     val genericType: Type = weakTypeOf[T]
 
     val currentStack: Stack =
-      recursionStack.get(c.enclosingPosition).getOrElse(Stack(Map(), List(), List()))
+      recursionStack.getOrElse(c.enclosingPosition, Stack(Map(), List(), List()))
 
-    val directlyReentrant = Some(genericType) == currentStack.frames.headOption.map(_.genericType)
+    val directlyReentrant = currentStack.frames.headOption.exists(_.genericType == genericType)
 
     if (directlyReentrant) throw DirectlyReentrantException()
 
@@ -457,14 +530,14 @@ object Magnolia {
         emittedErrors += error
         val trace = error.path.mkString("\n    in ", "\n    in ", "\n \n")
 
-        val msg = s"magnolia: could not derive ${typeConstructor} instance for type " +
+        val msg = s"magnolia: could not derive $typeConstructor instance for type " +
           s"${error.genericType}"
 
         c.info(c.enclosingPosition, msg + trace, true)
       }
     }
 
-    val result: Option[Tree] = if (!currentStack.frames.isEmpty) {
+    val result: Option[Tree] = if (currentStack.frames.nonEmpty) {
       findType(genericType) match {
         case None =>
           directInferImplicit(genericType, typeConstructor).map(_.tree)
@@ -508,16 +581,19 @@ object Magnolia {
     *  This method is intended to be called only from code generated by the Magnolia macro, and
     *  should not be called directly from users' code. */
   def param[Tc[_], T, P](name: String,
+                         repeated: Boolean,
                          typeclass: Tc[P],
                          default: => Option[P],
                          dereference: T => P) = {
     val typeclassVal = typeclass
     val defaultVal = default
     val dereferenceVal = dereference
+    val repeatedVal = repeated
     
     new Param[Tc, T] {
       type PType = P
       def label: String = name
+      def repeated: Boolean = repeatedVal
       def default: Option[PType] = defaultVal
       def typeclass: Tc[PType] = typeclassVal
       def dereference(t: T): PType = dereferenceVal(t)

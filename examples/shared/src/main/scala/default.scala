@@ -31,6 +31,9 @@ object Default {
   /** default value for ints; 0 */
   implicit val int: Default[Int] = new Default[Int] { def default = 0 }
 
+  /** default value for sequences; the empty sequence */
+  implicit def seq[A]: Default[Seq[A]] = new Typeclass[Seq[A]] { def default = Seq.empty }
+
   /** generates default instances of [[Default]] for case classes and sealed traits */
   implicit def gen[T]: Default[T] = macro Magnolia.gen[T]
 }

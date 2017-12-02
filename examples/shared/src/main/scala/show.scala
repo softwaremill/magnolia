@@ -93,4 +93,10 @@ object Show extends GenericShow[String] {
   implicit val int: Show[String, Int] = new Show[String, Int] {
     def show(s: Int): String = s.toString
   }
+
+  /** show typeclass for sequences */
+  implicit def seq[A](implicit A: Show[String, A]): Show[String, Seq[A]] =
+    new Show[String, Seq[A]] {
+      def show(as: Seq[A]): String = as.iterator.map(A.show).mkString("[", ",", "]")
+    }
 }
