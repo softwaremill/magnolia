@@ -20,6 +20,7 @@ case class Address(line1: String, occupant: Person)
 
 class Length(val value: Int) extends AnyVal
 
+case class FruitBasket(fruits: Fruit*)
 case class Lunchbox(fruit: Fruit, drink: String)
 object Fruit {
   import examples._
@@ -104,6 +105,12 @@ object Tests extends TestApp {
       import Show.gen
       implicitly[Show[String, Fruit]].show(Fruit("apple"))
     }.assert(_ == "Fruit(name=apple)")
+
+    test("low-priority implicit does not beat Magnolia when chained") {
+      import magnolia.examples._
+      import Show.gen
+      implicitly[Show[String, FruitBasket]].show(FruitBasket(Fruit("apple"), Fruit("banana")))
+    }.assert(_ == "FruitBasket(fruits=[Fruit(name=apple),Fruit(name=banana)])")
 
     test("typeclass implicit scope has lower priority than ADT implicit scope") {
       import magnolia.examples._
