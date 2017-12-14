@@ -1,6 +1,7 @@
 package magnolia
 
 import language.higherKinds
+import scala.annotation.tailrec
 
 /** represents a subtype of a sealed trait
   *
@@ -157,12 +158,12 @@ final class SealedTrait[Typeclass[_], Type](val typeName: String,
     *                 matches
     *  @return  the result of applying the `handle` lambda to subtype of the sealed trait which
     *           matches the parameter `value` */
-  def dispatch[Return](value: Type)(handle: Subtype[Typeclass, Type] => Return): Return =
-    subtypes
-      .map { sub =>
-        sub.cast.andThen { v =>
-          handle(sub)
-        }
-      }
-      .reduce(_ orElse _)(value)
+  def dispatch[Return](value: Type)(handle: Subtype[Typeclass, Type] => Return): Return = {
+    @tailrec def rec(ix: Int): Return =
+      if (ix < subtypesArray.length) {
+        val sub = subtypesArray(ix)
+        if (sub.cast.isDefinedAt(value)) handle(sub) else rec(ix + 1)
+      } else throw new IllegalArgumentException(s"The given value `$value` is not a sub type of `$typeName`")
+    rec(0)
+  }
 }
