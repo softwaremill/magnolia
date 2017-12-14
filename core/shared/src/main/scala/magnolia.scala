@@ -1,5 +1,6 @@
 package magnolia
 
+import scala.util.control.NonFatal
 import scala.reflect._
 import macros._
 import scala.collection.immutable.ListMap
@@ -112,7 +113,7 @@ object Magnolia {
           )
         }
       val firstParamBlock = combineClass.asType.toType.decl(term).asTerm.asMethod.paramLists.head
-      if (firstParamBlock.length != 1)
+      if (firstParamBlock.lengthCompare(1) != 0)
         c.abort(c.enclosingPosition,
                 s"magnolia: the method `combine` should take a single parameter of type $expected")
     }
@@ -124,9 +125,9 @@ object Magnolia {
     def findType(key: Type): Option[TermName] =
       recursionStack(c.enclosingPosition).frames.find(_.genericType == key).map(_.termName(c))
 
-    case class Typeclass(typ: c.Type, tree: c.Tree)
+    final case class Typeclass(typ: c.Type, tree: c.Tree)
 
-    def recurse[T](path: TypePath, key: Type, value: TermName)(fn: => T): Option[T] = {
+    def recurse[A](path: TypePath, key: Type, value: TermName)(fn: => A): Option[A] = {
       val oldRecursionStack = recursionStack.get(c.enclosingPosition)
       recursionStack = recursionStack.updated(
         c.enclosingPosition,
@@ -136,7 +137,7 @@ object Magnolia {
       )
 
       try Some(fn)
-      catch { case e: Exception => None } finally {
+      catch { case NonFatal(_) => None } finally {
         val currentStack = recursionStack(c.enclosingPosition)
         recursionStack = recursionStack.updated(c.enclosingPosition, currentStack.pop())
       }
@@ -293,7 +294,7 @@ object Magnolia {
             m.asMethod
         }
 
-        case class CaseParam(sym: c.universe.MethodSymbol,
+        final case class CaseParam(sym: c.universe.MethodSymbol,
                              repeated: Boolean,
                              typeclass: c.Tree,
                              paramType: c.Type,
@@ -524,7 +525,7 @@ object Magnolia {
                          isRepeated: Boolean,
                          typeclassParam: Tc[P],
                          defaultVal: => Option[P],
-                         deref: T => P) = new Param[Tc, T] {
+                         deref: T => P): Param[Tc, T] = new Param[Tc, T] {
     type PType = P
     def label: String = name
     def repeated: Boolean = isRepeated
@@ -541,31 +542,31 @@ object Magnolia {
                           obj: Boolean,
                           valClass: Boolean,
                           params: Array[Param[Tc, T]],
-                          constructor: (Param[Tc, T] => Any) => T) =
+                          constructor: (Param[Tc, T] => Any) => T): CaseClass[Tc, T] =
     new CaseClass[Tc, T](name, obj, valClass, params) {
       def construct[R](param: Param[Tc, T] => R): T = constructor(param)
     }
 }
 
-private[magnolia] case class DirectlyReentrantException()
+private[magnolia] final case class DirectlyReentrantException()
     extends Exception("attempt to recurse directly")
 
 private[magnolia] object Deferred { def apply[T](method: String): T = ??? }
 
 private[magnolia] object CompileTimeState {
 
-  sealed class TypePath(path: String) { override def toString = path }
-  case class CoproductType(typeName: String) extends TypePath(s"coproduct type $typeName")
+  sealed abstract class TypePath(path: String) { override def toString = path }
+  final case class CoproductType(typeName: String) extends TypePath(s"coproduct type $typeName")
 
-  case class ProductType(paramName: String, typeName: String)
+  final case class ProductType(paramName: String, typeName: String)
       extends TypePath(s"parameter '$paramName' of product type $typeName")
 
-  case class ChainedImplicit(typeName: String)
+  final case class ChainedImplicit(typeName: String)
       extends TypePath(s"chained implicit of type $typeName")
 
-  case class ImplicitNotFound(genericType: String, path: List[TypePath])
+  final case class ImplicitNotFound(genericType: String, path: List[TypePath])
 
-  case class Stack(cache: Map[whitebox.Context#Type, Option[whitebox.Context#Tree]],
+  final case class Stack(cache: Map[whitebox.Context#Type, Option[whitebox.Context#Tree]],
                    frames: List[Frame],
                    errors: List[ImplicitNotFound]) {
 
@@ -583,7 +584,7 @@ private[magnolia] object CompileTimeState {
     def pop(): Stack = Stack(cache, frames.tail, errors)
   }
 
-  case class Frame(path: TypePath,
+  final case class Frame(path: TypePath,
                    genericType: whitebox.Context#Type,
                    term: whitebox.Context#TermName) {
     def termName(c: whitebox.Context): c.TermName = term.asInstanceOf[c.TermName]

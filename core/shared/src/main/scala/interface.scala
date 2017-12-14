@@ -129,7 +129,7 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
     *
     *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
     *  [[scala.collection.Seq]] to hide the mutable collection API. */
-  def parameters: Seq[Param[Typeclass, Type]] = parametersArray
+  final def parameters: Seq[Param[Typeclass, Type]] = parametersArray
 }
 
 /** represents a sealed trait and the context required to construct a new typeclass instance
