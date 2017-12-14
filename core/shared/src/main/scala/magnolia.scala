@@ -333,7 +333,7 @@ object Magnolia {
         val caseParams = caseParamsReversed.reverse
 
         val paramsVal: TermName = TermName(c.freshName("parameters"))
-        val fnVal: TermName = TermName(c.freshName("fn"))
+        val fieldValues: TermName = TermName(c.freshName("fieldValues"))
 
         val preAssignments = caseParams.map(_.typeclass)
 
@@ -381,15 +381,18 @@ object Magnolia {
               false,
               $isValueClass,
               $paramsVal,
-              ($fnVal: $magnoliaPkg.Param[$typeConstructor, $genericType] => Any) =>
-                new $genericType(..${caseParams.zipWithIndex.map {
-              case (typeclass, idx) =>
-                val arg = q"$fnVal($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
-                if (typeclass.repeated) q"$arg: _*" else arg
-            }})
-            ))
-          }"""
-          )
+              ($fieldValues: $scalaPkg.Seq[Any]) => {
+                if ($fieldValues.lengthCompare($paramsVal.length) != 0) {
+                  val msg = "`" + $className + "` has " + $paramsVal.length + " fields, not " + $fieldValues.size
+                  throw new java.lang.IllegalArgumentException(msg)
+                }
+                new $genericType(..${
+                  caseParams.zipWithIndex.map { case (typeclass, idx) =>
+                    val arg = q"$fieldValues($idx).asInstanceOf[${typeclass.paramType}]"
+                    if (typeclass.repeated) q"$arg: _*" else arg
+                  }
+            })}))
+          }""")
         )
       } else if (isSealedTrait) {
         val genericSubtypes = classType.get.knownDirectSubclasses.to[List]
@@ -541,9 +544,9 @@ object Magnolia {
                           obj: Boolean,
                           valClass: Boolean,
                           params: Array[Param[Tc, T]],
-                          constructor: (Param[Tc, T] => Any) => T) =
+                          constructor: Seq[Any] => T): CaseClass[Tc, T] =
     new CaseClass[Tc, T](name, obj, valClass, params) {
-      def construct[R](param: Param[Tc, T] => R): T = constructor(param)
+      def rawConstruct(fieldValues: Seq[Any]): T = constructor(fieldValues)
     }
 }
 

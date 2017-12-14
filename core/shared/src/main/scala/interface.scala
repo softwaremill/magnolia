@@ -122,7 +122,22 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
     *  @param makeParam  lambda for converting a generic [[Param]] into the value to be used for
     *                    this parameter in the construction of a new instance of the case class
     *  @return  a new instance of the case class */
-  def construct[Return](makeParam: Param[Typeclass, Type] => Return): Type
+  final def construct[Return](makeParam: Param[Typeclass, Type] => Return): Type =
+    rawConstruct(parameters map makeParam)
+
+  /** constructs a new instance of the case class type
+    *
+    *  Like [[construct]] this method is implemented by Magnolia and let's you construct case class
+    *  instances generically in user code, without knowing their type concretely.
+    *
+    *  `rawConstruct`, however, is more low-level in that it expects you to provide a [[Seq]]
+    *  containing all the field values for the case class type, in order and with the correct types.
+    *
+    * @param fieldValues contains the field values for the case class instance to be constructed,
+    *                    in order and with the correct types.
+    *  @return  a new instance of the case class
+    *  @throws  IllegalArgumentException if the size of `paramValues` differs from the size of [[parameters]] */
+  def rawConstruct(fieldValues: Seq[Any]): Type
 
   /** a sequence of [[Param]] objects representing all of the parameters in the case class
     *
