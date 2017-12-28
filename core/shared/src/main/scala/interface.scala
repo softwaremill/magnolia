@@ -102,12 +102,14 @@ trait Param[Typeclass[_], Type] {
   *  @param parametersArray  an array of [[Param]] values for this case class
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type       generic type of this parameter */
-abstract class CaseClass[Typeclass[_], Type, ParamType] private[magnolia] (
+abstract class CaseClass[Typeclass[_], Type, PType] private[magnolia] (
   val typeName: String,
   val isObject: Boolean,
   val isValueClass: Boolean,
-  parametersArray: Array[ParamType]
+  parametersArray: Array[PType]
 ) {
+
+  type ParamType = PType
 
   /** constructs a new instance of the case class type
     *

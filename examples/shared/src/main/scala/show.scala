@@ -34,22 +34,33 @@ trait GenericShow[Out] {
 
   def join(typeName: String, strings: Seq[String]): Out
 
-  def param[T, P](name: String, typeclass: Show[Out, P], dereference: T => P)(implicit auto: Dflt[P]) =
+  def param[T, P](name: String, typeclass: Show[Out, P], dereference: T => P)(
+    implicit auto: Dflt[P]
+  ) =
     ShowParam[Out, T, P](name, typeclass, dereference)
 
   def caseClass[T, P](name: String, parameters: Array[P], isValueClass: Boolean): Derivation[T, P] =
     Derivation(name, isValueClass, parameters)
 
-  /*def subtype[T, S <: T](name: String, typeclassParam: => Show[Out, S], isType: T => Boolean, asType: T => S): Subtype[Typeclass, T] =
+  def subtype[T, S <: T](name: String,
+                         typeclass: => Show[Out, S],
+                         isType: T => Boolean,
+                         asType: T => S): Subtype[Typeclass, T] = {
+    def typeclassVal = typeclass
     new Subtype[Typeclass, T] {
       type SType = S
       def label = name
-      def typeclass = typeclassParam
+      def typeclass = typeclassVal
       def cast = new PartialFunction[T, S] {
         def isDefinedAt(t: T) = isType(t)
         def apply(t: T): SType = asType(t)
       }
-    }*/
+    }
+  }
+
+  def sealedTrait[T](name: String,
+                     subtypes: Array[Subtype[Typeclass, T]]): SealedTrait[Typeclass, T] =
+    new SealedTrait[Typeclass, T](name, subtypes)
 
   /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of
     *  showing each parameter, and prefixing it with the class name */

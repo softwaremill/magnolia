@@ -1,21 +1,5 @@
-package adt1
-
 import scalaz._
 import Scalaz._
-
-// @deriving(Show, Equal) sealed trait Tree
-// @deriving(Show, Equal) case class Leaf(value: String) extends Tree
-// @deriving(Show, Equal) case class Branch(left: Tree, right: Tree) extends Tree
-
-// @deriving(Show, Equal) sealed trait GTree[T]
-// @deriving(Show, Equal) case class GLeaf[T](value: String) extends GTree[T]
-// @deriving(Show, Equal) case class GBranch[T](left: GTree[T], right: GTree[T]) extends GTree[T]
-
-// @deriving(Show, Equal) sealed trait Entity
-
-// @deriving(Show, Equal) case class Company(name: String) extends Entity
-// @deriving(Show, Equal) case class Human(name: String, age: Int) extends Entity
-// @deriving(Show, Equal) case class Address(line1: String, occupant: Human)
 
 @deriving(Show, Equal) sealed trait Alphabet
 
@@ -61,23 +45,11 @@ import Scalaz._
                                         v: Letter)
     extends Alphabet
 
-//@deriving(Show, Equal) case class Letter(name: String, phonetic: String)
-//@deriving(Show, Equal) case class Country(name: String, language: Language, leader: Person, existence: DateRange)
-//@deriving(Show, Equal) case class Language(name: String, code: String, alphabet: Alphabet)
-//@deriving(Show, Equal) case class Person(name: String, dateOfBirth: Date)
-//@deriving(Show, Equal) case class Date(year: Int, month: Month, day: Int)
-//@deriving(Show, Equal) case class DateRange(from: Date, toDate: Date)
+@deriving(Show, Equal) case class Letter(name: String, phonetic: String)
+@deriving(Show, Equal) case class Country(name: String, language: Language)
+@deriving(Show, Equal) case class Language(name: String, code: String, alphabet: Latin)
 
-// @deriving(Show, Equal) sealed trait Month
-// @deriving(Show, Equal) case object Jan extends Month
-// @deriving(Show, Equal) case object Feb extends Month
-// @deriving(Show, Equal) case object Mar extends Month
-// @deriving(Show, Equal) case object Apr extends Month
-// @deriving(Show, Equal) case object May extends Month
-// @deriving(Show, Equal) case object Jun extends Month
-// @deriving(Show, Equal) case object Jul extends Month
-// @deriving(Show, Equal) case object Aug extends Month
-// @deriving(Show, Equal) case object Sep extends Month
-// @deriving(Show, Equal) case object Oct extends Month
-// @deriving(Show, Equal) case object Nov extends Month
-// @deriving(Show, Equal) case object Dec extends Month
+object Gen {
+  Show[Alphabet]
+  Equal[Alphabet]
+}

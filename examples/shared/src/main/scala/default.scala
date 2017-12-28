@@ -14,7 +14,7 @@ object Default {
 
   /** constructs a default for each parameter, using the constructor default (if provided),
     *  otherwise using a typeclass-provided default */
-  def combine[T](ctx: CaseClass[Default, T, Param[Default, T]]): Default[T] = new Default[T] {
+  def combine[T](ctx: CaseClass[Default, T]): Default[T] = new Default[T] {
     def default = ctx.construct { param =>
       param.default.getOrElse(param.typeclass.default)
     }

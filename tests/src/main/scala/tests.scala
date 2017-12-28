@@ -59,10 +59,18 @@ case class Account(id: String, emails: String*)
 
 case class Portfolio(companies: Company*)
 
+trait ProductOnly[T]
+object ProductOnly {
+  type Typeclass[T] = ProductOnly[T]
+  def combine[T](ctx: CaseClass[ProductOnly, T, _]): ProductOnly[T] = null
+  implicit def gen[T]: ProductOnly[T] = macro Magnolia.gen[T]
+
+  implicit val productOnlyString: ProductOnly[String] = null
+}
 
 object Tests extends TestApp {
 
-  def tests() = for(i <- 1 to 1000) {
+  def tests() = for (i <- 1 to 100) {
     import examples._
 
     test("construct a Show product instance with alternative apply functions") {
@@ -223,12 +231,10 @@ object Tests extends TestApp {
     // LabelledBox being invariant in L <: String prohibits the derivation for LabelledBox[Int, _]
     test("can't show a Box with invariant label") {
       scalac"Show.gen[Box[Int]]"
-    }.assert { _ == TypecheckError(
-      txt"""magnolia: could not find typeclass for type L
+    }.assert { _ == TypecheckError(txt"""magnolia: could not find typeclass for type L
         |    in parameter 'label' of product type magnolia.tests.LabelledBox[Int, _ <: String]
         |    in coproduct type magnolia.tests.Box[Int]
-        |""")
-    }
+        |""") }
 
     class ParentClass() {
       case class LocalClass(name: String)
@@ -243,7 +249,7 @@ object Tests extends TestApp {
         Default.gen[LocalClassWithDefault].default
       }.assert(_ == LocalClassWithDefault("foo"))
     }
-    
+
     new ParentClass()
 
     test("show an Account") {
@@ -257,7 +263,7 @@ object Tests extends TestApp {
     test("show a Portfolio of Companies") {
       Show.gen[Portfolio].show(Portfolio(Company("Alice Inc"), Company("Bob & Co")))
     }.assert(_ == "Portfolio(companies=[Company(name=Alice Inc),Company(name=Bob & Co)])")
-    
+
     test("sealed trait typeName should be complete and unchanged") {
       TypeName.gen[Color].name
     }.assert(_ == "magnolia.tests.Color")
@@ -266,6 +272,16 @@ object Tests extends TestApp {
       implicit val stringTypeName: TypeName[String] = new TypeName[String] { def name = "" }
       TypeName.gen[Fruit].name
     }.assert(_ == "magnolia.tests.Fruit")
+    
+    test("attempt to derive typeclass without `dispatch` works for products") {
+      ProductOnly.gen[Fruit]
+    }.returns()
+    
+    test("attempt to derive typeclass without `dispatch` fails for coproducts") {
+      scalac"ProductOnly.gen[Color]"
+    }.assert(_ == TypecheckError("""magnolia: the method `dispatch` should be defined, taking a """+
+        """single parameter of type SealedTrait[Typeclass, _]"""))
+    
     ()
   }
 }
