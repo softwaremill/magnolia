@@ -1,12 +1,13 @@
 package magnolia.tests
 
 import language.experimental.macros
-
 import magnolia._
 import estrapade._
 import contextual.data.scalac._
 import contextual.data.fqt._
 import contextual.data.txt._
+
+import scala.util.control.NonFatal
 
 sealed trait Tree[+T]
 case class Leaf[+L](value: L) extends Tree[L]
@@ -236,6 +237,44 @@ object Tests extends TestApp {
         |    in coproduct type magnolia.tests.Box[Int]
         |""")
     }
+
+    test("patch a Person via a Patcher[Entity]") {
+      // these two implicits can be removed once https://github.com/propensive/magnolia/issues/58 is closed
+      implicit val stringPatcher = Patcher.forSingleValue[String]
+      implicit val intPatcher = Patcher.forSingleValue[Int]
+      
+      val person = Person("Bob", 42)
+      implicitly[Patcher[Entity]]
+        .patch(person, Seq(null, 21))
+    }.assert(_ == Person("Bob", 21))
+
+    test("throw on an illegal patch attempt with field count mismatch") {
+      // these two implicits can be removed once https://github.com/propensive/magnolia/issues/58 is closed
+      implicit val stringPatcher = Patcher.forSingleValue[String]
+      implicit val intPatcher = Patcher.forSingleValue[Int]
+
+      try {
+        val person = Person("Bob", 42)
+        implicitly[Patcher[Entity]]
+          .patch(person, Seq(null, 21, 'killer))
+      } catch {
+        case NonFatal(e) => e.getMessage
+      }
+    }.assert(_ == "Cannot patch value `Person(Bob,42)`, expected 2 fields but got 3")
+
+    test("throw on an illegal patch attempt with field type mismatch") {
+      // these two implicits can be removed once https://github.com/propensive/magnolia/issues/58 is closed
+      implicit val stringPatcher = Patcher.forSingleValue[String]
+      implicit val intPatcher = Patcher.forSingleValue[Int]
+
+      try {
+        val person = Person("Bob", 42)
+        implicitly[Patcher[Entity]]
+          .patch(person, Seq(null, 'killer))
+      } catch {
+        case NonFatal(e) => e.getMessage
+      }
+    }.assert(_ == "scala.Symbol cannot be cast to java.lang.Integer")
 
     class ParentClass() {
       case class LocalClass(name: String)
