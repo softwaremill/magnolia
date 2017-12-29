@@ -61,10 +61,9 @@ case class Account(id: String, emails: String*)
 
 case class Portfolio(companies: Company*)
 
-
 object Tests extends TestApp {
 
-  def tests() = for (i <- 1 to 1) {
+  def tests(): Unit = for (i <- 1 to 1) {
     import examples._
 
     test("construct a Show product instance with alternative apply functions") {
@@ -276,21 +275,37 @@ object Tests extends TestApp {
       }
     }.assert(_ == "scala.Symbol cannot be cast to java.lang.Integer")
 
-    class ParentClass() {
-      case class LocalClass(name: String)
+    class ParentClass {
+      case class InnerClass(name: String)
+      case class InnerClassWithDefault(name: String = "foo")
 
-      test("serialize a case class inside another class") {
-        implicitly[Show[String, LocalClass]].show(LocalClass("foo"))
-      }.assert(_ == "LocalClass(name=foo)")
+      def testInner(): Unit = {
+        test("serialize a case class inside another class") {
+          implicitly[Show[String, InnerClass]].show(InnerClass("foo"))
+        }.assert(_ == "InnerClass(name=foo)")
 
-      case class LocalClassWithDefault(name: String = "foo")
+        test("construct a default case class inside another class") {
+          Default.gen[InnerClassWithDefault].default
+        }.assert(_ == InnerClassWithDefault("foo"))
+      }
 
-      test("construct a default case class inside another class") {
-        Default.gen[LocalClassWithDefault].default
-      }.assert(_ == LocalClassWithDefault("foo"))
+      def testLocal(): Unit = {
+        case class LocalClass(name: String)
+        case class LocalClassWithDefault(name: String = "foo")
+
+        test("serialize a case class inside a method") {
+          implicitly[Show[String, LocalClass]].show(LocalClass("foo"))
+        }.assert(_ == "LocalClass(name=foo)")
+
+        test("construct a default case class inside a method") {
+          Default.gen[LocalClassWithDefault].default
+        }.assert(_ == LocalClassWithDefault("foo"))
+      }
     }
     
-    new ParentClass()
+    val parent = new ParentClass()
+    parent.testInner()
+    parent.testLocal()
 
     test("show an Account") {
       Show.gen[Account].show(Account("john_doe", "john.doe@yahoo.com", "john.doe@gmail.com"))
@@ -312,6 +327,5 @@ object Tests extends TestApp {
       implicit val stringTypeName: TypeName[String] = new TypeName[String] { def name = "" }
       TypeName.gen[Fruit].name
     }.assert(_ == "magnolia.tests.Fruit")
-    ()
   }
 }
