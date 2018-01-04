@@ -30,7 +30,7 @@ trait GenericShow[Out] {
           s"${param.label}=${param.typeclass.show(param.dereference(value))}"
         }
 
-        join(ctx.typeName.split("\\.").last, paramStrings)
+        join(ctx.typeName.short, paramStrings)
       }
   }
 

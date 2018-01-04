@@ -320,12 +320,12 @@ object Tests extends TestApp {
     }.assert(_ == "Portfolio(companies=[Company(name=Alice Inc),Company(name=Bob & Co)])")
     
     test("sealed trait typeName should be complete and unchanged") {
-      TypeName.gen[Color].name
-    }.assert(_ == "magnolia.tests.Color")
+      TypeNameInfo.gen[Color].name
+    }.assert(_.full == "magnolia.tests.Color")
 
     test("case class typeName should be complete and unchanged") {
-      implicit val stringTypeName: TypeName[String] = new TypeName[String] { def name = "" }
-      TypeName.gen[Fruit].name
-    }.assert(_ == "magnolia.tests.Fruit")
+      implicit val stringTypeName: TypeNameInfo[String] = new TypeNameInfo[String] { def name = ??? }
+      TypeNameInfo.gen[Fruit].name
+    }.assert(_.full == "magnolia.tests.Fruit")
   }
 }
