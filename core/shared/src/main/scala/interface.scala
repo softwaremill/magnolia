@@ -104,7 +104,7 @@ trait Param[Typeclass[_], Type] {
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type       generic type of this parameter */
 abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
-  val typeName: String,
+  val typeName: TypeName,
   val isObject: Boolean,
   val isValueClass: Boolean,
   parametersArray: Array[Param[Typeclass, Type]]
@@ -157,7 +157,7 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
   *  @param subtypesArray  an array of [[Subtype]] instances for each subtype in the sealed trait
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type             generic type of this parameter */
-final class SealedTrait[Typeclass[_], Type](val typeName: String,
+final class SealedTrait[Typeclass[_], Type](val typeName: TypeName,
                                             subtypesArray: Array[Subtype[Typeclass, Type]]) {
 
   /** a sequence of all the subtypes of this sealed trait */
@@ -181,4 +181,11 @@ final class SealedTrait[Typeclass[_], Type](val typeName: String,
       } else throw new IllegalArgumentException(s"The given value `$value` is not a sub type of `$typeName`")
     rec(0)
   }
+}
+
+/**
+  * Provides the different parts of a type's class name.
+  */
+final case class TypeName(ownerName: String, short: String) {
+  def full: String = s"$ownerName.$short"
 }
