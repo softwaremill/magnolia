@@ -318,6 +318,10 @@ object Tests extends TestApp {
     test("show a Portfolio of Companies") {
       Show.gen[Portfolio].show(Portfolio(Company("Alice Inc"), Company("Bob & Co")))
     }.assert(_ == "Portfolio(companies=[Company(name=Alice Inc),Company(name=Bob & Co)])")
+
+    test("show a List[Int]") {
+      Show.gen[List[Int]].show(List(1, 2, 3))
+    }.assert(_ == "::(head=1,tl$access$1=::(head=2,tl$access$1=::(head=3,tl$access$1=Nil())))")
     
     test("sealed trait typeName should be complete and unchanged") {
       TypeNameInfo.gen[Color].name

@@ -225,11 +225,10 @@ object Magnolia {
       }
 
       val result = if (isCaseObject) {
-        val obj = GlobalUtil.patchedCompanionRef(c)(genericType)
         val impl = q"""
           $typeNameDef
           ${c.prefix}.combine($magnoliaPkg.Magnolia.caseClass[$typeConstructor, $genericType](
-            $typeName, true, false, new $scalaPkg.Array(0), _ => $obj)
+            $typeName, true, false, new $scalaPkg.Array(0), _ => ${genericType.typeSymbol.asClass.module})
           )
         """
         Some(Typeclass(genericType, impl))
