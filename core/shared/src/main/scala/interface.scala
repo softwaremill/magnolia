@@ -12,10 +12,10 @@ trait Subtype[Typeclass[_], Type] {
   /** the type of subtype */
   type SType <: Type
 
-  /** the name of the subtype
+  /** the [[TypeName]] of the subtype
     *
-    *  This is the fully-qualified name of the type of subclass. */
-  def label: String
+    *  This is the full name information for the type of subclass. */
+  def typeName: TypeName
 
   /** the typeclass instance associated with this subtype
     *
@@ -186,6 +186,6 @@ final class SealedTrait[Typeclass[_], Type](val typeName: TypeName,
 /**
   * Provides the different parts of a type's class name.
   */
-final case class TypeName(ownerName: String, short: String) {
-  def full: String = s"$ownerName.$short"
+final case class TypeName(owner: String, short: String) {
+  def full: String = s"$owner.$short"
 }

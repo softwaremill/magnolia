@@ -26,7 +26,7 @@ object Decoder {
   /** defines how new [[Decoder]]s for case classes should be constructed */
   def combine[T](ctx: CaseClass[Decoder, T]): Decoder[T] = new Decoder[T] {
     def decode(value: String) = {
-      val (name, values) = parse(value)
+      val (_, values) = parse(value)
       ctx.construct { param =>
         param.typeclass.decode(values(param.label))
       }
@@ -36,8 +36,8 @@ object Decoder {
   /** defines how to choose which subtype of the sealed trait to use for decoding */
   def dispatch[T](ctx: SealedTrait[Decoder, T]): Decoder[T] = new Decoder[T] {
     def decode(param: String) = {
-      val (name, values) = parse(param)
-      val subtype = ctx.subtypes.find(_.label == name).get
+      val (name, _) = parse(param)
+      val subtype = ctx.subtypes.find(_.typeName.full == name).get
       subtype.typeclass.decode(param)
     }
   }
