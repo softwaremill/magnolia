@@ -69,6 +69,10 @@ object Magnolia {
     import c.universe._
     import internal._
 
+    val debug = c.macroApplication.symbol.annotations
+      .find(_.tree.tpe <:< typeOf[debug])
+      .flatMap(_.tree.children.tail.collectFirst { case Literal(Constant(s: String)) => s })
+
     val magnoliaPkg = q"_root_.magnolia"
     val scalaPkg = q"_root_.scala"
 
@@ -447,6 +451,10 @@ object Magnolia {
     if (currentStack.frames.isEmpty) recursionStack = ListMap()
 
     val dereferencedResult = result.map { tree =>
+      if (debug.isDefined && genericType.toString.contains(debug.get)) {
+        c.echo(c.enclosingPosition, s"Magnolia macro expansion for $genericType")
+        c.echo(NoPosition, s"... = ${showCode(tree)}\n\n")
+      }
       if (currentStack.frames.isEmpty) c.untypecheck(removeDeferred.transform(tree)) else tree
     }
 
