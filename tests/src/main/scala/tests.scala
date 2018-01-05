@@ -1,17 +1,22 @@
 package magnolia.tests
 
 import language.experimental.macros
-import magnolia._
-import estrapade._
+import estrapade.{test, TestApp}
 import contextual.data.scalac._
 import contextual.data.fqt._
 import contextual.data.txt._
+import magnolia.examples._
 
 import scala.util.control.NonFatal
 
 sealed trait Tree[+T]
 case class Leaf[+L](value: L) extends Tree[L]
 case class Branch[+B](left: Tree[B], right: Tree[B]) extends Tree[B]
+
+sealed trait Path[+A]
+case class Destination[+A](value: A) extends Path[A]
+case class Crossroad[+A](left: Path[A], right: Path[A]) extends Path[A]
+case class OffRoad[+A](path: Option[Path[A]]) extends Path[A]
 
 sealed trait Entity
 
@@ -24,7 +29,6 @@ class Length(val value: Int) extends AnyVal
 case class FruitBasket(fruits: Fruit*)
 case class Lunchbox(fruit: Fruit, drink: String)
 object Fruit {
-  import examples._
   implicit val showFruit: Show[String, Fruit] =
     new Show[String, Fruit] { def show(f: Fruit): String = f.name }
 }
@@ -61,33 +65,29 @@ case class Account(id: String, emails: String*)
 
 case class Portfolio(companies: Company*)
 
+case class Recursive(children: Seq[Recursive])
+
+
 object Tests extends TestApp {
 
-  def tests(): Unit = for (i <- 1 to 1) {
-    import examples._
-
+  def tests(): Unit = for (_ <- 1 to 1) {
     test("construct a Show product instance with alternative apply functions") {
-      import examples._
       Show.gen[Test].show(Test("a", "b"))
     }.assert(_ == """Test(param=Param(a=a,b=b))""")
 
     test("construct a Show product instance") {
-      import examples._
       Show.gen[Person].show(Person("John Smith", 34))
     }.assert(_ == """Person(name=John Smith,age=34)""")
 
     test("construct a Show coproduct instance") {
-      import examples._
       Show.gen[Person].show(Person("John Smith", 34))
     }.assert(_ == "Person(name=John Smith,age=34)")
 
     test("serialize a Branch") {
-      import magnolia.examples._
       implicitly[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
     }.assert(_ == "Branch(left=Leaf(value=LHS),right=Leaf(value=RHS))")
 
     test("local implicit beats Magnolia") {
-      import magnolia.examples._
       implicit val showPerson: Show[String, Person] = new Show[String, Person] {
         def show(p: Person) = "nobody"
       }
@@ -95,40 +95,33 @@ object Tests extends TestApp {
     }.assert(_ == "Address(line1=Home,occupant=nobody)")
 
     test("even low-priority implicit beats Magnolia for nested case") {
-      import magnolia.examples._
       import Show.gen
       implicitly[Show[String, Lunchbox]].show(Lunchbox(Fruit("apple"), "lemonade"))
     }.assert(_ == "Lunchbox(fruit=apple,drink=lemonade)")
 
     test("low-priority implicit does not beat Magnolia when not nested") {
-      import magnolia.examples._
       import Show.gen
       implicitly[Show[String, Fruit]].show(Fruit("apple"))
     }.assert(_ == "Fruit(name=apple)")
 
     test("low-priority implicit does not beat Magnolia when chained") {
-      import magnolia.examples._
       import Show.gen
       implicitly[Show[String, FruitBasket]].show(FruitBasket(Fruit("apple"), Fruit("banana")))
     }.assert(_ == "FruitBasket(fruits=[Fruit(name=apple),Fruit(name=banana)])")
 
     test("typeclass implicit scope has lower priority than ADT implicit scope") {
-      import magnolia.examples._
       implicitly[Show[String, Fruit]].show(Fruit("apple"))
     }.assert(_ == "apple")
 
     test("test equality false") {
-      import examples._
       Eq.gen[Entity].equal(Person("John Smith", 34), Person("", 0))
     }.assert(_ == false)
 
     test("test equality true") {
-      import examples._
       Eq.gen[Entity].equal(Person("John Smith", 34), Person("John Smith", 34))
     }.assert(_ == true)
 
     test("test branch equality true") {
-      import examples._
       Eq.gen[Tree[String]].equal(Branch(Leaf("one"), Leaf("two")), Branch(Leaf("one"), Leaf("two")))
     }.assert(_ == true)
 
@@ -138,14 +131,12 @@ object Tests extends TestApp {
 
     test("construction of Show instance for Leaf") {
       scalac"""
-        import magnolia.examples._
         implicitly[Show[String, Leaf[java.lang.String]]]
       """
     }.assert(_ == Returns(fqt"magnolia.examples.Show[String,magnolia.tests.Leaf[String]]"))
 
     test("construction of Show instance for Tree") {
       scalac"""
-        import magnolia.examples._
         implicitly[Show[String, Tree[String]]]
       """
     }.assert(_ == Returns(fqt"magnolia.examples.Show[String,magnolia.tests.Tree[String]]"))
@@ -186,25 +177,25 @@ object Tests extends TestApp {
 
     test("show error stack") {
       scalac"""
-        import magnolia.examples._
         case class Alpha(integer: Double)
         case class Beta(alpha: Alpha)
         Show.gen[Beta]
       """
-    }.assert(_ == TypecheckError(txt"""magnolia: could not find typeclass for type Double
-                                      |    in parameter 'integer' of product type Alpha
-                                      |    in parameter 'alpha' of product type Beta
-                                      |"""))
+    }.assert(_ == TypecheckError(
+      txt"""magnolia: could not find Show.Typeclass for type Double
+        |    in parameter 'integer' of product type Alpha
+        |    in parameter 'alpha' of product type Beta
+        |"""))
 
     test("not attempt to instantiate Unit when producing error stack") {
       scalac"""
-        import magnolia.examples._
         case class Gamma(unit: Unit)
         Show.gen[Gamma]
       """
-    }.assert(_ == TypecheckError(txt"""magnolia: could not find typeclass for type Unit
-                                      |    in parameter 'unit' of product type Gamma
-                                      |"""))
+    }.assert(_ == TypecheckError(
+      txt"""magnolia: could not find Show.Typeclass for type Unit
+        |    in parameter 'unit' of product type Gamma
+        |"""))
 
     test("typenames and labels are not encoded") {
       implicitly[Show[String, `%%`]].show(`%%`(1, "two"))
@@ -231,7 +222,7 @@ object Tests extends TestApp {
     test("can't show a Box with invariant label") {
       scalac"Show.gen[Box[Int]]"
     }.assert { _ == TypecheckError(
-      txt"""magnolia: could not find typeclass for type L
+      txt"""magnolia: could not find Show.Typeclass for type L
         |    in parameter 'label' of product type magnolia.tests.LabelledBox[Int, _ <: String]
         |    in coproduct type magnolia.tests.Box[Int]
         |""")
@@ -241,7 +232,7 @@ object Tests extends TestApp {
       // these two implicits can be removed once https://github.com/propensive/magnolia/issues/58 is closed
       implicit val stringPatcher = Patcher.forSingleValue[String]
       implicit val intPatcher = Patcher.forSingleValue[Int]
-      
+
       val person = Person("Bob", 42)
       implicitly[Patcher[Entity]]
         .patch(person, Seq(null, 21))
@@ -286,7 +277,9 @@ object Tests extends TestApp {
 
         test("construct a default case class inside another class") {
           Default.gen[InnerClassWithDefault].default
-        }.assert(_ == InnerClassWithDefault("foo"))
+        }.assert(_ == InnerClassWithDefault())
+
+        ()
       }
 
       def testLocal(): Unit = {
@@ -299,10 +292,12 @@ object Tests extends TestApp {
 
         test("construct a default case class inside a method") {
           Default.gen[LocalClassWithDefault].default
-        }.assert(_ == LocalClassWithDefault("foo"))
+        }.assert(_ == LocalClassWithDefault())
+
+        ()
       }
     }
-    
+
     val parent = new ParentClass()
     parent.testInner()
     parent.testLocal()
@@ -322,7 +317,7 @@ object Tests extends TestApp {
     test("show a List[Int]") {
       Show.gen[List[Int]].show(List(1, 2, 3))
     }.assert(_ == "::(head=1,tl$access$1=::(head=2,tl$access$1=::(head=3,tl$access$1=Nil())))")
-    
+
     test("sealed trait typeName should be complete and unchanged") {
       TypeNameInfo.gen[Color].name
     }.assert(_.full == "magnolia.tests.Color")
@@ -331,5 +326,41 @@ object Tests extends TestApp {
       implicit val stringTypeName: TypeNameInfo[String] = new TypeNameInfo[String] { def name = ??? }
       TypeNameInfo.gen[Fruit].name
     }.assert(_.full == "magnolia.tests.Fruit")
+
+    test("show chained error stack") {
+      scalac"""
+        Show.gen[(Int, Seq[(Long, String)])]
+      """
+    } assert { _ == TypecheckError(
+      txt"""magnolia: could not find Show.Typeclass for type Long
+        |    in parameter '_1' of product type (Long, String)
+        |    in chained implicit Show.Typeclass for type Seq[(Long, String)]
+        |    in parameter '_2' of product type (Int, Seq[(Long, String)])
+        |""")
+    }
+
+    test("show a recursive case class") {
+      Show.gen[Recursive].show(Recursive(Seq(Recursive(Nil))))
+    }.assert(_ == "Recursive(children=[Recursive(children=[])])")
+
+    test("manually derive a recursive case class instance") {
+      implicit lazy val showRecursive: Show[String, Recursive] = Show.gen[Recursive]
+      showRecursive.show(Recursive(Seq(Recursive(Nil))))
+    }.assert(_ == "Recursive(children=[Recursive(children=[])])")
+
+    test("show a type aliased case class") {
+      type T = Person
+      Show.gen[T].show(Person("Donald Duck", 313))
+    }.assert(_ == "Person(name=Donald Duck,age=313)")
+
+    test("dependencies between derived type classes") {
+      implicit def showDefaultOption[A](
+        implicit showA: Show[String, A], defaultA: Default[A]
+      ): Show[String, Option[A]] = new Show[String, Option[A]] {
+        def show(optA: Option[A]) = showA.show(optA.getOrElse(defaultA.default))
+      }
+
+      Show.gen[Path[String]].show(OffRoad(Some(Crossroad(Destination("A"), Destination("B")))))
+    }.assert(_ == "OffRoad(path=Crossroad(left=Destination(value=A),right=Destination(value=B)))")
   }
 }
