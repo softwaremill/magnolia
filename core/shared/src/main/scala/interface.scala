@@ -178,7 +178,10 @@ final class SealedTrait[Typeclass[_], Type](val typeName: TypeName,
       if (ix < subtypesArray.length) {
         val sub = subtypesArray(ix)
         if (sub.cast.isDefinedAt(value)) handle(sub) else rec(ix + 1)
-      } else throw new IllegalArgumentException(s"The given value `$value` is not a sub type of `$typeName`")
+      } else
+        throw new IllegalArgumentException(
+          s"The given value `$value` is not a sub type of `$typeName`"
+        )
     rec(0)
   }
 }

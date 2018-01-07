@@ -20,7 +20,7 @@ private[magnolia] object GlobalUtil {
     val original = globalType.typeSymbol
     val owner = original.owner
     val companion = original.companion.orElse {
-      import global.{ abort => aabort, _ }
+      import global.{abort => aabort, _}
       implicit class PatchedContext(ctx: global.analyzer.Context) {
         trait PatchedLookupResult { def suchThat(criterion: Symbol => Boolean): Symbol }
         def patchedLookup(name: Name, expectedOwner: Symbol) = new PatchedLookupResult {
@@ -34,9 +34,12 @@ private[magnolia] object GlobalUtil {
               val s = {
                 val lookupResult = ctx.scope.lookupAll(name).filter(criterion).toList
                 lookupResult match {
-                  case Nil => NoSymbol
+                  case Nil          => NoSymbol
                   case List(unique) => unique
-                  case _ => aabort(s"unexpected multiple results for a companion symbol lookup for $original#{$original.id}")
+                  case _ =>
+                    aabort(
+                      s"unexpected multiple results for a companion symbol lookup for $original#{$original.id}"
+                    )
                 }
               }
               if (s != NoSymbol && s.owner == expectedOwner)

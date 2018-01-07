@@ -88,9 +88,11 @@ object Magnolia {
     }
 
     val typeConstructor = typeDefs.headOption.fold {
-      c.abort(c.enclosingPosition,
-        s"magnolia: the derivation $prefixObject does not define the Typeclass type constructor")
-    } (_.typeConstructor)
+      c.abort(
+        c.enclosingPosition,
+        s"magnolia: the derivation $prefixObject does not define the Typeclass type constructor"
+      )
+    }(_.typeConstructor)
 
     def checkMethod(termName: String, category: String, expected: String): Unit = {
       val term = TermName(termName)
@@ -117,7 +119,8 @@ object Magnolia {
     val removeDeferred = new Transformer {
       override def transform(tree: Tree) = tree match {
         case q"$magnolia.Deferred.apply[$_](${Literal(Constant(method: String))})"
-          if magnolia.symbol == magnoliaPkg => q"${TermName(method)}"
+            if magnolia.symbol == magnoliaPkg =>
+          q"${TermName(method)}"
         case _ =>
           super.transform(tree)
       }
@@ -134,7 +137,8 @@ object Magnolia {
         val path = ChainedImplicit(s"$prefixName.Typeclass", genericType.toString)
         val frame = stack.Frame(path, searchType, termNames.EMPTY)
         stack.recurse(frame, searchType) {
-          Option(c.inferImplicitValue(searchType)).filterNot(_.isEmpty)
+          Option(c.inferImplicitValue(searchType))
+            .filterNot(_.isEmpty)
             .orElse(directInferImplicit(genericType, typeConstructor))
             .getOrElse {
               val missingType = stack.top.fold(searchType)(_.searchType.asInstanceOf[Type])
@@ -142,7 +146,7 @@ object Magnolia {
               val genericType = missingType.typeArgs.head
               val trace = stack.trace.mkString("    in ", "\n    in ", "\n")
               c.abort(c.enclosingPosition,
-                s"magnolia: could not find $typeClassName for type $genericType\n$trace")
+                      s"magnolia: could not find $typeClassName for type $genericType\n$trace")
             }
         }
       }
@@ -170,7 +174,7 @@ object Magnolia {
       val isValueClass = genericType <:< typeOf[AnyVal] && !primitives.exists(_ =:= genericType)
 
       val resultType = appliedType(typeConstructor, genericType)
-        
+
       val typeName = TermName(c.freshName("typeName"))
       val typeNameDef = {
         val ts = genericType.typeSymbol
@@ -209,19 +213,22 @@ object Magnolia {
                 false -> tpe
             }
 
-            acc.find(_.paramType =:= paramType).fold {
-              val path = ProductType(paramName, genericType.toString)
-              val frame = stack.Frame(path, resultType, assignedName)
-              val derivedImplicit = stack.recurse(frame, appliedType(typeConstructor, paramType)) {
-                typeclassTree(paramType, typeConstructor)
-              }
+            acc
+              .find(_.paramType =:= paramType)
+              .fold {
+                val path = ProductType(paramName, genericType.toString)
+                val frame = stack.Frame(path, resultType, assignedName)
+                val derivedImplicit =
+                  stack.recurse(frame, appliedType(typeConstructor, paramType)) {
+                    typeclassTree(paramType, typeConstructor)
+                  }
 
-              val ref = TermName(c.freshName("paramTypeclass"))
-              val assigned = q"""lazy val $ref = $derivedImplicit"""
-              CaseParam(param, repeated, assigned, paramType, ref) :: acc
-            } { backRef =>
-              CaseParam(param, repeated, q"()", paramType, backRef.ref) :: acc
-            }
+                val ref = TermName(c.freshName("paramTypeclass"))
+                val assigned = q"""lazy val $ref = $derivedImplicit"""
+                CaseParam(param, repeated, assigned, paramType, ref) :: acc
+              } { backRef =>
+                CaseParam(param, repeated, q"()", paramType, backRef.ref) :: acc
+              }
         }
 
         val caseParams = caseParamsReversed.reverse
@@ -238,7 +245,7 @@ object Magnolia {
           // If a companion object is defined with alternative apply methods
           // it is needed get all the alternatives
           val constructorMethods =
-          companionSym.decl(TermName("apply")).alternatives.map(_.asMethod)
+            companionSym.decl(TermName("apply")).alternatives.map(_.asMethod)
 
           // The last apply method in the alternatives is the one that belongs
           // to the case class, not the user defined companion object
@@ -280,12 +287,11 @@ object Magnolia {
                   val msg = "`" + $typeName.full + "` has " + $paramsVal.length + " fields, not " + $fieldValues.size
                   throw new java.lang.IllegalArgumentException(msg)
                 }
-                new $genericType(..${
-                  caseParams.zipWithIndex.map { case (typeclass, idx) =>
-                    val arg = q"$fieldValues($idx).asInstanceOf[${typeclass.paramType}]"
-                    if (typeclass.repeated) q"$arg: _*" else arg
-                  }
-            })}))
+                new $genericType(..${caseParams.zipWithIndex.map {
+          case (typeclass, idx) =>
+            val arg = q"$fieldValues($idx).asInstanceOf[${typeclass.paramType}]"
+            if (typeclass.repeated) q"$arg: _*" else arg
+        }})}))
           }""")
       } else if (isSealedTrait) {
         val genericSubtypes = classType.get.knownDirectSubclasses.to[List]
@@ -353,23 +359,27 @@ object Magnolia {
     val directlyReentrant = stack.top.exists(_.searchType =:= searchType)
     if (directlyReentrant) throw DirectlyReentrantException()
 
-    val result = stack.find(searchType).map { enclosingRef =>
-      q"$magnoliaPkg.Deferred[$searchType](${enclosingRef.toString})"
-    }.orElse {
-      directInferImplicit(genericType, typeConstructor)
-    }
+    val result = stack
+      .find(searchType)
+      .map { enclosingRef =>
+        q"$magnoliaPkg.Deferred[$searchType](${enclosingRef.toString})"
+      }
+      .orElse {
+        directInferImplicit(genericType, typeConstructor)
+      }
 
     for (tree <- result) if (debug.isDefined && genericType.toString.contains(debug.get)) {
       c.echo(c.enclosingPosition, s"Magnolia macro expansion for $genericType")
       c.echo(NoPosition, s"... = ${showCode(tree)}\n\n")
     }
 
-    val dereferencedResult = if (stack.nonEmpty) result
+    val dereferencedResult =
+      if (stack.nonEmpty) result
       else for (tree <- result) yield c.untypecheck(removeDeferred.transform(tree))
 
     dereferencedResult.getOrElse {
       c.abort(c.enclosingPosition,
-        s"magnolia: could not infer $prefixName.Typeclass for type $genericType")
+              s"magnolia: could not infer $prefixName.Typeclass for type $genericType")
     }
   }
 
@@ -377,7 +387,10 @@ object Magnolia {
     *
     *  This method is intended to be called only from code generated by the Magnolia macro, and
     *  should not be called directly from users' code. */
-  def subtype[Tc[_], T, S <: T](name: TypeName, tc: => Tc[S], isType: T => Boolean, asType: T => S): Subtype[Tc, T] =
+  def subtype[Tc[_], T, S <: T](name: TypeName,
+                                tc: => Tc[S],
+                                isType: T => Boolean,
+                                asType: T => S): Subtype[Tc, T] =
     new Subtype[Tc, T] with PartialFunction[T, S] {
       type SType = S
       def typeName: TypeName = name
@@ -460,13 +473,18 @@ private[magnolia] object CompileTimeState {
       result.asInstanceOf[T]
     }
 
-    def trace: List[TypePath] = frames.drop(1).foldLeft[(C#Type, List[TypePath])]((null, Nil)) {
-      case ((_, Nil), frame) =>
-        (frame.searchType, frame.path :: Nil)
-      case (continue @ (tpe, acc), frame) =>
-        if (tpe =:= frame.searchType) continue
-        else (frame.searchType, frame.path :: acc)
-    }._2.reverse
+    def trace: List[TypePath] =
+      frames
+        .drop(1)
+        .foldLeft[(C#Type, List[TypePath])]((null, Nil)) {
+          case ((_, Nil), frame) =>
+            (frame.searchType, frame.path :: Nil)
+          case (continue @ (tpe, acc), frame) =>
+            if (tpe =:= frame.searchType) continue
+            else (frame.searchType, frame.path :: acc)
+        }
+        ._2
+        .reverse
 
     override def toString: String =
       frames.mkString("magnolia stack:\n", "\n", "\n")

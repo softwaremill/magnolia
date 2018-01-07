@@ -16,4 +16,3 @@ object TypeNameInfo {
 
   implicit def gen[T]: TypeNameInfo[T] = macro Magnolia.gen[T]
 }
-

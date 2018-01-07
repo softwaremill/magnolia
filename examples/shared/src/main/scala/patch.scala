@@ -30,7 +30,8 @@ object Patcher extends LowerPriorityPatcher {
       def patch(value: T, fieldValues: Seq[Any]): T = {
         if (fieldValues.lengthCompare(ctx.parameters.size) != 0) {
           throw new IllegalArgumentException(
-          s"Cannot patch value `$value`, expected ${ctx.parameters.size} fields but got ${fieldValues.size}")
+            s"Cannot patch value `$value`, expected ${ctx.parameters.size} fields but got ${fieldValues.size}"
+          )
         }
         val effectiveFields = ctx.parameters.zip(fieldValues).map {
           case (param, x) => if (x.asInstanceOf[AnyRef] ne null) x else param dereference value
@@ -55,11 +56,13 @@ sealed abstract class LowerPriorityPatcher {
       def patch(value: Any, fieldValues: Seq[Any]): Any = {
         if (fieldValues.lengthCompare(1) != 0)
           throw new IllegalArgumentException(
-            s"Cannot patch single value `$value` with patch sequence of size ${fieldValues.size}")
+            s"Cannot patch single value `$value` with patch sequence of size ${fieldValues.size}"
+          )
         val head = fieldValues.head
         if (head.getClass != value.getClass)
           throw new IllegalArgumentException(
-            s"Illegal patch value type. Expected `${value.getClass}` but got `${head.getClass}`")
+            s"Illegal patch value type. Expected `${value.getClass}` but got `${head.getClass}`"
+          )
         head
       }
     }
