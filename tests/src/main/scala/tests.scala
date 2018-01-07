@@ -67,7 +67,6 @@ case class Portfolio(companies: Company*)
 
 case class Recursive(children: Seq[Recursive])
 
-
 object Tests extends TestApp {
 
   def tests(): Unit = for (_ <- 1 to 1) {
@@ -181,8 +180,7 @@ object Tests extends TestApp {
         case class Beta(alpha: Alpha)
         Show.gen[Beta]
       """
-    }.assert(_ == TypecheckError(
-      txt"""magnolia: could not find Show.Typeclass for type Double
+    }.assert(_ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type Double
         |    in parameter 'integer' of product type Alpha
         |    in parameter 'alpha' of product type Beta
         |"""))
@@ -192,8 +190,7 @@ object Tests extends TestApp {
         case class Gamma(unit: Unit)
         Show.gen[Gamma]
       """
-    }.assert(_ == TypecheckError(
-      txt"""magnolia: could not find Show.Typeclass for type Unit
+    }.assert(_ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type Unit
         |    in parameter 'unit' of product type Gamma
         |"""))
 
@@ -221,12 +218,10 @@ object Tests extends TestApp {
     // LabelledBox being invariant in L <: String prohibits the derivation for LabelledBox[Int, _]
     test("can't show a Box with invariant label") {
       scalac"Show.gen[Box[Int]]"
-    }.assert { _ == TypecheckError(
-      txt"""magnolia: could not find Show.Typeclass for type L
+    }.assert { _ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type L
         |    in parameter 'label' of product type magnolia.tests.LabelledBox[Int, _ <: String]
         |    in coproduct type magnolia.tests.Box[Int]
-        |""")
-    }
+        |""") }
 
     test("patch a Person via a Patcher[Entity]") {
       // these two implicits can be removed once https://github.com/propensive/magnolia/issues/58 is closed
@@ -234,8 +229,7 @@ object Tests extends TestApp {
       implicit val intPatcher = Patcher.forSingleValue[Int]
 
       val person = Person("Bob", 42)
-      implicitly[Patcher[Entity]]
-        .patch(person, Seq(null, 21))
+      implicitly[Patcher[Entity]].patch(person, Seq(null, 21))
     }.assert(_ == Person("Bob", 21))
 
     test("throw on an illegal patch attempt with field count mismatch") {
@@ -245,8 +239,7 @@ object Tests extends TestApp {
 
       try {
         val person = Person("Bob", 42)
-        implicitly[Patcher[Entity]]
-          .patch(person, Seq(null, 21, 'killer))
+        implicitly[Patcher[Entity]].patch(person, Seq(null, 21, 'killer))
       } catch {
         case NonFatal(e) => e.getMessage
       }
@@ -259,8 +252,7 @@ object Tests extends TestApp {
 
       try {
         val person = Person("Bob", 42)
-        implicitly[Patcher[Entity]]
-          .patch(person, Seq(null, 'killer))
+        implicitly[Patcher[Entity]].patch(person, Seq(null, 'killer))
       } catch {
         case NonFatal(e) => e.getMessage
       }
@@ -323,7 +315,9 @@ object Tests extends TestApp {
     }.assert(_.full == "magnolia.tests.Color")
 
     test("case class typeName should be complete and unchanged") {
-      implicit val stringTypeName: TypeNameInfo[String] = new TypeNameInfo[String] { def name = ??? }
+      implicit val stringTypeName: TypeNameInfo[String] = new TypeNameInfo[String] {
+        def name = ???
+      }
       TypeNameInfo.gen[Fruit].name
     }.assert(_.full == "magnolia.tests.Fruit")
 
@@ -331,13 +325,11 @@ object Tests extends TestApp {
       scalac"""
         Show.gen[(Int, Seq[(Long, String)])]
       """
-    } assert { _ == TypecheckError(
-      txt"""magnolia: could not find Show.Typeclass for type Long
+    } assert { _ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type Long
         |    in parameter '_1' of product type (Long, String)
         |    in chained implicit Show.Typeclass for type Seq[(Long, String)]
         |    in parameter '_2' of product type (Int, Seq[(Long, String)])
-        |""")
-    }
+        |""") }
 
     test("show a recursive case class") {
       Show.gen[Recursive].show(Recursive(Seq(Recursive(Nil))))
@@ -355,7 +347,8 @@ object Tests extends TestApp {
 
     test("dependencies between derived type classes") {
       implicit def showDefaultOption[A](
-        implicit showA: Show[String, A], defaultA: Default[A]
+        implicit showA: Show[String, A],
+        defaultA: Default[A]
       ): Show[String, Option[A]] = new Show[String, Option[A]] {
         def show(optA: Option[A]) = showA.show(optA.getOrElse(defaultA.default))
       }
