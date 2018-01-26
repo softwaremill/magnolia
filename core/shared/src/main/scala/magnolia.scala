@@ -203,6 +203,10 @@ object Magnolia {
 
         val caseParamsReversed = caseClassParameters.foldLeft[List[CaseParam]](Nil) {
           (acc, param) =>
+            for (ann <- param.annotations) {
+              c.info(c.enclosingPosition, ann.tree.toString, force = false)
+            }
+
             val paramName = param.name.decodedName.toString
             val paramTypeSubstituted = param.typeSignatureIn(genericType).resultType
 

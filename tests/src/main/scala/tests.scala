@@ -245,6 +245,7 @@ object Tests extends TestApp {
       }
     }.assert(_ == "Cannot patch value `Person(Bob,42)`, expected 2 fields but got 3")
 
+
     test("throw on an illegal patch attempt with field type mismatch") {
       // these two implicits can be removed once https://github.com/propensive/magnolia/issues/58 is closed
       implicit val stringPatcher = Patcher.forSingleValue[String]
@@ -253,10 +254,14 @@ object Tests extends TestApp {
       try {
         val person = Person("Bob", 42)
         implicitly[Patcher[Entity]].patch(person, Seq(null, 'killer))
+        "it worked"
       } catch {
         case NonFatal(e) => e.getMessage
       }
-    }.assert(_ == "scala.Symbol cannot be cast to java.lang.Integer")
+    }.assert{x =>
+      //tiny hack because Java 9 inserts the "java.base/" module name in the error message
+      x.startsWith("scala.Symbol cannot be cast to") && x.endsWith("java.lang.Integer")
+    }
 
     class ParentClass {
       case class InnerClass(name: String)

@@ -29,10 +29,20 @@ lazy val tests = project
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),
     libraryDependencies ++= Seq(
       "com.fommil" %% "deriving-macro" % "0.9.0",
-      "com.fommil" %% "scalaz-deriving" % "0.9.0"
+      "com.fommil" %% "scalaz-deriving" % "0.9.0",
+      // These 4 because scalaz-deriving collects dependencies like they were pokémon
+      // Including XML stuff that got modularised in Java 9...
+      // which is odd for a library that has nothing whatsoever to do with XML!
+      "javax.xml.bind" % "jaxb-api" % "2.3.0",
+      "com.sun.xml.bind" % "jaxb-impl" % "2.3.0",
+      "org.glassfish.jaxb" % "jaxb-runtime" % "2.3.0",
+      "javax.activation" % "activation" % "1.1.1"
     )
   )
   .dependsOn(examplesJVM)
+
+
+
 
 lazy val benchmarks = project
   .in(file("benchmarks"))
@@ -55,6 +65,8 @@ lazy val buildSettings = Seq(
     "-Ywarn-inaccessible",
     "-Ywarn-adapted-args"
   ),
+//  javaOptions += "--add-modules=javax.xml.bind",
+//  javacOptions += "--add-modules=javax.xml.bind",
   scmInfo := Some(
     ScmInfo(url("https://github.com/propensive/magnolia"),
             "scm:git:git@github.com:propensive/magnolia.git")
