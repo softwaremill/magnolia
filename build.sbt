@@ -31,12 +31,10 @@ lazy val tests = project
     libraryDependencies ++= Seq(
       "com.fommil" %% "deriving-macro" % "0.9.0",
       "com.fommil" %% "scalaz-deriving" % "0.9.0",
-      // These 4 to allow compilation under Java 9...
+      // These two to allow compilation under Java 9...
       // Specifically to import XML stuff that got modularised
       "javax.xml.bind" % "jaxb-api" % "2.3.0" % "compile",
-      "com.sun.xml.bind" % "jaxb-impl" % "2.3.0" % "compile",
-      "org.glassfish.jaxb" % "jaxb-runtime" % "2.3.0" % "compile",
-      "javax.activation" % "activation" % "1.1.1" % "compile"
+      "com.sun.xml.bind" % "jaxb-impl" % "2.3.0" % "compile"
     )
   )
   .dependsOn(examplesJVM)
