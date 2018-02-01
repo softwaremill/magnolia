@@ -32,7 +32,10 @@ trait GenericShow[Out] {
         s"${param.label}$attribStr=${param.typeclass.show(param.dereference(value))}"
       }
 
-      join(ctx.typeName.short, paramStrings)
+      val anns = ctx.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
+      val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
+
+      join(ctx.typeName.short + annotationStr, paramStrings)
     }
   }
 

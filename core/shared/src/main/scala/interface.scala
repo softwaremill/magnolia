@@ -92,7 +92,13 @@ trait Param[Typeclass[_], Type] {
     *  @return  the parameter value */
   def dereference(param: Type): PType
 
-  def annotations: Seq[Any]
+  def annotationsArray: Array[Any]
+
+  /** a sequence of objects representing all of the annotations on the case class
+    *
+    *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
+    *  [[scala.collection.Seq]] to hide the mutable collection API. */
+  final def annotations: Seq[Any] = annotationsArray
 
   override def toString: String = s"Param($label)"
 }
@@ -113,7 +119,8 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
   val typeName: TypeName,
   val isObject: Boolean,
   val isValueClass: Boolean,
-  parametersArray: Array[Param[Typeclass, Type]]
+  parametersArray: Array[Param[Typeclass, Type]],
+  annotationsArray: Array[Any]
 ) {
 
   override def toString: String = s"CaseClass(${typeName.full}, ${parameters.mkString(",")})"
@@ -152,6 +159,12 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
     *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
     *  [[scala.collection.Seq]] to hide the mutable collection API. */
   final def parameters: Seq[Param[Typeclass, Type]] = parametersArray
+
+  /** a sequence of objects representing all of the annotations on the case class
+    *
+    *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
+    *  [[scala.collection.Seq]] to hide the mutable collection API. */
+  final def annotations: Seq[Any] = annotationsArray
 }
 
 /** represents a sealed trait and the context required to construct a new typeclass instance
@@ -163,8 +176,11 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
   *  @param subtypesArray  an array of [[Subtype]] instances for each subtype in the sealed trait
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type             generic type of this parameter */
-final class SealedTrait[Typeclass[_], Type](val typeName: TypeName,
-                                            subtypesArray: Array[Subtype[Typeclass, Type]]) {
+final class SealedTrait[Typeclass[_], Type](
+  val typeName: TypeName,
+  subtypesArray: Array[Subtype[Typeclass, Type]],
+  annotationsArray: Array[Any]
+) {
 
   override def toString: String = s"SealedTrait($typeName, Array[${subtypes.mkString(",")}])"
 
@@ -192,6 +208,12 @@ final class SealedTrait[Typeclass[_], Type](val typeName: TypeName,
         )
     rec(0)
   }
+
+  /** a sequence of objects representing all of the annotations on the topmost trait
+    *
+    *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
+    *  [[scala.collection.Seq]] to hide the mutable collection API. */
+  final def annotations: Seq[Any] = annotationsArray
 }
 
 /**

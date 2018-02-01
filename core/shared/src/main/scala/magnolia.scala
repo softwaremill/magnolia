@@ -73,8 +73,6 @@ object Magnolia {
 
     val magnoliaPkg = c.mirror.staticPackage("magnolia")
     val scalaPkg = c.mirror.staticPackage("scala")
-    val sciPkg = c.mirror.staticPackage("scala.collection.immutable")
-
 
     val repeatedParamClass = definitions.RepeatedParamClass
     val scalaSeqType = typeOf[Seq[_]].typeConstructor
@@ -163,6 +161,8 @@ object Magnolia {
       val isCaseObject = classType.exists(_.isModuleClass)
       val isSealedTrait = classType.exists(_.isSealed)
 
+      val classAnnotationTrees = typeSymbol.annotations.map(_.tree)
+
       val primitives = Set(typeOf[Double],
                            typeOf[Float],
                            typeOf[Short],
@@ -187,8 +187,13 @@ object Magnolia {
         val impl = q"""
           $typeNameDef
           ${c.prefix}.combine($magnoliaPkg.Magnolia.caseClass[$typeConstructor, $genericType](
-            $typeName, true, false, new $scalaPkg.Array(0), _ => ${genericType.typeSymbol.asClass.module})
-          )
+            $typeName,
+            true,
+            false,
+            new $scalaPkg.Array(0),
+            $scalaPkg.Array(..$classAnnotationTrees),
+            _ => ${genericType.typeSymbol.asClass.module}
+          ))
         """
         Some(impl)
       } else if (isCaseClass || isValueClass) {
@@ -277,7 +282,12 @@ object Magnolia {
           case (((CaseParam(param, repeated, typeclass, paramType, ref), defaultVal), annList), idx) =>
             q"""$paramsVal($idx) = $magnoliaPkg.Magnolia.param[$typeConstructor, $genericType,
                 $paramType](
-            ${param.name.decodedName.toString}, $repeated, $ref, $defaultVal, _.${param.name}, $sciPkg.List(..$annList)
+            ${param.name.decodedName.toString},
+            $repeated,
+            $ref,
+            $defaultVal,
+            _.${param.name},
+            $scalaPkg.Array(..$annList)
           )"""
         }
 
@@ -294,6 +304,7 @@ object Magnolia {
               false,
               $isValueClass,
               $paramsVal,
+              $scalaPkg.Array(..$classAnnotationTrees),
               ($fieldValues: $scalaPkg.Seq[Any]) => {
                 if ($fieldValues.lengthCompare($paramsVal.length) != 0) {
                   val msg = "`" + $typeName.full + "` has " + $paramsVal.length + " fields, not " + $fieldValues.size
@@ -355,8 +366,9 @@ object Magnolia {
             
             ${c.prefix}.dispatch(new $magnoliaPkg.SealedTrait(
               $typeName,
-              $subtypesVal: $scalaPkg.Array[$magnoliaPkg.Subtype[$typeConstructor, $genericType]])
-            ): $resultType
+              $subtypesVal: $scalaPkg.Array[$magnoliaPkg.Subtype[$typeConstructor, $genericType]],
+              $scalaPkg.Array(..$classAnnotationTrees)
+            )): $resultType
           }""")
       } else None
 
@@ -422,7 +434,7 @@ object Magnolia {
                          typeclassParam: => Tc[P],
                          defaultVal: => Option[P],
                          deref: T => P,
-                         annotationsParam: List[Any]
+                         annotationsArrayParam: Array[Any]
                         ): Param[Tc, T] = new Param[Tc, T] {
     type PType = P
     def label: String = name
@@ -430,7 +442,7 @@ object Magnolia {
     def default: Option[PType] = defaultVal
     def typeclass: Tc[PType] = typeclassParam
     def dereference(t: T): PType = deref(t)
-    def annotations: Seq[Any] = annotationsParam
+    def annotationsArray: Array[Any] = annotationsArrayParam
   }
 
   /** constructs a new [[CaseClass]] instance
@@ -441,8 +453,9 @@ object Magnolia {
                           obj: Boolean,
                           valClass: Boolean,
                           params: Array[Param[Tc, T]],
+                          annotations: Array[Any],
                           constructor: Seq[Any] => T): CaseClass[Tc, T] =
-    new CaseClass[Tc, T](name, obj, valClass, params) {
+    new CaseClass[Tc, T](name, obj, valClass, params, annotations) {
       def rawConstruct(fieldValues: Seq[Any]): T = constructor(fieldValues)
     }
 }

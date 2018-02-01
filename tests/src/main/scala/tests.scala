@@ -44,7 +44,7 @@ case object Blue extends Color
 
 case class MyAnnotation(order: Int) extends StaticAnnotation
 
-case class Attributed(
+@MyAnnotation(0) case class Attributed(
   @MyAnnotation(1) p1: String,
   @MyAnnotation(2) p2: Int
 )
@@ -369,7 +369,7 @@ object Tests extends TestApp {
 
     test("capture attributes against params") {
       Show.gen[Attributed].show(Attributed("xyz", 100))
-    }.assert(_ == "Attributed(p1{MyAnnotation(1)}=xyz,p2{MyAnnotation(2)}=100)")
+    }.assert(_ == "Attributed{MyAnnotation(0)}(p1{MyAnnotation(1)}=xyz,p2{MyAnnotation(2)}=100)")
 
   }
 }
