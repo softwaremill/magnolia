@@ -10,12 +10,10 @@ trait Decoder[T] { def decode(str: String): T }
 object Decoder {
 
   /** decodes strings */
-  implicit val string: Decoder[String] = new Decoder[String] {
-    def decode(str: String): String = str
-  }
+  implicit val string: Decoder[String] = (str: String) => str
 
   /** decodes ints */
-  implicit val int: Decoder[Int] = new Decoder[Int] { def decode(str: String): Int = str.toInt }
+  implicit val int: Decoder[Int] = (str: String) => str.toInt
 
   /** binds the Magnolia macro to this derivation object */
   implicit def gen[T]: Decoder[T] = macro Magnolia.gen[T]
@@ -24,22 +22,18 @@ object Decoder {
   type Typeclass[T] = Decoder[T]
 
   /** defines how new [[Decoder]]s for case classes should be constructed */
-  def combine[T](ctx: CaseClass[Decoder, T]): Decoder[T] = new Decoder[T] {
-    def decode(value: String) = {
-      val (_, values) = parse(value)
-      ctx.construct { param =>
-        param.typeclass.decode(values(param.label))
-      }
+  def combine[T](ctx: CaseClass[Decoder, T]): Decoder[T] = (value: String) => {
+    val (_, values) = parse(value)
+    ctx.construct { param =>
+      param.typeclass.decode(values(param.label))
     }
   }
 
   /** defines how to choose which subtype of the sealed trait to use for decoding */
-  def dispatch[T](ctx: SealedTrait[Decoder, T]): Decoder[T] = new Decoder[T] {
-    def decode(param: String) = {
-      val (name, _) = parse(param)
-      val subtype = ctx.subtypes.find(_.typeName.full == name).get
-      subtype.typeclass.decode(param)
-    }
+  def dispatch[T](ctx: SealedTrait[Decoder, T]): Decoder[T] = (param: String) => {
+    val (name, _) = parse(param)
+    val subtype = ctx.subtypes.find(_.typeName.full == name).get
+    subtype.typeclass.decode(param)
   }
 
   /** very simple extractor for grabbing an entire parameter value, assuming matching parentheses */

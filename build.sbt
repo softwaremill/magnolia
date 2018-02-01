@@ -27,16 +27,16 @@ lazy val tests = project
   .settings(moduleName := "magnolia-tests")
   .settings(
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),
+    initialCommands in console := """import magnolia.tests._; import magnolia.examples._;""",
     libraryDependencies ++= Seq(
       "com.fommil" %% "deriving-macro" % "0.9.0",
       "com.fommil" %% "scalaz-deriving" % "0.9.0",
-      // These 4 because scalaz-deriving collects dependencies like they were pokémon
-      // Including XML stuff that got modularised in Java 9...
-      // which is odd for a library that has nothing whatsoever to do with XML!
-      "javax.xml.bind" % "jaxb-api" % "2.3.0",
-      "com.sun.xml.bind" % "jaxb-impl" % "2.3.0",
-      "org.glassfish.jaxb" % "jaxb-runtime" % "2.3.0",
-      "javax.activation" % "activation" % "1.1.1"
+      // These 4 to allow compilation under Java 9...
+      // Specifically to import XML stuff that got modularised
+      "javax.xml.bind" % "jaxb-api" % "2.3.0" % "compile",
+      "com.sun.xml.bind" % "jaxb-impl" % "2.3.0" % "compile",
+      "org.glassfish.jaxb" % "jaxb-runtime" % "2.3.0" % "compile",
+      "javax.activation" % "activation" % "1.1.1" % "compile"
     )
   )
   .dependsOn(examplesJVM)
@@ -65,8 +65,6 @@ lazy val buildSettings = Seq(
     "-Ywarn-inaccessible",
     "-Ywarn-adapted-args"
   ),
-//  javaOptions += "--add-modules=javax.xml.bind",
-//  javacOptions += "--add-modules=javax.xml.bind",
   scmInfo := Some(
     ScmInfo(url("https://github.com/propensive/magnolia"),
             "scm:git:git@github.com:propensive/magnolia.git")
@@ -96,11 +94,14 @@ lazy val publishSettings = Seq(
         <name>Jon Pretty</name>
         <url>https://github.com/propensive/magnolia/</url>
       </developer>
+      <developer>
+        <id>thecoda</id>
+        <name>Kevin Wright</name>
+        <url>https://github.com/kevinwright/</url>
+      </developer>
     </developers>
   )
 )
-
-import java.io.File
 
 lazy val unmanagedSettings = unmanagedBase := (scalaVersion.value
   .split("\\.")
