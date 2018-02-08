@@ -202,7 +202,8 @@ object Magnolia {
 
         val headParamList = {
           val primaryConstructor = classType map (_.primaryConstructor)
-          val optList: Option[List[c.universe.Symbol]] = primaryConstructor flatMap (_.typeSignature.paramLists.headOption)
+          val optList: Option[List[c.universe.Symbol]] =
+            primaryConstructor flatMap (_.asMethod.typeSignature.paramLists.headOption)
           optList.map(_.map(_.asTerm))
         }
 
@@ -256,10 +257,11 @@ object Magnolia {
         val preAssignments = caseParams.map(_.typeclass)
 
 
-        val defaults = headParamList.filterNot(_ => isValueClass) map { plist =>
+        val defaults = headParamList map { plist =>
           // note: This causes the namer/typer to generate the synthetic default methods by forcing
           // the typeSignature of the "default" factory method to be visited.
           // It feels like it shouldn't be needed, but we'll get errors otherwise (as discovered after 6 hours debugging)
+
           val companionSym = companionRef.symbol.asModule.info
           val primaryFactoryMethod = companionSym.decl(TermName("apply")).alternatives.lastOption
           primaryFactoryMethod.foreach(_.asMethod.typeSignature)

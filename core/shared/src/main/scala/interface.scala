@@ -113,6 +113,7 @@ trait Param[Typeclass[_], Type] {
   *  @param typeName         the name of the case class
   *  @param isObject         true only if this represents a case object rather than a case class
   *  @param parametersArray  an array of [[Param]] values for this case class
+  *  @param annotationsArray  an array of instantiated annotations applied to this case class
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type       generic type of this parameter */
 abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
@@ -174,6 +175,7 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
   *  which form a coproduct, and to the fully-qualified name of the sealed trait.
   *  @param typeName       the name of the sealed trait
   *  @param subtypesArray  an array of [[Subtype]] instances for each subtype in the sealed trait
+  *  @param annotationsArray  an array of instantiated annotations applied to this case class
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type             generic type of this parameter */
 final class SealedTrait[Typeclass[_], Type](

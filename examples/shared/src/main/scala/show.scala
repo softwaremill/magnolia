@@ -20,7 +20,7 @@ trait GenericShow[Out] {
 
   /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of
     *  showing each parameter, and prefixing it with the class name */
-  def combine[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = (value: T) => {
+  def combine[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = { value =>
     if (ctx.isValueClass) {
       val param = ctx.parameters.head
       param.typeclass.show(param.dereference(value))

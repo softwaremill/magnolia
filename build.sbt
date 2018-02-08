@@ -30,7 +30,6 @@ lazy val tests = project
     initialCommands in console := """import magnolia.tests._; import magnolia.examples._;""",
     libraryDependencies ++= Seq(
       "com.fommil" %% "deriving-macro" % "0.9.0",
-      "com.fommil" %% "scalaz-deriving" % "0.9.0",
       // These two to allow compilation under Java 9...
       // Specifically to import XML stuff that got modularised
       "javax.xml.bind" % "jaxb-api" % "2.3.0" % "compile",
@@ -91,11 +90,6 @@ lazy val publishSettings = Seq(
         <id>propensive</id>
         <name>Jon Pretty</name>
         <url>https://github.com/propensive/magnolia/</url>
-      </developer>
-      <developer>
-        <id>thecoda</id>
-        <name>Kevin Wright</name>
-        <url>https://github.com/kevinwright/</url>
       </developer>
     </developers>
   )
