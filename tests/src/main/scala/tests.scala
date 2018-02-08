@@ -1,12 +1,13 @@
 package magnolia.tests
 
 import language.experimental.macros
-import estrapade.{test, TestApp}
+import estrapade.{TestApp, test}
 import contextual.data.scalac._
 import contextual.data.fqt._
 import contextual.data.txt._
 import magnolia.examples._
 
+import scala.annotation.StaticAnnotation
 import scala.util.control.NonFatal
 
 sealed trait Tree[+T]
@@ -29,8 +30,7 @@ class Length(val value: Int) extends AnyVal
 case class FruitBasket(fruits: Fruit*)
 case class Lunchbox(fruit: Fruit, drink: String)
 object Fruit {
-  implicit val showFruit: Show[String, Fruit] =
-    new Show[String, Fruit] { def show(f: Fruit): String = f.name }
+  implicit val showFruit: Show[String, Fruit] = (f: Fruit) => f.name
 }
 case class Fruit(name: String)
 
@@ -40,6 +40,14 @@ sealed trait Color
 case object Red extends Color
 case object Green extends Color
 case object Blue extends Color
+
+
+case class MyAnnotation(order: Int) extends StaticAnnotation
+
+@MyAnnotation(0) case class Attributed(
+  @MyAnnotation(1) p1: String,
+  @MyAnnotation(2) p2: Int
+)
 
 case class `%%`(`/`: Int, `#`: String)
 
@@ -245,6 +253,7 @@ object Tests extends TestApp {
       }
     }.assert(_ == "Cannot patch value `Person(Bob,42)`, expected 2 fields but got 3")
 
+
     test("throw on an illegal patch attempt with field type mismatch") {
       // these two implicits can be removed once https://github.com/propensive/magnolia/issues/58 is closed
       implicit val stringPatcher = Patcher.forSingleValue[String]
@@ -253,10 +262,14 @@ object Tests extends TestApp {
       try {
         val person = Person("Bob", 42)
         implicitly[Patcher[Entity]].patch(person, Seq(null, 'killer))
+        "it worked"
       } catch {
         case NonFatal(e) => e.getMessage
       }
-    }.assert(_ == "scala.Symbol cannot be cast to java.lang.Integer")
+    }.assert{x =>
+      //tiny hack because Java 9 inserts the "java.base/" module name in the error message
+      x.startsWith("scala.Symbol cannot be cast to") && x.endsWith("java.lang.Integer")
+    }
 
     class ParentClass {
       case class InnerClass(name: String)
@@ -349,11 +362,14 @@ object Tests extends TestApp {
       implicit def showDefaultOption[A](
         implicit showA: Show[String, A],
         defaultA: Default[A]
-      ): Show[String, Option[A]] = new Show[String, Option[A]] {
-        def show(optA: Option[A]) = showA.show(optA.getOrElse(defaultA.default))
-      }
+      ): Show[String, Option[A]] = (optA: Option[A]) => showA.show(optA.getOrElse(defaultA.default))
 
       Show.gen[Path[String]].show(OffRoad(Some(Crossroad(Destination("A"), Destination("B")))))
     }.assert(_ == "OffRoad(path=Crossroad(left=Destination(value=A),right=Destination(value=B)))")
+
+    test("capture attributes against params") {
+      Show.gen[Attributed].show(Attributed("xyz", 100))
+    }.assert(_ == "Attributed{MyAnnotation(0)}(p1{MyAnnotation(1)}=xyz,p2{MyAnnotation(2)}=100)")
+
   }
 }

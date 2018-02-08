@@ -27,12 +27,19 @@ lazy val tests = project
   .settings(moduleName := "magnolia-tests")
   .settings(
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),
+    initialCommands in console := """import magnolia.tests._; import magnolia.examples._;""",
     libraryDependencies ++= Seq(
       "com.fommil" %% "deriving-macro" % "0.9.0",
-      "com.fommil" %% "scalaz-deriving" % "0.9.0"
+      // These two to allow compilation under Java 9...
+      // Specifically to import XML stuff that got modularised
+      "javax.xml.bind" % "jaxb-api" % "2.3.0" % "compile",
+      "com.sun.xml.bind" % "jaxb-impl" % "2.3.0" % "compile"
     )
   )
   .dependsOn(examplesJVM)
+
+
+
 
 lazy val benchmarks = project
   .in(file("benchmarks"))
@@ -87,8 +94,6 @@ lazy val publishSettings = Seq(
     </developers>
   )
 )
-
-import java.io.File
 
 lazy val unmanagedSettings = unmanagedBase := (scalaVersion.value
   .split("\\.")

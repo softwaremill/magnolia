@@ -161,6 +161,8 @@ object Magnolia {
       val isCaseObject = classType.exists(_.isModuleClass)
       val isSealedTrait = classType.exists(_.isSealed)
 
+      val classAnnotationTrees = typeSymbol.annotations.map(_.tree)
+
       val primitives = Set(typeOf[Double],
                            typeOf[Float],
                            typeOf[Short],
@@ -185,11 +187,26 @@ object Magnolia {
         val impl = q"""
           $typeNameDef
           ${c.prefix}.combine($magnoliaPkg.Magnolia.caseClass[$typeConstructor, $genericType](
-            $typeName, true, false, new $scalaPkg.Array(0), _ => ${genericType.typeSymbol.asClass.module})
-          )
+            $typeName,
+            true,
+            false,
+            new $scalaPkg.Array(0),
+            $scalaPkg.Array(..$classAnnotationTrees),
+            _ => ${genericType.typeSymbol.asClass.module}
+          ))
         """
         Some(impl)
       } else if (isCaseClass || isValueClass) {
+
+        val companionRef = GlobalUtil.patchedCompanionRef(c)(genericType.dealias)
+
+        val headParamList = {
+          val primaryConstructor = classType map (_.primaryConstructor)
+          val optList: Option[List[c.universe.Symbol]] =
+            primaryConstructor flatMap (_.asMethod.typeSignature.paramLists.headOption)
+          optList.map(_.map(_.asTerm))
+        }
+
         val caseClassParameters = genericType.decls.collect {
           case m: MethodSymbol if m.isCaseAccessor || (isValueClass && m.isParamAccessor) =>
             m.asMethod
@@ -199,7 +216,8 @@ object Magnolia {
                              repeated: Boolean,
                              typeclass: Tree,
                              paramType: Type,
-                             ref: TermName)
+                             ref: TermName
+                            )
 
         val caseParamsReversed = caseClassParameters.foldLeft[List[CaseParam]](Nil) {
           (acc, param) =>
@@ -238,20 +256,17 @@ object Magnolia {
 
         val preAssignments = caseParams.map(_.typeclass)
 
-        val defaults = if (!isValueClass) {
-          val companionRef = GlobalUtil.patchedCompanionRef(c)(genericType.dealias)
+
+        val defaults = headParamList map { plist =>
+          // note: This causes the namer/typer to generate the synthetic default methods by forcing
+          // the typeSignature of the "default" factory method to be visited.
+          // It feels like it shouldn't be needed, but we'll get errors otherwise (as discovered after 6 hours debugging)
+
           val companionSym = companionRef.symbol.asModule.info
+          val primaryFactoryMethod = companionSym.decl(TermName("apply")).alternatives.lastOption
+          primaryFactoryMethod.foreach(_.asMethod.typeSignature)
 
-          // If a companion object is defined with alternative apply methods
-          // it is needed get all the alternatives
-          val constructorMethods =
-            companionSym.decl(TermName("apply")).alternatives.map(_.asMethod)
-
-          // The last apply method in the alternatives is the one that belongs
-          // to the case class, not the user defined companion object
-          val indexedConstructorParams =
-            constructorMethods.last.paramLists.head.map(_.asTerm).zipWithIndex
-
+          val indexedConstructorParams = plist.zipWithIndex
           indexedConstructorParams.map {
             case (p, idx) =>
               if (p.isParamWithDefault) {
@@ -259,13 +274,22 @@ object Magnolia {
                 q"$scalaPkg.Some($companionRef.$method)"
               } else q"$scalaPkg.None"
           }
-        } else List(q"$scalaPkg.None")
+        } getOrElse List(q"$scalaPkg.None")
 
-        val assignments = caseParams.zip(defaults).zipWithIndex.map {
-          case ((CaseParam(param, repeated, typeclass, paramType, ref), defaultVal), idx) =>
+        val annotations: List[List[Tree]] = headParamList.toList.flatten map { param =>
+          param.annotations map { _.tree }
+        }
+
+        val assignments = caseParams.zip(defaults).zip(annotations).zipWithIndex.map {
+          case (((CaseParam(param, repeated, typeclass, paramType, ref), defaultVal), annList), idx) =>
             q"""$paramsVal($idx) = $magnoliaPkg.Magnolia.param[$typeConstructor, $genericType,
                 $paramType](
-            ${param.name.decodedName.toString}, $repeated, $ref, $defaultVal, _.${param.name}
+            ${param.name.decodedName.toString},
+            $repeated,
+            $ref,
+            $defaultVal,
+            _.${param.name},
+            $scalaPkg.Array(..$annList)
           )"""
         }
 
@@ -282,6 +306,7 @@ object Magnolia {
               false,
               $isValueClass,
               $paramsVal,
+              $scalaPkg.Array(..$classAnnotationTrees),
               ($fieldValues: $scalaPkg.Seq[Any]) => {
                 if ($fieldValues.lengthCompare($paramsVal.length) != 0) {
                   val msg = "`" + $typeName.full + "` has " + $paramsVal.length + " fields, not " + $fieldValues.size
@@ -343,8 +368,9 @@ object Magnolia {
             
             ${c.prefix}.dispatch(new $magnoliaPkg.SealedTrait(
               $typeName,
-              $subtypesVal: $scalaPkg.Array[$magnoliaPkg.Subtype[$typeConstructor, $genericType]])
-            ): $resultType
+              $subtypesVal: $scalaPkg.Array[$magnoliaPkg.Subtype[$typeConstructor, $genericType]],
+              $scalaPkg.Array(..$classAnnotationTrees)
+            )): $resultType
           }""")
       } else None
 
@@ -398,6 +424,7 @@ object Magnolia {
       def cast: PartialFunction[T, SType] = this
       def isDefinedAt(t: T) = isType(t)
       def apply(t: T): SType = asType(t)
+      override def toString: String = s"Subtype(${typeName.full})"
     }
 
   /** constructs a new [[Param]] instance
@@ -408,13 +435,16 @@ object Magnolia {
                          isRepeated: Boolean,
                          typeclassParam: => Tc[P],
                          defaultVal: => Option[P],
-                         deref: T => P): Param[Tc, T] = new Param[Tc, T] {
+                         deref: T => P,
+                         annotationsArrayParam: Array[Any]
+                        ): Param[Tc, T] = new Param[Tc, T] {
     type PType = P
     def label: String = name
     def repeated: Boolean = isRepeated
     def default: Option[PType] = defaultVal
     def typeclass: Tc[PType] = typeclassParam
     def dereference(t: T): PType = deref(t)
+    def annotationsArray: Array[Any] = annotationsArrayParam
   }
 
   /** constructs a new [[CaseClass]] instance
@@ -425,8 +455,9 @@ object Magnolia {
                           obj: Boolean,
                           valClass: Boolean,
                           params: Array[Param[Tc, T]],
+                          annotations: Array[Any],
                           constructor: Seq[Any] => T): CaseClass[Tc, T] =
-    new CaseClass[Tc, T](name, obj, valClass, params) {
+    new CaseClass[Tc, T](name, obj, valClass, params, annotations) {
       def rawConstruct(fieldValues: Seq[Any]): T = constructor(fieldValues)
     }
 }
