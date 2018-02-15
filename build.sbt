@@ -29,7 +29,6 @@ lazy val tests = project
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),
     initialCommands in console := """import magnolia.tests._; import magnolia.examples._;""",
     libraryDependencies ++= Seq(
-      "com.fommil" %% "deriving-macro" % "0.9.0",
       // These two to allow compilation under Java 9...
       // Specifically to import XML stuff that got modularised
       "javax.xml.bind" % "jaxb-api" % "2.3.0" % "compile",
@@ -51,7 +50,7 @@ lazy val buildSettings = Seq(
   organization := "com.propensive",
   scalaVersion := "2.12.4",
   name := "magnolia",
-  version := "0.6.1",
+  version := "0.7.0",
   scalacOptions ++= Seq(
     "-deprecation",
     "-feature",
