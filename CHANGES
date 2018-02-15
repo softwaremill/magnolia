@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.7.0
+- Fix regression related to deriving inner classes
+- Fix for derivations of case classes with alternative factory methods
+- Fix for [#41](https://github.com/propensive/magnolia/issues/41)
+- Support for repeated arguments
+- Choose existential bounds for sealed traits with more type parameters than their components
+- Provide a rich type name (not just its basic name)
+- Remove all unnecessary allocations when deriving sealed traits
+- @debug annotation for making development easier
+- Added `CaseClass#rawConstruct`, useful for some derivations
+- Various code simplifications and new tests
+- Rewrite of Magnolia's compile-time state
+- Better error messages
+- Support compilation on Java 9
+- Support for capturing annotations
+
+## v0.6.1
+- Build support for Scala.js
+- Fixed a bug related to spurious error messages
+
 ## v0.6.0
 - Include warnings if the `combine` or `dispatch` methods are missing
 - Avoid compilation warnings from use of old macros API
