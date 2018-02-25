@@ -321,7 +321,7 @@ object Magnolia {
               $isValueClass,
               $paramsVal,
               $scalaPkg.Array(..$classAnnotationTrees),
-              ($fieldValues: $scalaPkg.Seq[Any]) => {
+              ($fieldValues: $scalaPkg.Seq[_root_.scala.Any]) => {
                 if ($fieldValues.lengthCompare($paramsVal.length) != 0) {
                   val msg = "`" + $typeName.full + "` has " + $paramsVal.length + " fields, not " + $fieldValues.size
                   throw new java.lang.IllegalArgumentException(msg)
