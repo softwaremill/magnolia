@@ -48,12 +48,14 @@ lazy val benchmarks = project
 
 lazy val buildSettings = Seq(
   organization := "com.propensive",
-  scalaVersion := "2.12.4",
+  crossScalaVersions := Seq("2.11.11", "2.12.4"),
   name := "magnolia",
   version := "0.7.1",
   scalacOptions ++= Seq(
     "-deprecation",
     "-feature",
+    "-Xfuture",
+    "-Xexperimental",
     "-Ywarn-value-discard",
     "-Ywarn-dead-code",
     "-Ywarn-nullary-unit",
