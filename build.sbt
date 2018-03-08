@@ -52,7 +52,12 @@ lazy val tests = project
   )
   .dependsOn(examplesJVM)
 
-
+lazy val root = (project in file("."))
+  .aggregate(coreJVM, coreJS, coreNative, examplesJVM, examplesJS, examplesNative)
+  .settings(
+    publish := {},
+    publishLocal := {}
+  )
 
 lazy val benchmarks = project
   .in(file("benchmarks"))
