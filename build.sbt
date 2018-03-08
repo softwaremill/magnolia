@@ -1,24 +1,39 @@
+// shadow sbt-scalajs' crossProject and CrossType until Scala.js 1.0.0 is released
+import sbtcrossproject.{crossProject, CrossType}
 import com.typesafe.sbt.pgp.PgpKeys.publishSigned
 
-lazy val core = crossProject
+lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
   .in(file("core"))
   .settings(buildSettings: _*)
   .settings(publishSettings: _*)
   .settings(scalaMacroDependencies: _*)
   .settings(moduleName := "magnolia")
+  .settings(
+    crossScalaVersions := "2.12.4" :: "2.11.12" :: Nil,
+    scalaVersion := crossScalaVersions.value.head
+  )
+  .nativeSettings(
+    crossScalaVersions := "2.11.12" :: Nil,
+  )
 
 lazy val coreJVM = core.jvm
 lazy val coreJS = core.js
+lazy val coreNative = core.native
 
-lazy val examples = crossProject
+lazy val examples = crossProject(JVMPlatform, JSPlatform, NativePlatform)
   .in(file("examples"))
   .settings(buildSettings: _*)
   .settings(publishSettings: _*)
   .settings(moduleName := "magnolia-examples")
+  .nativeSettings(
+    crossScalaVersions := (crossScalaVersions in coreNative).value,
+    scalaVersion := (scalaVersion in coreNative).value
+  )
   .dependsOn(core)
 
 lazy val examplesJVM = examples.jvm
 lazy val examplesJS = examples.js
+lazy val examplesNative = examples.native
 
 lazy val tests = project
   .in(file("tests"))
@@ -39,7 +54,6 @@ lazy val tests = project
 
 
 
-
 lazy val benchmarks = project
   .in(file("benchmarks"))
   .settings(buildSettings: _*)
@@ -48,7 +62,6 @@ lazy val benchmarks = project
 
 lazy val buildSettings = Seq(
   organization := "com.propensive",
-  crossScalaVersions := Seq("2.11.11", "2.12.4"),
   name := "magnolia",
   version := "0.7.1",
   scalacOptions ++= Seq(
