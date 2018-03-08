@@ -9,11 +9,16 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
   .settings(scalaMacroDependencies: _*)
   .settings(moduleName := "magnolia")
   .settings(
-    crossScalaVersions := "2.12.4" :: "2.11.12" :: Nil,
     scalaVersion := crossScalaVersions.value.head
   )
+  .jvmSettings(
+    crossScalaVersions := "2.12.4" :: "2.13.0-M3" :: "2.11.12" :: Nil
+  )
+  .jsSettings(
+    crossScalaVersions := "2.12.4" :: "2.11.12" :: Nil
+  )
   .nativeSettings(
-    crossScalaVersions := "2.11.12" :: Nil,
+    crossScalaVersions := "2.11.12" :: Nil
   )
 
 lazy val coreJVM = core.jvm
@@ -25,6 +30,14 @@ lazy val examples = crossProject(JVMPlatform, JSPlatform, NativePlatform)
   .settings(buildSettings: _*)
   .settings(publishSettings: _*)
   .settings(moduleName := "magnolia-examples")
+  .jvmSettings(
+    crossScalaVersions := (crossScalaVersions in coreJVM).value,
+    scalaVersion := (scalaVersion in coreJVM).value
+  )
+  .jsSettings(
+    crossScalaVersions := (crossScalaVersions in coreJS).value,
+    scalaVersion := (scalaVersion in coreJS).value
+  )
   .nativeSettings(
     crossScalaVersions := (crossScalaVersions in coreNative).value,
     scalaVersion := (scalaVersion in coreNative).value
@@ -53,7 +66,7 @@ lazy val tests = project
   .dependsOn(examplesJVM)
 
 lazy val root = (project in file("."))
-  .aggregate(coreJVM, coreJS, coreNative, examplesJVM, examplesJS, examplesNative)
+  .aggregate(coreJVM, coreJS, coreNative, examplesJVM, examplesJS, examplesNative, tests)
   .settings(
     publish := {},
     publishLocal := {}
