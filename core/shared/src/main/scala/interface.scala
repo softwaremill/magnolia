@@ -63,6 +63,9 @@ trait Param[Typeclass[_], Type] extends Serializable {
   /** the name of the parameter */
   def label: String
 
+  /** flag indicating a parameter of type scala.Option */
+  def option: Boolean
+
   /** flag indicating a repeated (aka. vararg) parameter
     *
     * For example, for a case class,
