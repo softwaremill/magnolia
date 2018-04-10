@@ -20,7 +20,7 @@ case class MapContainer(theMap: Map[String, List[Int]])
   *   }
   * }
   * }}}
-  * This can be fixed, but explicitly importing Encoder companion into scope (see 2nd test).
+  * This can be fixed by explicitly importing Encoder companion into scope (see 2nd test).
   *
   * Seems like magnolia macro in some cases has higher priority than companion provided implicits,
   * that are not directly imported in scope
