@@ -60,7 +60,8 @@ lazy val tests = project
       // These two to allow compilation under Java 9...
       // Specifically to import XML stuff that got modularised
       "javax.xml.bind" % "jaxb-api" % "2.3.0" % "compile",
-      "com.sun.xml.bind" % "jaxb-impl" % "2.3.0" % "compile"
+      "com.sun.xml.bind" % "jaxb-impl" % "2.3.0" % "compile",
+      "io.circe" %% "circe-core" % "0.9.3"
     )
   )
   .dependsOn(examplesJVM)
