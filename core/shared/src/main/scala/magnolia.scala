@@ -155,7 +155,7 @@ object Magnolia {
             .filterNot(_.isEmpty)
             .orElse(directInferImplicit(genericType, typeConstructor))
             .getOrElse {
-              val missingType = stack.top.fold(searchType)(_.searchType.asInstanceOf[Type])
+              val missingType = stack.top.fold(searchType)(_.searchType)
               val typeClassName = s"${missingType.typeSymbol.name.decodedName}.Typeclass"
               val genericType = missingType.typeArgs.head
               val trace = stack.trace.mkString("    in ", "\n    in ", "\n")
@@ -295,7 +295,7 @@ object Magnolia {
         }
 
         val assignments = caseParams.zip(defaults).zip(annotations).zipWithIndex.map {
-          case (((CaseParam(param, repeated, typeclass, paramType, ref), defaultVal), annList), idx) =>
+          case (((CaseParam(param, repeated, _, paramType, ref), defaultVal), annList), idx) =>
             q"""$paramsVal($idx) = $magnoliaPkg.Magnolia.param[$typeConstructor, $genericType,
                 $paramType](
             ${param.name.decodedName.toString},
@@ -492,7 +492,7 @@ private[magnolia] object CompileTimeState {
   final case class ChainedImplicit(typeClassName: String, typeName: String)
       extends TypePath(s"chained implicit $typeClassName for type $typeName")
 
-  final class Stack[C <: whitebox.Context] {
+  final class Stack[C <: whitebox.Context with Singleton] {
     private var frames = List.empty[Frame]
     private val cache = mutable.Map.empty[C#Type, C#Tree]
 
@@ -511,11 +511,11 @@ private[magnolia] object CompileTimeState {
       case Frame(_, tpe, term) if tpe =:= searchType => term
     }
 
-    def recurse[T <: C#Tree](frame: Frame, searchType: C#Type)(fn: => T): T = {
+    def recurse[T <: C#Tree](frame: Frame, searchType: C#Type)(fn: => C#Tree): C#Tree = {
       push(frame)
       val result = cache.getOrElseUpdate(searchType, fn)
       pop()
-      result.asInstanceOf[T]
+      result
     }
 
     def trace: List[TypePath] =
@@ -538,7 +538,9 @@ private[magnolia] object CompileTimeState {
   }
 
   object Stack {
-    private val global = new Stack[whitebox.Context]
+    // Cheating to satisfy Singleton bound (which improves type inference).
+    private val dummyContext: whitebox.Context = null
+    private val global = new Stack[dummyContext.type]
     private val workSet = mutable.Set.empty[whitebox.Context#Symbol]
 
     def withContext(c: whitebox.Context)(fn: Stack[c.type] => c.Tree): c.Tree = {
