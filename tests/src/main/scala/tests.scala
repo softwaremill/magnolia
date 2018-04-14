@@ -43,10 +43,10 @@ class Length(val value: Int) extends AnyVal
 
 case class FruitBasket(fruits: Fruit*)
 case class Lunchbox(fruit: Fruit, drink: String)
+case class Fruit(name: String)
 object Fruit {
   implicit val showFruit: Show[String, Fruit] = (f: Fruit) => f.name
 }
-case class Fruit(name: String)
 
 case class Item(name: String, quantity: Int = 1, price: Int)
 
@@ -116,19 +116,16 @@ object Tests extends TestApp {
     }.assert(_ == "Address(line1=Home,occupant=nobody)")
 
     test("even low-priority implicit beats Magnolia for nested case") {
-      import Show.gen
       implicitly[Show[String, Lunchbox]].show(Lunchbox(Fruit("apple"), "lemonade"))
     }.assert(_ == "Lunchbox(fruit=apple,drink=lemonade)")
 
-    test("low-priority implicit does not beat Magnolia when not nested") {
-      import Show.gen
+    test("low-priority implicit beats Magnolia when not nested") {
       implicitly[Show[String, Fruit]].show(Fruit("apple"))
-    }.assert(_ == "Fruit(name=apple)")
+    }.assert(_ == "apple")
 
-    test("low-priority implicit does not beat Magnolia when chained") {
-      import Show.gen
+    test("low-priority implicit beats Magnolia when chained") {
       implicitly[Show[String, FruitBasket]].show(FruitBasket(Fruit("apple"), Fruit("banana")))
-    }.assert(_ == "FruitBasket(fruits=[Fruit(name=apple),Fruit(name=banana)])")
+    }.assert(_ == "FruitBasket(fruits=[apple,banana])")
 
     test("typeclass implicit scope has lower priority than ADT implicit scope") {
       implicitly[Show[String, Fruit]].show(Fruit("apple"))
