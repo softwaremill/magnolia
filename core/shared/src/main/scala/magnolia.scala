@@ -14,6 +14,7 @@
  */
 package magnolia
 
+import scala.collection.breakOut
 import scala.collection.mutable
 import scala.language.existentials
 import scala.language.higherKinds
@@ -519,17 +520,10 @@ private[magnolia] object CompileTimeState {
     }
 
     def trace: List[TypePath] =
-      frames
-        .drop(1)
-        .foldLeft[(C#Type, List[TypePath])]((null, Nil)) {
-          case ((_, Nil), frame) =>
-            (frame.searchType, frame.path :: Nil)
-          case (continue @ (tpe, acc), frame) =>
-            if (tpe =:= frame.searchType) continue
-            else (frame.searchType, frame.path :: acc)
-        }
-        ._2
-        .reverse
+      (frames.drop(1), frames).zipped.collect {
+        case (Frame(path, tp1, _), Frame(_, tp2, _))
+          if !(tp1 =:= tp2) => path
+      } (breakOut)
 
     override def toString: String =
       frames.mkString("magnolia stack:\n", "\n", "\n")
