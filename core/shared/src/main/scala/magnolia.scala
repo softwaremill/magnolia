@@ -14,6 +14,7 @@
  */
 package magnolia
 
+import scala.annotation.compileTimeOnly
 import scala.collection.breakOut
 import scala.collection.mutable
 import scala.language.existentials
@@ -131,7 +132,7 @@ object Magnolia {
     checkMethod("combine", "case classes", "CaseClass[Typeclass, _]")
     checkMethod("dispatch", "sealed traits", "SealedTrait[Typeclass, _]")
 
-    val removeDeferred = new Transformer {
+    val expandDeferred = new Transformer {
       override def transform(tree: Tree) = tree match {
         case q"$magnolia.Deferred.apply[$_](${Literal(Constant(method: String))})"
             if magnolia.symbol == magnoliaPkg =>
@@ -402,12 +403,8 @@ object Magnolia {
 
     val result = stack
       .find(searchType)
-      .map { enclosingRef =>
-        q"$magnoliaPkg.Deferred[$searchType](${enclosingRef.toString})"
-      }
-      .orElse {
-        directInferImplicit(genericType, typeConstructor)
-      }
+      .map(enclosingRef => q"$magnoliaPkg.Deferred[$searchType](${enclosingRef.toString})")
+      .orElse(directInferImplicit(genericType, typeConstructor))
 
     for (tree <- result) if (debug.isDefined && genericType.toString.contains(debug.get)) {
       c.echo(c.enclosingPosition, s"Magnolia macro expansion for $genericType")
@@ -416,7 +413,7 @@ object Magnolia {
 
     val dereferencedResult =
       if (stack.nonEmpty) result
-      else for (tree <- result) yield c.untypecheck(removeDeferred.transform(tree))
+      else for (tree <- result) yield c.untypecheck(expandDeferred.transform(tree))
 
     dereferencedResult.getOrElse {
       c.abort(c.enclosingPosition,
@@ -480,7 +477,8 @@ object Magnolia {
 private[magnolia] final case class DirectlyReentrantException()
     extends Exception("attempt to recurse directly")
 
-private[magnolia] object Deferred { def apply[T](method: String): T = ??? }
+@compileTimeOnly("magnolia.Deferred is used for derivation of recursive typeclasses")
+object Deferred { def apply[T](method: String): T = ??? }
 
 private[magnolia] object CompileTimeState {
 
