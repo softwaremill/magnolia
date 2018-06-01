@@ -21,7 +21,7 @@ import scala.annotation.tailrec
   *
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type       generic type of this parameter */
-trait Subtype[Typeclass[_], Type] {
+trait Subtype[Typeclass[_], Type] extends Serializable {
 
   /** the type of subtype */
   type SType <: Type
@@ -47,7 +47,7 @@ trait Subtype[Typeclass[_], Type] {
   *
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type       generic type of this parameter */
-trait Param[Typeclass[_], Type] {
+trait Param[Typeclass[_], Type] extends Serializable {
 
   /** the type of the parameter being represented
     *
@@ -136,7 +136,7 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
   val isValueClass: Boolean,
   parametersArray: Array[Param[Typeclass, Type]],
   annotationsArray: Array[Any]
-) {
+) extends Serializable {
 
   override def toString: String = s"CaseClass(${typeName.full}, ${parameters.mkString(",")})"
   /** constructs a new instance of the case class type
@@ -196,7 +196,7 @@ final class SealedTrait[Typeclass[_], Type](
   val typeName: TypeName,
   subtypesArray: Array[Subtype[Typeclass, Type]],
   annotationsArray: Array[Any]
-) {
+) extends Serializable {
 
   override def toString: String = s"SealedTrait($typeName, Array[${subtypes.mkString(",")}])"
 
