@@ -15,7 +15,6 @@
 package magnolia
 
 import scala.annotation.compileTimeOnly
-import scala.collection.breakOut
 import scala.collection.mutable
 import scala.language.existentials
 import scala.language.higherKinds
@@ -518,7 +517,7 @@ private[magnolia] object CompileTimeState {
       (frames.drop(1), frames).zipped.collect {
         case (Frame(path, tp1, _), Frame(_, tp2, _))
           if !(tp1 =:= tp2) => path
-      } (breakOut)
+      }.toList
 
     override def toString: String =
       frames.mkString("magnolia stack:\n", "\n", "\n")
