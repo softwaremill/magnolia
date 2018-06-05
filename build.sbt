@@ -127,13 +127,12 @@ lazy val publishSettings = Seq(
   )
 )
 
-lazy val unmanagedSettings = unmanagedBase := (scalaVersion.value
-  .split("\\.")
-  .map(_.toInt)
-  .to[List] match {
-  case List(2, 12, _) => baseDirectory.value / "lib" / "2.12"
-  case List(2, 11, _) => baseDirectory.value / "lib" / "2.11"
-})
+lazy val unmanagedSettings = unmanagedBase :=
+  baseDirectory.value / "lib" /
+    (CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, 11)) => "2.11"
+      case _             => "2.12"
+    })
 
 lazy val scalaMacroDependencies: Seq[Setting[_]] = Seq(
   libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
