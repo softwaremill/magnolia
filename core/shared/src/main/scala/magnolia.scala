@@ -99,6 +99,13 @@ object Magnolia {
 
     def error(msg: String) = c.abort(c.enclosingPosition, msg)
 
+    def knownSubclasses(sym: ClassSymbol): List[Symbol] = {
+      val children = sym.knownDirectSubclasses.toList
+      val (abstractTypes, concreteTypes) = children.partition(_.isAbstract)
+      
+      abstractTypes.map(_.asClass).flatMap(knownSubclasses(_)) ::: concreteTypes
+    }
+
     val typeDefs = prefixType.baseClasses.flatMap { cls =>
       cls.asType.toType.decls.filter(_.isType).find(_.name.toString == "Typeclass").map { tpe =>
         tpe.asType.toType.asSeenFrom(prefixType, cls)
@@ -326,7 +333,7 @@ object Magnolia {
         }})}))
           }""")
       } else if (isSealedTrait) {
-        val genericSubtypes = classType.get.knownDirectSubclasses.toList
+        val genericSubtypes = knownSubclasses(classType.get)
         val subtypes = genericSubtypes.map { sub =>
           val subType = sub.asType.toType // FIXME: Broken for path dependent types
           val typeParams = sub.asType.typeParams
