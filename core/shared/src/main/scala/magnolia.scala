@@ -333,7 +333,7 @@ object Magnolia {
         }})}))
           }""")
       } else if (isSealedTrait) {
-        val genericSubtypes = classType.get.knownDirectSubclasses.to[List]
+        val genericSubtypes = classType.get.knownDirectSubclasses.toList
         val subtypes = genericSubtypes.map { sub =>
           val subType = sub.asType.toType // FIXME: Broken for path dependent types
           val typeParams = sub.asType.typeParams

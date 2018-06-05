@@ -78,7 +78,7 @@ object Decoder {
     }
 
     def keyValue(str: String): (String, String) = {
-      val List(label, value) = str.split("=", 2).to[List]
+      val List(label, value) = str.split("=", 2).toList
       (label, value)
     }
 
