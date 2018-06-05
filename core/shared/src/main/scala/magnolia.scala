@@ -249,7 +249,7 @@ object Magnolia {
                   }
 
                 val ref = TermName(c.freshName("paramTypeclass"))
-                val assigned = q"""val $ref = $derivedImplicit"""
+                val assigned = q"""lazy val $ref = $derivedImplicit"""
                 CaseParam(param, repeated, assigned, paramType, ref) :: acc
               } { backRef =>
                 CaseParam(param, repeated, q"()", paramType, backRef.ref) :: acc
