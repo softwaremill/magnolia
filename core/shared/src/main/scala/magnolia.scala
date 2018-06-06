@@ -127,9 +127,7 @@ object Magnolia {
         error(s"magnolia: the method `combine` should take a single parameter of type $expected")
     }
 
-    // FIXME: Only run these methods if they're used, particularly `dispatch`
     checkMethod("combine", "case classes", "CaseClass[Typeclass, _]")
-    checkMethod("dispatch", "sealed traits", "SealedTrait[Typeclass, _]")
 
     val expandDeferred = new Transformer {
       override def transform(tree: Tree) = tree match {
@@ -333,6 +331,7 @@ object Magnolia {
         }})}))
           }""")
       } else if (isSealedTrait) {
+        checkMethod("dispatch", "sealed traits", "SealedTrait[Typeclass, _]")
         val genericSubtypes = knownSubclasses(classType.get)
         val subtypes = genericSubtypes.map { sub =>
           val subType = sub.asType.toType // FIXME: Broken for path dependent types

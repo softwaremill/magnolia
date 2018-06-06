@@ -55,7 +55,6 @@ case object Red extends Color
 case object Green extends Color
 case object Blue extends Color
 
-
 case class MyAnnotation(order: Int) extends StaticAnnotation
 
 @MyAnnotation(0) case class Attributed(
@@ -381,6 +380,20 @@ object Tests extends TestApp {
     test("capture attributes against params") {
       Show.gen[Attributed].show(Attributed("xyz", 100))
     }.assert(_ == "Attributed{MyAnnotation(0)}(p1{MyAnnotation(1)}=xyz,p2{MyAnnotation(2)}=100)")
+
+    test("allow no-coproduct derivation definitions") {
+      scalac"""
+        WeakHash.gen[Person]
+      """
+    }.assert(_ == Returns(fqt"magnolia.examples.WeakHash.Typeclass[magnolia.tests.Person]"))
+    
+    test("disallow coproduct derivations without dispatch method") {
+      scalac"""
+        WeakHash.gen[Entity]
+      """
+    }.assert(_ == TypecheckError("magnolia: the method `dispatch` must be defined on the derivation object WeakHash to derive typeclasses for sealed traits"))
+
+
 
   }
 }
