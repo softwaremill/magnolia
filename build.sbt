@@ -12,10 +12,10 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
     scalaVersion := crossScalaVersions.value.head
   )
   .jvmSettings(
-    crossScalaVersions := "2.12.4" :: "2.13.0-M3" :: "2.11.12" :: Nil
+    crossScalaVersions := "2.12.4" :: "2.13.0-M4" :: "2.11.12" :: Nil
   )
   .jsSettings(
-    crossScalaVersions := "2.12.4" :: "2.11.12" :: Nil
+    crossScalaVersions := "2.12.4" :: "2.13.0-M4" :: "2.11.12" :: Nil
   )
   .nativeSettings(
     crossScalaVersions := "2.11.12" :: Nil
