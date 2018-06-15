@@ -12,10 +12,10 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
     scalaVersion := crossScalaVersions.value.head
   )
   .jvmSettings(
-    crossScalaVersions := "2.12.4" :: "2.13.0-M3" :: "2.11.12" :: Nil
+    crossScalaVersions := "2.12.4" :: "2.13.0-M4" :: "2.11.12" :: Nil
   )
   .jsSettings(
-    crossScalaVersions := "2.12.4" :: "2.11.12" :: Nil
+    crossScalaVersions := "2.12.4" :: "2.13.0-M4" :: "2.11.12" :: Nil
   )
   .nativeSettings(
     crossScalaVersions := "2.11.12" :: Nil
@@ -86,14 +86,23 @@ lazy val buildSettings = Seq(
     "-deprecation",
     "-feature",
     "-Xfuture",
-    "-Xexperimental",
     "-Ywarn-value-discard",
     "-Ywarn-dead-code",
-    "-Ywarn-nullary-unit",
     "-Ywarn-numeric-widen",
-    "-Ywarn-inaccessible",
-    "-Ywarn-adapted-args"
   ),
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, v)) if v <= 12 =>
+        Seq(
+          "-Xexperimental",
+          "-Ywarn-nullary-unit",
+          "-Ywarn-inaccessible",
+          "-Ywarn-adapted-args"
+        )
+      case _ =>
+        Nil
+    }
+  },
   scmInfo := Some(
     ScmInfo(url("https://github.com/propensive/magnolia"),
             "scm:git:git@github.com:propensive/magnolia.git")

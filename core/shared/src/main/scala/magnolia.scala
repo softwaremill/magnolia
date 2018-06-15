@@ -15,7 +15,6 @@
 package magnolia
 
 import scala.annotation.compileTimeOnly
-import scala.collection.breakOut
 import scala.collection.mutable
 import scala.language.existentials
 import scala.language.higherKinds
@@ -102,7 +101,7 @@ object Magnolia {
     def knownSubclasses(sym: ClassSymbol): List[Symbol] = {
       val children = sym.knownDirectSubclasses.toList
       val (abstractTypes, concreteTypes) = children.partition(_.isAbstract)
-      
+
       abstractTypes.map(_.asClass).flatMap(knownSubclasses(_)) ::: concreteTypes
     }
 
@@ -166,7 +165,7 @@ object Magnolia {
 
     def directInferImplicit(genericType: Type, typeConstructor: Type): Option[Tree] = {
       val genericTypeName = genericType.typeSymbol.name.decodedName.toString.toLowerCase
-      val assignedName = TermName(c.freshName(s"${genericTypeName}Typeclass"))
+      val assignedName = TermName(c.freshName(s"${genericTypeName}Typeclass")).encodedName.toTermName
       val typeSymbol = genericType.typeSymbol
       val classType = if (typeSymbol.isClass) Some(typeSymbol.asClass) else None
       val isCaseClass = classType.exists(_.isCaseClass)
@@ -312,7 +311,7 @@ object Magnolia {
             ..$assignments
 
             $typeNameDef
-            
+
             ${c.prefix}.combine($magnoliaPkg.Magnolia.caseClass[$typeConstructor, $genericType](
               $typeName,
               false,
@@ -374,11 +373,11 @@ object Magnolia {
         Some(q"""{
             val $subtypesVal: $scalaPkg.Array[$magnoliaPkg.Subtype[$typeConstructor, $genericType]] =
               new $scalaPkg.Array(${assignments.size})
-            
+
             ..$assignments
 
             $typeNameDef
-            
+
             ${c.prefix}.dispatch(new $magnoliaPkg.SealedTrait(
               $typeName,
               $subtypesVal: $scalaPkg.Array[$magnoliaPkg.Subtype[$typeConstructor, $genericType]],
@@ -517,7 +516,7 @@ private[magnolia] object CompileTimeState {
       (frames.drop(1), frames).zipped.collect {
         case (Frame(path, tp1, _), Frame(_, tp2, _))
           if !(tp1 =:= tp2) => path
-      } (breakOut)
+      }.toList
 
     override def toString: String =
       frames.mkString("magnolia stack:\n", "\n", "\n")
