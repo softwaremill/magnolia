@@ -80,7 +80,7 @@ object Magnolia {
     *  */
   def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = Stack.withContext(c) { stack =>
     import c.universe._
-    import internal._
+    import c.internal._
 
     val debug = c.macroApplication.symbol.annotations
       .find(_.tree.tpe <:< typeOf[debug])
@@ -97,11 +97,17 @@ object Magnolia {
     val prefixName = prefixObject.name.decodedName
 
     def error(msg: String) = c.abort(c.enclosingPosition, msg)
+    val enclosingVals = Iterator
+      .iterate(enclosingOwner)(_.owner)
+      .takeWhile(encl => encl != null && encl != NoSymbol)
+      .filter(_.isTerm)
+      .map(_.asTerm)
+      .filter(encl => encl.isVal || encl.isLazy)
+      .toSet[Symbol]
 
     def knownSubclasses(sym: ClassSymbol): List[Symbol] = {
       val children = sym.knownDirectSubclasses.toList
       val (abstractTypes, concreteTypes) = children.partition(_.isAbstract)
-
       abstractTypes.map(_.asClass).flatMap(knownSubclasses(_)) ::: concreteTypes
     }
 
@@ -136,6 +142,16 @@ object Magnolia {
         case _ =>
           super.transform(tree)
       }
+    }
+
+    def deferredVal(name: TermName, tpe: Type, rhs: Tree): Tree = {
+      val shouldBeLazy = rhs.exists {
+        case q"$magnolia.Deferred.apply[$_]($_)" => magnolia.symbol == magnoliaPkg
+        case tree => enclosingVals.contains(tree.symbol)
+      }
+
+      if (shouldBeLazy) q"lazy val $name: $tpe = $rhs"
+      else q"val $name = $rhs"
     }
 
     def typeclassTree(genericType: Type, typeConstructor: Type): Tree = {
@@ -247,13 +263,13 @@ object Magnolia {
               .fold {
                 val path = ProductType(paramName, genericType.toString)
                 val frame = stack.Frame(path, resultType, assignedName)
-                val derivedImplicit =
-                  stack.recurse(frame, appliedType(typeConstructor, paramType)) {
-                    typeclassTree(paramType, typeConstructor)
-                  }
+                val searchType = appliedType(typeConstructor, paramType)
+                val derivedImplicit = stack.recurse(frame, searchType) {
+                  typeclassTree(paramType, typeConstructor)
+                }
 
                 val ref = TermName(c.freshName("paramTypeclass"))
-                val assigned = q"""lazy val $ref = $derivedImplicit"""
+                val assigned = deferredVal(ref, searchType, derivedImplicit)
                 CaseParam(param, repeated, assigned, paramType, ref) :: acc
               } { backRef =>
                 CaseParam(param, repeated, q"()", paramType, backRef.ref) :: acc
@@ -387,7 +403,7 @@ object Magnolia {
       } else None
 
       for (term <- result) yield q"""{
-        lazy val $assignedName: $resultType = $term
+        ${deferredVal(assignedName, resultType, term)}
         $assignedName
       }"""
     }

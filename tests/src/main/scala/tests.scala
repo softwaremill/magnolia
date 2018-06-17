@@ -385,7 +385,7 @@ object Tests extends TestApp {
       scalac"""
         WeakHash.gen[Person]
       """
-    }.assert(_ == Returns(fqt"magnolia.examples.WeakHash.Typeclass[magnolia.tests.Person]"))
+    }.assert(_ == Returns(fqt"magnolia.examples.WeakHash[magnolia.tests.Person]"))
     
     test("disallow coproduct derivations without dispatch method") {
       scalac"""
