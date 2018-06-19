@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.7.1
+- Support compilation for Scala Native
+- Add travis build configuration
+
 ## v0.7.0
 - Fix regression related to deriving inner classes
 - Fix for derivations of case classes with alternative factory methods

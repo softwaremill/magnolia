@@ -1,0 +1,11 @@
+sudo: required
+dist: trusty
+language: scala
+
+before_install:
+- curl https://raw.githubusercontent.com/scala-native/scala-native/master/scripts/travis_setup.sh | bash -x
+      
+script:
+  - sbt +compile +tests/run
+jdk:
+  - oraclejdk8

@@ -1,3 +1,17 @@
+/* Magnolia, version 0.7.1. Copyright 2018 Jon Pretty, Propensive Ltd.
+ *
+ * The primary distribution site is: http://co.ntextu.al/
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ */
 package magnolia
 
 import language.higherKinds
@@ -7,7 +21,7 @@ import scala.annotation.tailrec
   *
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type       generic type of this parameter */
-trait Subtype[Typeclass[_], Type] {
+trait Subtype[Typeclass[_], Type] extends Serializable {
 
   /** the type of subtype */
   type SType <: Type
@@ -33,7 +47,7 @@ trait Subtype[Typeclass[_], Type] {
   *
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type       generic type of this parameter */
-trait Param[Typeclass[_], Type] {
+trait Param[Typeclass[_], Type] extends Serializable {
 
   /** the type of the parameter being represented
     *
@@ -122,7 +136,7 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
   val isValueClass: Boolean,
   parametersArray: Array[Param[Typeclass, Type]],
   annotationsArray: Array[Any]
-) {
+) extends Serializable {
 
   override def toString: String = s"CaseClass(${typeName.full}, ${parameters.mkString(",")})"
   /** constructs a new instance of the case class type
@@ -182,7 +196,7 @@ final class SealedTrait[Typeclass[_], Type](
   val typeName: TypeName,
   subtypesArray: Array[Subtype[Typeclass, Type]],
   annotationsArray: Array[Any]
-) {
+) extends Serializable {
 
   override def toString: String = s"SealedTrait($typeName, Array[${subtypes.mkString(",")}])"
 

@@ -14,22 +14,24 @@
  */
 package magnolia.examples
 
-import language.experimental.macros
-
 import magnolia._
+import scala.language.experimental.macros
 
-trait TypeNameInfo[T] { def name: TypeName }
+trait WeakHash[T] { def hash(value: T): Int }
 
-object TypeNameInfo {
-  type Typeclass[T] = TypeNameInfo[T]
-  def combine[T](ctx: CaseClass[TypeNameInfo, T]): TypeNameInfo[T] =
-    new TypeNameInfo[T] { def name: TypeName = ctx.typeName }
+object WeakHash {
 
-  def dispatch[T](ctx: SealedTrait[TypeNameInfo, T]): TypeNameInfo[T] =
-    new TypeNameInfo[T] { def name: TypeName = ctx.typeName }
+  type Typeclass[T] = WeakHash[T]
 
-  def fallback[T]: TypeNameInfo[T] =
-    new TypeNameInfo[T] { def name: TypeName = TypeName("", "Unknown Type") }
+  def combine[T](ctx: CaseClass[WeakHash, T]): WeakHash[T] = new WeakHash[T] {
+    def hash(value: T): Int = ctx.parameters.map { param =>
+      param.typeclass.hash(param.dereference(value))
+    }.foldLeft(0)(_ ^ _)
+  }
 
-  implicit def gen[T]: TypeNameInfo[T] = macro Magnolia.gen[T]
+  implicit val string: WeakHash[String] = _.map(_.toInt).sum
+  implicit val int: WeakHash[Int] = identity
+  implicit val double: WeakHash[Double] = _.toInt
+
+  implicit def gen[T]: WeakHash[T] = macro Magnolia.gen[T]
 }

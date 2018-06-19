@@ -1,3 +1,17 @@
+/* Magnolia, version 0.7.1. Copyright 2018 Jon Pretty, Propensive Ltd.
+ *
+ * The primary distribution site is: http://co.ntextu.al/
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ */
 package magnolia.tests
 
 import language.experimental.macros
@@ -30,10 +44,10 @@ class Length(val value: Int) extends AnyVal
 
 case class FruitBasket(fruits: Fruit*)
 case class Lunchbox(fruit: Fruit, drink: String)
+case class Fruit(name: String)
 object Fruit {
   implicit val showFruit: Show[String, Fruit] = (f: Fruit) => f.name
 }
-case class Fruit(name: String)
 
 case class Item(name: String, quantity: Int = 1, price: Int)
 
@@ -41,7 +55,6 @@ sealed trait Color
 case object Red extends Color
 case object Green extends Color
 case object Blue extends Color
-
 
 case class MyAnnotation(order: Int) extends StaticAnnotation
 
@@ -105,19 +118,16 @@ object Tests extends TestApp {
     }.assert(_ == "Address(line1=Home,occupant=nobody)")
 
     test("even low-priority implicit beats Magnolia for nested case") {
-      import Show.gen
       implicitly[Show[String, Lunchbox]].show(Lunchbox(Fruit("apple"), "lemonade"))
     }.assert(_ == "Lunchbox(fruit=apple,drink=lemonade)")
 
-    test("low-priority implicit does not beat Magnolia when not nested") {
-      import Show.gen
+    test("low-priority implicit beats Magnolia when not nested") {
       implicitly[Show[String, Fruit]].show(Fruit("apple"))
-    }.assert(_ == "Fruit(name=apple)")
+    }.assert(_ == "apple")
 
-    test("low-priority implicit does not beat Magnolia when chained") {
-      import Show.gen
+    test("low-priority implicit beats Magnolia when chained") {
       implicitly[Show[String, FruitBasket]].show(FruitBasket(Fruit("apple"), Fruit("banana")))
-    }.assert(_ == "FruitBasket(fruits=[Fruit(name=apple),Fruit(name=banana)])")
+    }.assert(_ == "FruitBasket(fruits=[apple,banana])")
 
     test("typeclass implicit scope has lower priority than ADT implicit scope") {
       implicitly[Show[String, Fruit]].show(Fruit("apple"))
@@ -377,5 +387,17 @@ object Tests extends TestApp {
     test("show underivable type with fallback") {
       TypeNameInfo.gen[NotDerivable].name
     }.assert(_ == TypeName("", "Unknown Type"))
+
+    test("allow no-coproduct derivation definitions") {
+      scalac"""
+        WeakHash.gen[Person]
+      """
+    }.assert(_ == Returns(fqt"magnolia.examples.WeakHash.Typeclass[magnolia.tests.Person]"))
+    
+    test("disallow coproduct derivations without dispatch method") {
+      scalac"""
+        WeakHash.gen[Entity]
+      """
+    }.assert(_ == TypecheckError("magnolia: the method `dispatch` must be defined on the derivation object WeakHash to derive typeclasses for sealed traits"))
   }
 }
