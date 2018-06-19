@@ -6,6 +6,7 @@ import contextual.data.scalac._
 import contextual.data.fqt._
 import contextual.data.txt._
 import magnolia.examples._
+import magnolia.TypeName
 
 import scala.annotation.StaticAnnotation
 import scala.util.control.NonFatal
@@ -74,6 +75,8 @@ case class Account(id: String, emails: String*)
 case class Portfolio(companies: Company*)
 
 case class Recursive(children: Seq[Recursive])
+
+class NotDerivable
 
 object Tests extends TestApp {
 
@@ -371,5 +374,8 @@ object Tests extends TestApp {
       Show.gen[Attributed].show(Attributed("xyz", 100))
     }.assert(_ == "Attributed{MyAnnotation(0)}(p1{MyAnnotation(1)}=xyz,p2{MyAnnotation(2)}=100)")
 
+    test("show underivable type with fallback") {
+      TypeNameInfo.gen[NotDerivable].name
+    }.assert(_ == TypeName("", "Unknown Type"))
   }
 }
