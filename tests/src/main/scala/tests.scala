@@ -98,15 +98,6 @@ class NotDerivable
 
 case class NoDefault(value: Boolean)
 
-// this should *not* be derived: both ServiceName and Option[String] should fail
-final case class LoggingConfig(
-  name: ServiceName,
-  optName: Option[String]
-)
-object LoggingConfig {
-  implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
-}
-
 final case class ServiceName(value: String) extends AnyVal
 
 object Tests extends TestApp {
@@ -232,6 +223,17 @@ object Tests extends TestApp {
     }.assert(_ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type Unit
         |    in parameter 'unit' of product type Gamma
         |"""))
+
+    test("not assume full auto derivation") {
+      scalac"""
+        case class LoggingConfig(n: ServiceName, o: Option[String])
+        object LoggingConfig {
+          implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
+        }
+        """
+    }.assert(_ == TypecheckError(txt"""magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName
+    in parameter 'n' of product type LoggingConfig
+""") )
 
     test("typenames and labels are not encoded") {
       implicitly[Show[String, `%%`]].show(`%%`(1, "two"))

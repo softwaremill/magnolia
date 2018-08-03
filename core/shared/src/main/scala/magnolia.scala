@@ -134,6 +134,8 @@ object Magnolia {
 
     checkMethod("combine", "case classes", "CaseClass[Typeclass, _]")
 
+    val fullauto = c.macroApplication.symbol.isImplicit
+
     val expandDeferred = new Transformer {
       override def transform(tree: Tree) = tree match {
         case q"$magnolia.Deferred.apply[$_](${Literal(Constant(method: String))})"
@@ -150,7 +152,7 @@ object Magnolia {
         case tree => enclosingVals.contains(tree.symbol)
       }
 
-      if (shouldBeLazy) q"lazy val $name: $tpe = $rhs"
+      if (!fullauto || shouldBeLazy) q"lazy val $name: $tpe = $rhs"
       else q"val $name = $rhs"
     }
 
@@ -167,7 +169,10 @@ object Magnolia {
         stack.recurse(frame, searchType) {
           Option(c.inferImplicitValue(searchType))
             .filterNot(_.isEmpty)
-            .orElse(directInferImplicit(genericType, typeConstructor))
+            .orElse(
+              if (fullauto) directInferImplicit(genericType, typeConstructor)
+              else None
+            )
             .getOrElse {
               val missingType = stack.top.fold(searchType)(_.searchType)
               val typeClassName = s"${missingType.typeSymbol.name.decodedName}.Typeclass"
