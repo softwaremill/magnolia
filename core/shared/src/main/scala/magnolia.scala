@@ -129,7 +129,7 @@ object Magnolia {
 
       val firstParamBlock = combineClass.asType.toType.decl(term).asTerm.asMethod.paramLists.head
       if (firstParamBlock.lengthCompare(1) != 0)
-        error(s"magnolia: the method `combine` should take a single parameter of type $expected")
+        error(s"magnolia: the method `$termName` should take a single parameter of type $expected")
     }
 
     checkMethod("combine", "case classes", "CaseClass[Typeclass, _]")
