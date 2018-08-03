@@ -93,7 +93,11 @@ case class Recursive(children: Seq[Recursive])
 class GenericCsv[A: Csv]
 object ParamCsv extends GenericCsv[Param]
 
+
 class NotDerivable
+
+case class NoDefault(value: Boolean)
+
 
 object Tests extends TestApp {
 
@@ -151,7 +155,7 @@ object Tests extends TestApp {
 
     test("construct a default value") {
       Default.gen[Entity].default
-    }.assert(_ == Company(""))
+    }.assert(_ == Right(Company("")))
 
     test("construction of Show instance for Leaf") {
       scalac"""
@@ -179,7 +183,7 @@ object Tests extends TestApp {
 
     test("access default constructor values") {
       implicitly[Default[Item]].default
-    }.assert(_ == Item("", 1, 0))
+    }.assert(_ == Right(Item("", 1, 0)))
 
     test("serialize case object as a sealed trait") {
       implicitly[Show[String, Color]].show(Blue)
@@ -299,7 +303,7 @@ object Tests extends TestApp {
 
         test("construct a default case class inside another class") {
           Default.gen[InnerClassWithDefault].default
-        }.assert(_ == InnerClassWithDefault())
+        }.assert(_ == Right(InnerClassWithDefault()))
 
         ()
       }
@@ -314,7 +318,7 @@ object Tests extends TestApp {
 
         test("construct a default case class inside a method") {
           Default.gen[LocalClassWithDefault].default
-        }.assert(_ == LocalClassWithDefault())
+        }.assert(_ == Right(LocalClassWithDefault()))
 
         ()
       }
@@ -330,7 +334,11 @@ object Tests extends TestApp {
 
     test("construct a default Account") {
       Default.gen[Account].default
-    }.assert(_ == Account(""))
+    }.assert(_ == Right(Account("")))
+
+    test("construct a failed NoDefault") {
+      Default.gen[NoDefault].default
+    }.assert(_ == Left("truth is a lie"))
 
     test("show a Portfolio of Companies") {
       Show.gen[Portfolio].show(Portfolio(Company("Alice Inc"), Company("Bob & Co")))
@@ -379,7 +387,7 @@ object Tests extends TestApp {
       implicit def showDefaultOption[A](
         implicit showA: Show[String, A],
         defaultA: Default[A]
-      ): Show[String, Option[A]] = (optA: Option[A]) => showA.show(optA.getOrElse(defaultA.default))
+      ): Show[String, Option[A]] = (optA: Option[A]) => showA.show(optA.getOrElse(defaultA.default.right.get))
 
       Show.gen[Path[String]].show(OffRoad(Some(Crossroad(Destination("A"), Destination("B")))))
     }.assert(_ == "OffRoad(path=Crossroad(left=Destination(value=A),right=Destination(value=B)))")
