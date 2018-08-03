@@ -155,6 +155,29 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
   final def construct[Return](makeParam: Param[Typeclass, Type] => Return): Type =
     rawConstruct(parameters map makeParam)
 
+  /**
+   * Like construct but allows each parameter to fail with an error.
+   *
+   * @see construct
+   */
+  final def constructEither[E <: AnyRef, Return](makeParam: Param[Typeclass, Type] => Either[E, Return]): Either[E, Type] = {
+    // poor man's scalaz.Traverse
+    try {
+      Right(
+        rawConstruct(
+          parameters.map { p =>
+            makeParam(p) match {
+              case Left(e) => throw EarlyExit(e)
+              case Right(a) => a
+            }
+          }
+        )
+      )
+    } catch {
+      case EarlyExit(err) => Left(err.asInstanceOf[E])
+    }
+  }
+
   /** constructs a new instance of the case class type
     *
     *  Like [[construct]] this method is implemented by Magnolia and lets you construct case class
@@ -248,3 +271,5 @@ final case class TypeName(owner: String, short: String) {
   *                     whose full name contains the given [[String]]
   */
 final class debug(typeNamePart: String = "") extends scala.annotation.StaticAnnotation
+
+private[magnolia] final case class EarlyExit[E](e: E) extends Exception with util.control.NoStackTrace
