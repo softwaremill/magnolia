@@ -28,5 +28,8 @@ object TypeNameInfo {
   def dispatch[T](ctx: SealedTrait[TypeNameInfo, T]): TypeNameInfo[T] =
     new TypeNameInfo[T] { def name: TypeName = ctx.typeName }
 
+  def fallback[T]: TypeNameInfo[T] =
+    new TypeNameInfo[T] { def name: TypeName = TypeName("", "Unknown Type") }
+
   implicit def gen[T]: TypeNameInfo[T] = macro Magnolia.gen[T]
 }

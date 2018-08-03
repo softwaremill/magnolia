@@ -20,6 +20,7 @@ import contextual.data.scalac._
 import contextual.data.fqt._
 import contextual.data.txt._
 import magnolia.examples._
+import magnolia.TypeName
 
 import scala.annotation.StaticAnnotation
 import scala.util.control.NonFatal
@@ -91,6 +92,8 @@ case class Recursive(children: Seq[Recursive])
 // This tests compilation.
 class GenericCsv[A: Csv]
 object ParamCsv extends GenericCsv[Param]
+
+class NotDerivable
 
 object Tests extends TestApp {
 
@@ -385,6 +388,10 @@ object Tests extends TestApp {
       Show.gen[Attributed].show(Attributed("xyz", 100))
     }.assert(_ == "Attributed{MyAnnotation(0)}(p1{MyAnnotation(1)}=xyz,p2{MyAnnotation(2)}=100)")
 
+    test("show underivable type with fallback") {
+      TypeNameInfo.gen[NotDerivable].name
+    }.assert(_ == TypeName("", "Unknown Type"))
+
     test("allow no-coproduct derivation definitions") {
       scalac"""
         WeakHash.gen[Person]
@@ -396,8 +403,5 @@ object Tests extends TestApp {
         WeakHash.gen[Entity]
       """
     }.assert(_ == TypecheckError("magnolia: the method `dispatch` must be defined on the derivation object WeakHash to derive typeclasses for sealed traits"))
-
-
-
   }
 }
