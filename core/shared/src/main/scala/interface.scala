@@ -160,16 +160,19 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
    *
    * @see construct
    */
-  final def econstruct[E <: AnyRef, Return](makeParam: Param[Typeclass, Type] => Either[E, Return]): Either[E, Type] = {
+  final def constructEither[E <: AnyRef, Return](makeParam: Param[Typeclass, Type] => Either[E, Return]): Either[E, Type] = {
     // poor man's scalaz.Traverse
     try {
-      val bits = parameters.map { p =>
-        makeParam(p) match {
-          case Left(e) => throw EarlyExit(e)
-          case Right(a) => a
-        }
-      }
-      Right(rawConstruct(bits))
+      Right(
+        rawConstruct(
+          parameters.map { p =>
+            makeParam(p) match {
+              case Left(e) => throw EarlyExit(e)
+              case Right(a) => a
+            }
+          }
+        )
+      )
     } catch {
       case EarlyExit(err) => Left(err.asInstanceOf[E])
     }
