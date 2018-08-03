@@ -88,6 +88,10 @@ case class Portfolio(companies: Company*)
 
 case class Recursive(children: Seq[Recursive])
 
+// This tests compilation.
+class GenericCsv[A: Csv]
+object ParamCsv extends GenericCsv[Param]
+
 object Tests extends TestApp {
 
   def tests(): Unit = for (_ <- 1 to 1) {
@@ -385,7 +389,7 @@ object Tests extends TestApp {
       scalac"""
         WeakHash.gen[Person]
       """
-    }.assert(_ == Returns(fqt"magnolia.examples.WeakHash.Typeclass[magnolia.tests.Person]"))
+    }.assert(_ == Returns(fqt"magnolia.examples.WeakHash[magnolia.tests.Person]"))
     
     test("disallow coproduct derivations without dispatch method") {
       scalac"""
