@@ -98,6 +98,16 @@ class NotDerivable
 
 case class NoDefault(value: Boolean)
 
+// this should *not* be derived: both ServiceName and Option[String] should fail
+final case class LoggingConfig(
+  name: ServiceName,
+  optName: Option[String]
+)
+object LoggingConfig {
+  implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
+}
+
+final case class ServiceName(value: String) extends AnyVal
 
 object Tests extends TestApp {
 
