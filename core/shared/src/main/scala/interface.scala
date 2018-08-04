@@ -40,6 +40,10 @@ trait Subtype[Typeclass[_], Type] extends Serializable {
   /** partial function defined the subset of values of `Type` which have the type of this subtype */
   def cast: PartialFunction[Type, SType]
 
+  /** all of the annotations on the sub type */
+  final def annotations: Seq[Any] = annotationsArray
+  def annotationsArray: Array[Any]
+
   override def toString: String = s"Subtype(${typeName.full})"
 }
 
