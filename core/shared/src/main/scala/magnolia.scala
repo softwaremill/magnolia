@@ -39,6 +39,9 @@ object Magnolia {
     *  `Derivation.gen[T]` or with `implicitly[Typeclass[T]]`, if the implicit method is imported
     *  into the current scope.
     *
+    *  If the `gen` is not `implicit`, semi-auto derivation is used instead, whereby implicits will
+    *  not be generated outside of this ADT.
+    *
     *  The definition expects a type constructor called `Typeclass`, taking one *-kinded type
     *  parameter to be defined on the same object as a means of determining how the typeclass should
     *  be genericized. While this may be obvious for typeclasses like `Show[T]` which take only a
