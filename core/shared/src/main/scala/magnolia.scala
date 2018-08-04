@@ -136,6 +136,10 @@ object Magnolia {
 
     val fullauto = c.macroApplication.symbol.isImplicit
 
+    // halp! I really just want to ask "is t a subtype of T?"
+    def halfauto(s: Type): Boolean =
+      s.typeSymbol.isClass && s.typeSymbol.asClass.baseClasses.contains(weakTypeOf[T].typeSymbol)
+
     val expandDeferred = new Transformer {
       override def transform(tree: Tree) = tree match {
         case q"$magnolia.Deferred.apply[$_](${Literal(Constant(method: String))})"
@@ -170,7 +174,8 @@ object Magnolia {
           Option(c.inferImplicitValue(searchType))
             .filterNot(_.isEmpty)
             .orElse(
-              if (fullauto) directInferImplicit(genericType, typeConstructor)
+              if (fullauto || halfauto(genericType))
+                directInferImplicit(genericType, typeConstructor)
               else None
             )
             .getOrElse {

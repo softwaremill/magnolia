@@ -101,6 +101,10 @@ case class NoDefault(value: Boolean)
 final case class ServiceName1(value: String) extends AnyVal
 final case class ServiceName2(value: String)
 
+sealed abstract class Halfy
+final case class Lefty() extends Halfy
+final case class Righty() extends Halfy
+
 object Tests extends TestApp {
 
   def tests(): Unit = for (_ <- 1 to 1) {
@@ -257,6 +261,10 @@ object Tests extends TestApp {
     }.assert(_ == TypecheckError(txt"""magnolia: could not find SemiDefault.Typeclass for type Option[String]
     in parameter 'o' of product type LoggingConfig
 """) )
+
+    test("half auto derivation of sealed families") {
+      SemiDefault.gen[Halfy].default
+    }.assert(_ == Lefty())
 
     test("typenames and labels are not encoded") {
       implicitly[Show[String, `%%`]].show(`%%`(1, "two"))
