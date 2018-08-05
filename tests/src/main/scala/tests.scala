@@ -22,7 +22,7 @@ import contextual.data.txt._
 import magnolia.examples._
 import magnolia.TypeName
 
-import scala.annotation.StaticAnnotation
+import scala.annotation.{ Annotation, StaticAnnotation }
 import scala.util.control.NonFatal
 
 sealed trait Tree[+T]
@@ -58,10 +58,12 @@ case object Blue extends Color
 
 case class MyAnnotation(order: Int) extends StaticAnnotation
 
+case class MyOtherAnnotation() extends Annotation
+
 sealed trait AttributeParent
-@MyAnnotation(0) case class Attributed(
-  @MyAnnotation(1) p1: String,
-  @MyAnnotation(2) p2: Int
+@MyOtherAnnotation @MyAnnotation(0) case class Attributed(
+  @MyOtherAnnotation @MyAnnotation(1) p1: String,
+  @MyOtherAnnotation @MyAnnotation(2) p2: Int
 ) extends AttributeParent
 
 case class `%%`(`/`: Int, `#`: String)

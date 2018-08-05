@@ -15,7 +15,7 @@
 package magnolia
 
 import language.higherKinds
-import scala.annotation.tailrec
+import scala.annotation.{ tailrec, StaticAnnotation }
 
 /** represents a subtype of a sealed trait
   *
@@ -41,8 +41,8 @@ trait Subtype[Typeclass[_], Type] extends Serializable {
   def cast: PartialFunction[Type, SType]
 
   /** all of the annotations on the sub type */
-  final def annotations: Seq[Any] = annotationsArray
-  def annotationsArray: Array[Any]
+  final def annotations: Seq[StaticAnnotation] = annotationsArray
+  def annotationsArray: Array[StaticAnnotation]
 
   override def toString: String = s"Subtype(${typeName.full})"
 }
@@ -110,13 +110,12 @@ trait Param[Typeclass[_], Type] extends Serializable {
     *  @return  the parameter value */
   def dereference(param: Type): PType
 
-  def annotationsArray: Array[Any]
-
   /** a sequence of objects representing all of the annotations on the case class
     *
     *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
     *  [[scala.collection.Seq]] to hide the mutable collection API. */
-  final def annotations: Seq[Any] = annotationsArray
+  final def annotations: Seq[StaticAnnotation] = annotationsArray
+  def annotationsArray: Array[StaticAnnotation]
 
   override def toString: String = s"Param($label)"
 }
@@ -139,7 +138,7 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
   val isObject: Boolean,
   val isValueClass: Boolean,
   parametersArray: Array[Param[Typeclass, Type]],
-  annotationsArray: Array[Any]
+  annotationsArray: Array[StaticAnnotation]
 ) extends Serializable {
 
   override def toString: String = s"CaseClass(${typeName.full}, ${parameters.mkString(",")})"
@@ -206,7 +205,7 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
     *
     *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
     *  [[scala.collection.Seq]] to hide the mutable collection API. */
-  final def annotations: Seq[Any] = annotationsArray
+  final def annotations: Seq[StaticAnnotation] = annotationsArray
 }
 
 /** represents a sealed trait and the context required to construct a new typeclass instance
@@ -222,7 +221,7 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
 final class SealedTrait[Typeclass[_], Type](
   val typeName: TypeName,
   subtypesArray: Array[Subtype[Typeclass, Type]],
-  annotationsArray: Array[Any]
+  annotationsArray: Array[StaticAnnotation]
 ) extends Serializable {
 
   override def toString: String = s"SealedTrait($typeName, Array[${subtypes.mkString(",")}])"
@@ -256,7 +255,7 @@ final class SealedTrait[Typeclass[_], Type](
     *
     *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
     *  [[scala.collection.Seq]] to hide the mutable collection API. */
-  final def annotations: Seq[Any] = annotationsArray
+  final def annotations: Seq[StaticAnnotation] = annotationsArray
 }
 
 /**
