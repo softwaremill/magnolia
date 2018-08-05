@@ -137,11 +137,14 @@ object Magnolia {
 
     checkMethod("combine", "case classes", "CaseClass[Typeclass, _]")
 
+    // fullauto means we should directly infer everything, including external
+    // members of the ADT, that isn't inferred by the compiler.
+    //
+    // semiauto means that we should directly derive only the sealed ADT but not
+    // external members (i.e. things that are not a subtype of T).
     val fullauto = c.macroApplication.symbol.isImplicit
-
-    // halp! I really just want to ask "is t a subtype of T?"
-    def halfauto(s: Type): Boolean =
-      s.typeSymbol.isClass && s.typeSymbol.asClass.baseClasses.contains(weakTypeOf[T].typeSymbol)
+    val tSealed = weakTypeOf[T].typeSymbol.isClass && weakTypeOf[T].typeSymbol.asClass.isSealed
+    def semiauto(s: Type): Boolean = tSealed && s <:< weakTypeOf[T]
 
     val expandDeferred = new Transformer {
       override def transform(tree: Tree) = tree match {
@@ -177,7 +180,7 @@ object Magnolia {
           Option(c.inferImplicitValue(searchType))
             .filterNot(_.isEmpty)
             .orElse(
-              if (fullauto || halfauto(genericType))
+              if (fullauto || semiauto(genericType))
                 directInferImplicit(genericType, typeConstructor)
               else None
             )
