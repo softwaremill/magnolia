@@ -7,6 +7,8 @@ trait SemiDefault[A] {
   def default: A
 }
 object SemiDefault {
+  @inline def apply[A](implicit A: SemiDefault[A]): SemiDefault[A] = A
+
   type Typeclass[T] = SemiDefault[T]
 
   def combine[T](ctx: CaseClass[SemiDefault, T]): SemiDefault[T] = new SemiDefault[T] {

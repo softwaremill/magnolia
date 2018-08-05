@@ -99,7 +99,12 @@ class NotDerivable
 
 case class NoDefault(value: Boolean)
 
-final case class ServiceName(value: String) extends AnyVal
+final case class ServiceName1(value: String) extends AnyVal
+final case class ServiceName2(value: String)
+
+sealed abstract class Halfy
+final case class Lefty() extends Halfy
+final case class Righty() extends Halfy
 
 object Tests extends TestApp {
 
@@ -225,16 +230,42 @@ object Tests extends TestApp {
         |    in parameter 'unit' of product type Gamma
         |"""))
 
-    test("not assume full auto derivation") {
+    test("not assume full auto derivation of external value classes") {
       scalac"""
-        case class LoggingConfig(n: ServiceName, o: Option[String])
+        case class LoggingConfig(n: ServiceName1)
         object LoggingConfig {
           implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
         }
         """
-    }.assert(_ == TypecheckError(txt"""magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName
+    }.assert(_ == TypecheckError(txt"""magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName1
     in parameter 'n' of product type LoggingConfig
 """) )
+
+    test("not assume full auto derivation of external products") {
+      scalac"""
+        case class LoggingConfig(n: ServiceName2)
+        object LoggingConfig {
+          implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
+        }
+        """
+    }.assert(_ == TypecheckError(txt"""magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName2
+    in parameter 'n' of product type LoggingConfig
+""") )
+
+    test("not assume full auto derivation of external coproducts") {
+      scalac"""
+        case class LoggingConfig(o: Option[String])
+        object LoggingConfig {
+          implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
+        }
+        """
+    }.assert(_ == TypecheckError(txt"""magnolia: could not find SemiDefault.Typeclass for type Option[String]
+    in parameter 'o' of product type LoggingConfig
+""") )
+
+    test("half auto derivation of sealed families") {
+      SemiDefault.gen[Halfy].default
+    }.assert(_ == Lefty())
 
     test("typenames and labels are not encoded") {
       implicitly[Show[String, `%%`]].show(`%%`(1, "two"))

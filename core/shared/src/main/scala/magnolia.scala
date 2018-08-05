@@ -39,6 +39,9 @@ object Magnolia {
     *  `Derivation.gen[T]` or with `implicitly[Typeclass[T]]`, if the implicit method is imported
     *  into the current scope.
     *
+    *  If the `gen` is not `implicit`, semi-auto derivation is used instead, whereby implicits will
+    *  not be generated outside of this ADT.
+    *
     *  The definition expects a type constructor called `Typeclass`, taking one *-kinded type
     *  parameter to be defined on the same object as a means of determining how the typeclass should
     *  be genericized. While this may be obvious for typeclasses like `Show[T]` which take only a
@@ -134,7 +137,14 @@ object Magnolia {
 
     checkMethod("combine", "case classes", "CaseClass[Typeclass, _]")
 
+    // fullauto means we should directly infer everything, including external
+    // members of the ADT, that isn't inferred by the compiler.
+    //
+    // semiauto means that we should directly derive only the sealed ADT but not
+    // external members (i.e. things that are not a subtype of T).
     val fullauto = c.macroApplication.symbol.isImplicit
+    val tSealed = weakTypeOf[T].typeSymbol.isClass && weakTypeOf[T].typeSymbol.asClass.isSealed
+    def semiauto(s: Type): Boolean = tSealed && s <:< weakTypeOf[T]
 
     val expandDeferred = new Transformer {
       override def transform(tree: Tree) = tree match {
@@ -170,7 +180,8 @@ object Magnolia {
           Option(c.inferImplicitValue(searchType))
             .filterNot(_.isEmpty)
             .orElse(
-              if (fullauto) directInferImplicit(genericType, typeConstructor)
+              if (fullauto || semiauto(genericType))
+                directInferImplicit(genericType, typeConstructor)
               else None
             )
             .getOrElse {

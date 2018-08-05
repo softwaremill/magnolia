@@ -164,7 +164,7 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
    *
    * @see construct
    */
-  final def constructEither[E <: AnyRef, Return](makeParam: Param[Typeclass, Type] => Either[E, Return]): Either[E, Type] = {
+  final def constructEither[E, Return](makeParam: Param[Typeclass, Type] => Either[E, Return]): Either[E, Type] = {
     // poor man's scalaz.Traverse
     try {
       Right(
