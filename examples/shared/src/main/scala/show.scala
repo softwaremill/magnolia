@@ -31,6 +31,7 @@ trait GenericShow[Out] {
   type Typeclass[T] = Show[Out, T]
 
   def join(typeName: String, strings: Seq[String]): Out
+  def prefix(s: String, out: Out): Out
 
   /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of
     *  showing each parameter, and prefixing it with the class name */
@@ -53,10 +54,13 @@ trait GenericShow[Out] {
     }
   }
 
-  /** choose which typeclass to use based on the subtype of the sealed trait */
+  /** choose which typeclass to use based on the subtype of the sealed trait
+    * and prefix with the annotations as discovered on the subtype. */
   def dispatch[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
     ctx.dispatch(value) { sub =>
-      sub.typeclass.show(sub.cast(value))
+      val anns = sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
+      val annotationStr = if (anns.isEmpty) "" else anns.mkString("[", ",", "]")
+      prefix(annotationStr, sub.typeclass.show(sub.cast(value)))
     }
 
   /** bind the Magnolia macro to this derivation object */
@@ -71,6 +75,7 @@ object Show extends GenericShow[String] {
 
   def join(typeName: String, params: Seq[String]): String =
     params.mkString(s"$typeName(", ",", ")")
+  def prefix(s: String, out: String): String = s + out
 
   /** show typeclass for integers */
   implicit val int: Show[String, Int] = (s: Int) => s.toString

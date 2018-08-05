@@ -58,10 +58,11 @@ case object Blue extends Color
 
 case class MyAnnotation(order: Int) extends StaticAnnotation
 
+sealed trait AttributeParent
 @MyAnnotation(0) case class Attributed(
   @MyAnnotation(1) p1: String,
   @MyAnnotation(2) p2: Int
-)
+) extends AttributeParent
 
 case class `%%`(`/`: Int, `#`: String)
 
@@ -408,6 +409,10 @@ object Tests extends TestApp {
       Show.gen[Attributed].show(Attributed("xyz", 100))
     }.assert(_ == "Attributed{MyAnnotation(0)}(p1{MyAnnotation(1)}=xyz,p2{MyAnnotation(2)}=100)")
 
+    test("capture attributes against subtypes") {
+      Show.gen[AttributeParent].show(Attributed("xyz", 100))
+    }.assert(_ == "[MyAnnotation(0)]Attributed{MyAnnotation(0)}(p1{MyAnnotation(1)}=xyz,p2{MyAnnotation(2)}=100)")
+
     test("show underivable type with fallback") {
       TypeNameInfo.gen[NotDerivable].name
     }.assert(_ == TypeName("", "Unknown Type"))
@@ -417,7 +422,7 @@ object Tests extends TestApp {
         WeakHash.gen[Person]
       """
     }.assert(_ == Returns(fqt"magnolia.examples.WeakHash[magnolia.tests.Person]"))
-    
+
     test("disallow coproduct derivations without dispatch method") {
       scalac"""
         WeakHash.gen[Entity]
