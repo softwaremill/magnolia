@@ -330,8 +330,8 @@ object Magnolia {
             ${param.name.decodedName.toString},
             $idx,
             $repeated,
-            $ref,
-            $defaultVal,
+            new _root_.magnolia.Need(() => $ref),
+            new _root_.magnolia.Need(() => $defaultVal),
             _.${param.name},
             $scalaPkg.Array(..$annList)
           )"""
@@ -399,7 +399,7 @@ object Magnolia {
             $magnoliaPkg.TypeName(${typ.typeSymbol.owner.fullName}, ${typ.typeSymbol.name.decodedName.toString}),
             $idx,
             $scalaPkg.Array(..${typ.typeSymbol.annotations.map(_.tree)}),
-            $typeclass,
+            new _root_.magnolia.Need(() => $typeclass),
             (t: $genericType) => t.isInstanceOf[$typ],
             (t: $genericType) => t.asInstanceOf[$typ]
           )"""
@@ -466,14 +466,14 @@ object Magnolia {
   def subtype[Tc[_], T, S <: T](name: TypeName,
                                 idx: Int,
                                 anns: Array[Any],
-                                tc: => Tc[S],
+                                tc: Need[Tc[S]],
                                 isType: T => Boolean,
                                 asType: T => S): Subtype[Tc, T] =
     new Subtype[Tc, T] with PartialFunction[T, S] {
       type SType = S
       def typeName: TypeName = name
       def index: Int = idx
-      def typeclass: Tc[SType] = tc
+      def typeclass: Tc[SType] = tc.value
       def cast: PartialFunction[T, SType] = this
       def isDefinedAt(t: T) = isType(t)
       def apply(t: T): SType = asType(t)
@@ -488,8 +488,8 @@ object Magnolia {
   def param[Tc[_], T, P](name: String,
                          idx: Int,
                          isRepeated: Boolean,
-                         typeclassParam: => Tc[P],
-                         defaultVal: => Option[P],
+                         typeclassParam: Need[Tc[P]],
+                         defaultVal: Need[Option[P]],
                          deref: T => P,
                          annotationsArrayParam: Array[Any]
                         ): Param[Tc, T] = new Param[Tc, T] {
@@ -497,8 +497,8 @@ object Magnolia {
     def label: String = name
     def index: Int = idx
     def repeated: Boolean = isRepeated
-    def default: Option[PType] = defaultVal
-    def typeclass: Tc[PType] = typeclassParam
+    def default: Option[PType] = defaultVal.value
+    def typeclass: Tc[PType] = typeclassParam.value
     def dereference(t: T): PType = deref(t)
     def annotationsArray: Array[Any] = annotationsArrayParam
   }
@@ -588,5 +588,13 @@ private[magnolia] object CompileTimeState {
         workSet.clear()
       }
     }
+  }
+}
+
+final class Need[+A](private[this] var eval: () => A) {
+  lazy val value: A = {
+    val value0 = eval()
+    eval = null
+    value0
   }
 }
