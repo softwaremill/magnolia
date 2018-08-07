@@ -31,6 +31,8 @@ trait Subtype[Typeclass[_], Type] extends Serializable {
     *  This is the full name information for the type of subclass. */
   def typeName: TypeName
 
+  def index: Int
+
   /** the typeclass instance associated with this subtype
     *
     *  This is the instance of the type `Typeclass[SType]` which will have been discovered by
