@@ -67,6 +67,8 @@ trait Param[Typeclass[_], Type] extends Serializable {
   /** the name of the parameter */
   def label: String
 
+  def index: Int
+
   /** flag indicating a repeated (aka. vararg) parameter
     *
     * For example, for a case class,
