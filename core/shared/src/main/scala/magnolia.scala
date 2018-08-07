@@ -332,7 +332,7 @@ object Magnolia {
             $repeated,
             _root_.magnolia.CallByNeed($ref),
             _root_.magnolia.CallByNeed($defaultVal),
-            _root_.magnolia.CallByNeed(_.${param.name}),
+            _.${param.name},
             $scalaPkg.Array(..$annList)
           )"""
         }
@@ -490,7 +490,7 @@ object Magnolia {
                          isRepeated: Boolean,
                          typeclassParam: CallByNeed[Tc[P]],
                          defaultVal: CallByNeed[Option[P]],
-                         deref: CallByNeed[T => P],
+                         deref: T => P,
                          annotationsArrayParam: Array[Any]
                         ): Param[Tc, T] = new Param[Tc, T] {
     type PType = P
@@ -499,7 +499,7 @@ object Magnolia {
     def repeated: Boolean = isRepeated
     def default: Option[PType] = defaultVal.value
     def typeclass: Tc[PType] = typeclassParam.value
-    def dereference(t: T): PType = deref.value(t)
+    def dereference(t: T): PType = deref(t)
     def annotationsArray: Array[Any] = annotationsArrayParam
   }
 
