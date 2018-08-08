@@ -359,7 +359,13 @@ object Magnolia {
           val part = TermName(s"p$idx")
           (part, if(typeclass.repeated) fq"$part <- new $magnoliaPkg.Monadic.Ops(null.asInstanceOf[${typeclass.paramType}])" else fq"$part <- new $magnoliaPkg.Monadic.Ops(makeParam($paramsVal($idx)).asInstanceOf[F[${typeclass.paramType}]])")
         }
-        
+       
+        val constructMonadicImpl = if(forParams.length == 0) q"monadic.point(new $genericType())" else q"""
+          for(
+            ..${forParams.map(_._2)}
+          ) yield new $genericType(..${forParams.map(_._1)})
+        """
+
         Some(q"""{
             ..$preAssignments
             val $paramsVal: $scalaPkg.Array[$magnoliaPkg.Param[$typeConstructor, $genericType]] =
@@ -380,9 +386,7 @@ object Magnolia {
 
               import _root_.scala.language.higherKinds
               def constructMonadic[F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => F[Return])(implicit monadic: _root_.magnolia.Monadic[F]): F[$genericType] = {
-                for(
-                  ..${fq"_ <- new $magnoliaPkg.Monadic.Ops(monadic.point(()))" +: forParams.map(_._2)}
-                ) yield new $genericType(..${forParams.map(_._1)})
+                $constructMonadicImpl
               }
 
               def rawConstruct(fieldValues: _root_.scala.Seq[_root_.scala.Any]): $genericType = {
