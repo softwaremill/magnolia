@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.1
+- Runtime performance enhancements
+
 ## v0.9.0
 - More discerning laziness of derivations
 - More examples
