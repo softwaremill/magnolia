@@ -15,6 +15,7 @@
 package magnolia
 
 import language.higherKinds
+import language.experimental.macros
 import scala.annotation.tailrec
 
 /** represents a subtype of a sealed trait
@@ -138,7 +139,7 @@ trait Param[Typeclass[_], Type] extends Serializable {
   *  @param annotationsArray  an array of instantiated annotations applied to this case class
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type       generic type of this parameter */
-abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
+abstract class CaseClass[Typeclass[_], Type] (
   val typeName: TypeName,
   val isObject: Boolean,
   val isValueClass: Boolean,
@@ -160,8 +161,9 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
     *  @param makeParam  lambda for converting a generic [[Param]] into the value to be used for
     *                    this parameter in the construction of a new instance of the case class
     *  @return  a new instance of the case class */
-  final def construct[Return](makeParam: Param[Typeclass, Type] => Return): Type =
-    rawConstruct(parameters map makeParam)
+  def construct[Return](makeParam: Param[Typeclass, Type] => Return): Type
+
+  def constructMonadic[Monad[_], PType](makeParam: Param[Typeclass, Type] => Monad[PType])(implicit monadic: Monadic[Monad]): Monad[Type]
 
   /**
    * Like construct but allows each parameter to fail with an error.
