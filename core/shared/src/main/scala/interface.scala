@@ -166,29 +166,6 @@ abstract class CaseClass[Typeclass[_], Type] (
 
   def constructMonadic[Monad[_], PType](makeParam: Param[Typeclass, Type] => Monad[PType])(implicit monadic: Monadic[Monad]): Monad[Type]
 
-  /**
-   * Like construct but allows each parameter to fail with an error.
-   *
-   * @see construct
-   */
-  final def constructEither[E, Return](makeParam: Param[Typeclass, Type] => Either[E, Return]): Either[E, Type] = {
-    // poor man's scalaz.Traverse
-    try {
-      Right(
-        rawConstruct(
-          parameters.map { p =>
-            makeParam(p) match {
-              case Left(e) => throw EarlyExit(e)
-              case Right(a) => a
-            }
-          }
-        )
-      )
-    } catch {
-      case EarlyExit(err) => Left(err.asInstanceOf[E])
-    }
-  }
-
   /** constructs a new instance of the case class type
     *
     *  Like [[construct]] this method is implemented by Magnolia and lets you construct case class

@@ -335,10 +335,10 @@ object Magnolia {
 
         val assignments = caseParams.zip(defaults).zip(annotations).zipWithIndex.map {
           case (((CaseParam(param, repeated, _, paramType, ref), defaultVal), annList), idx) =>
-            q"""$paramsVal($idx) = $magnoliaPkg.Magnolia.param[$typeConstructor, $genericType,
-                $paramType](
+            val call = if(isValueClass) q"$magnoliaPkg.Magnolia.valueParam" else q"$magnoliaPkg.Magnolia.param"
+            q"""$paramsVal($idx) = $call[$typeConstructor, $genericType, $paramType](
             ${param.name.decodedName.toString},
-            $idx,
+            ${if(!isValueClass) q"$idx" else q"(g: $genericType) => g.${param.name}: $paramType"},
             $repeated,
             _root_.magnolia.CallByNeed($ref),
             _root_.magnolia.CallByNeed($defaultVal),
@@ -358,7 +358,7 @@ object Magnolia {
         
         val forParams = caseParams.zipWithIndex.map { case (typeclass, idx) =>
           val part = TermName(s"p$idx")
-          (part, if(typeclass.repeated) fq"$part <- new _root_.mercator.Ops(null.asInstanceOf[${typeclass.paramType}])" else fq"$part <- new _root_.mercator.Ops(makeParam($paramsVal($idx)).asInstanceOf[F[${typeclass.paramType}]])")
+          (if(typeclass.repeated) q"$part: _*" else q"$part", fq"$part <- new _root_.mercator.Ops(makeParam($paramsVal($idx)).asInstanceOf[F[${typeclass.paramType}]])")
         }
        
         val constructMonadicImpl = if(forParams.length == 0) q"monadic.point(new $genericType())" else q"""
@@ -533,6 +533,23 @@ object Magnolia {
     def default: Option[PType] = defaultVal.value
     def typeclass: Tc[PType] = typeclassParam.value
     def dereference(t: T): PType = t.asInstanceOf[Product].productElement(idx).asInstanceOf[PType]
+    def annotationsArray: Array[Any] = annotationsArrayParam
+  }
+
+  def valueParam[Tc[_], T, P](name: String,
+                         deref: T => P,
+                         isRepeated: Boolean,
+                         typeclassParam: CallByNeed[Tc[P]],
+                         defaultVal: CallByNeed[Option[P]],
+                         annotationsArrayParam: Array[Any]
+                        ): Param[Tc, T] = new Param[Tc, T] {
+    type PType = P
+    def label: String = name
+    def index: Int = 0
+    def repeated: Boolean = isRepeated
+    def default: Option[PType] = defaultVal.value
+    def typeclass: Tc[PType] = typeclassParam.value
+    def dereference(t: T): PType = deref(t)
     def annotationsArray: Array[Any] = annotationsArrayParam
   }
 
