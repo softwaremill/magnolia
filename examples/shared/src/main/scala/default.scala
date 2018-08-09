@@ -1,4 +1,4 @@
-/* Magnolia, version 0.7.1. Copyright 2018 Jon Pretty, Propensive Ltd.
+/* Magnolia, version 0.10.0. Copyright 2018 Jon Pretty, Propensive Ltd.
  *
  * The primary distribution site is: http://co.ntextu.al/
  *

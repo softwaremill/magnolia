@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.0
+- Remove constructEither
+- Runtime performance improvements
+
 ## 0.9.1
 - Runtime performance enhancements
 
