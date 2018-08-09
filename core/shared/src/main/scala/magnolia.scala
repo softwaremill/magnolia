@@ -19,6 +19,7 @@ import scala.collection.mutable
 import scala.language.existentials
 import scala.language.higherKinds
 import scala.reflect.macros._
+import mercator._
 
 /** the object which defines the Magnolia macro */
 object Magnolia {
@@ -229,14 +230,23 @@ object Magnolia {
       val result = if (isCaseObject) {
         val impl = q"""
           $typeNameDef
-          ${c.prefix}.combine($magnoliaPkg.Magnolia.caseClass[$typeConstructor, $genericType](
+          ${c.prefix}.combine(new $magnoliaPkg.CaseClass[$typeConstructor, $genericType](
             $typeName,
             true,
             false,
             new $scalaPkg.Array(0),
-            $scalaPkg.Array(..$classAnnotationTrees),
-            _ => ${genericType.typeSymbol.asClass.module}
-          ))
+            $scalaPkg.Array(..$classAnnotationTrees)
+          ) {
+            override def construct[Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => Return): $genericType =
+              ${genericType.typeSymbol.asClass.module}
+
+            import _root_.scala.language.higherKinds
+            def constructMonadic[F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => F[Return])(implicit monadic: _root_.mercator.Monadic[F]): F[$genericType] =
+              monadic.point(${genericType.typeSymbol.asClass.module})
+
+            def rawConstruct(fieldValues: _root_.scala.Seq[_root_.scala.Any]): $genericType =
+              ${genericType.typeSymbol.asClass.module}
+          })
         """
         Some(impl)
       } else if (isCaseClass || isValueClass) {
@@ -325,16 +335,37 @@ object Magnolia {
 
         val assignments = caseParams.zip(defaults).zip(annotations).zipWithIndex.map {
           case (((CaseParam(param, repeated, _, paramType, ref), defaultVal), annList), idx) =>
-            q"""$paramsVal($idx) = $magnoliaPkg.Magnolia.param[$typeConstructor, $genericType,
-                $paramType](
+            val call = if(isValueClass) q"$magnoliaPkg.Magnolia.valueParam" else q"$magnoliaPkg.Magnolia.param"
+            q"""$paramsVal($idx) = $call[$typeConstructor, $genericType, $paramType](
             ${param.name.decodedName.toString},
-            $idx,
+            ${if(!isValueClass) q"$idx" else q"(g: $genericType) => g.${param.name}: $paramType"},
             $repeated,
             _root_.magnolia.CallByNeed($ref),
             _root_.magnolia.CallByNeed($defaultVal),
             $scalaPkg.Array(..$annList)
           )"""
         }
+        
+        val genericParams = caseParams.zipWithIndex.map { case (typeclass, idx) =>
+          val arg = q"makeParam($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
+          if(typeclass.repeated) q"$arg: _*" else arg
+        }
+        
+        val rawGenericParams = caseParams.zipWithIndex.map { case (typeclass, idx) =>
+          val arg = q"fieldValues($idx).asInstanceOf[${typeclass.paramType}]"
+          if(typeclass.repeated) q"$arg: _*" else arg
+        }
+        
+        val forParams = caseParams.zipWithIndex.map { case (typeclass, idx) =>
+          val part = TermName(s"p$idx")
+          (if(typeclass.repeated) q"$part: _*" else q"$part", fq"$part <- new _root_.mercator.Ops(makeParam($paramsVal($idx)).asInstanceOf[F[${typeclass.paramType}]])")
+        }
+       
+        val constructMonadicImpl = if(forParams.length == 0) q"monadic.point(new $genericType())" else q"""
+          for(
+            ..${forParams.map(_._2)}
+          ) yield new $genericType(..${forParams.map(_._1)})
+        """
 
         Some(q"""{
             ..$preAssignments
@@ -344,22 +375,26 @@ object Magnolia {
 
             $typeNameDef
 
-            ${c.prefix}.combine($magnoliaPkg.Magnolia.caseClass[$typeConstructor, $genericType](
+            ${c.prefix}.combine(new $magnoliaPkg.CaseClass[$typeConstructor, $genericType](
               $typeName,
               false,
               $isValueClass,
               $paramsVal,
-              $scalaPkg.Array(..$classAnnotationTrees),
-              ($fieldValues: $scalaPkg.Seq[_root_.scala.Any]) => {
-                if ($fieldValues.lengthCompare($paramsVal.length) != 0) {
-                  val msg = "`" + $typeName.full + "` has " + $paramsVal.length + " fields, not " + $fieldValues.size
-                  throw new java.lang.IllegalArgumentException(msg)
-                }
-                new $genericType(..${caseParams.zipWithIndex.map {
-          case (typeclass, idx) =>
-            val arg = q"$fieldValues($idx).asInstanceOf[${typeclass.paramType}]"
-            if (typeclass.repeated) q"$arg: _*" else arg
-        }})}))
+              $scalaPkg.Array(..$classAnnotationTrees)
+            ) {
+              override def construct[Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => Return): $genericType =
+                new $genericType(..$genericParams)
+
+              import _root_.scala.language.higherKinds
+              def constructMonadic[F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => F[Return])(implicit monadic: _root_.mercator.Monadic[F]): F[$genericType] = {
+                $constructMonadicImpl
+              }
+
+              def rawConstruct(fieldValues: _root_.scala.Seq[_root_.scala.Any]): $genericType = {
+                $magnoliaPkg.Magnolia.checkParamLengths(fieldValues, $paramsVal.length, $typeName.full)
+                new $genericType(..$rawGenericParams)
+              }
+            })
           }""")
       } else if (isSealedTrait) {
         checkMethod("dispatch", "sealed traits", "SealedTrait[Typeclass, _]")
@@ -501,18 +536,27 @@ object Magnolia {
     def annotationsArray: Array[Any] = annotationsArrayParam
   }
 
-  /** constructs a new [[CaseClass]] instance
-    *
-    *  This method is intended to be called only from code generated by the Magnolia macro, and
-    *  should not be called directly from users' code. */
-  def caseClass[Tc[_], T](name: TypeName,
-                          obj: Boolean,
-                          valClass: Boolean,
-                          params: Array[Param[Tc, T]],
-                          annotations: Array[Any],
-                          constructor: Seq[Any] => T): CaseClass[Tc, T] =
-    new CaseClass[Tc, T](name, obj, valClass, params, annotations) {
-      def rawConstruct(fieldValues: Seq[Any]): T = constructor(fieldValues)
+  def valueParam[Tc[_], T, P](name: String,
+                         deref: T => P,
+                         isRepeated: Boolean,
+                         typeclassParam: CallByNeed[Tc[P]],
+                         defaultVal: CallByNeed[Option[P]],
+                         annotationsArrayParam: Array[Any]
+                        ): Param[Tc, T] = new Param[Tc, T] {
+    type PType = P
+    def label: String = name
+    def index: Int = 0
+    def repeated: Boolean = isRepeated
+    def default: Option[PType] = defaultVal.value
+    def typeclass: Tc[PType] = typeclassParam.value
+    def dereference(t: T): PType = deref(t)
+    def annotationsArray: Array[Any] = annotationsArrayParam
+  }
+
+  final def checkParamLengths(fieldValues: Seq[Any], paramsLength: Int, typeName: String) =
+    if (fieldValues.lengthCompare(paramsLength) != 0) {
+      val msg = "`" + typeName + "` has " + paramsLength + " fields, not " + fieldValues.size
+      throw new java.lang.IllegalArgumentException(msg)
     }
 }
 

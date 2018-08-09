@@ -14,7 +14,7 @@
  */
 package magnolia.examples
 
-import magnolia._
+import magnolia._, mercator._
 import scala.language.experimental.macros
 
 /** typeclass for providing a default value for a particular type */
@@ -28,7 +28,7 @@ object Default {
   /** constructs a default for each parameter, using the constructor default (if provided),
     *  otherwise using a typeclass-provided default */
   def combine[T](ctx: CaseClass[Default, T]): Default[T] = new Default[T] {
-    def default = ctx.constructEither { param =>
+    def default = ctx.constructMonadic { param =>
       param.default match {
         case Some(arg) => Right(arg)
         case None => param.typeclass.default

@@ -15,7 +15,9 @@
 package magnolia
 
 import language.higherKinds
+import language.experimental.macros
 import scala.annotation.tailrec
+import mercator._
 
 /** represents a subtype of a sealed trait
   *
@@ -138,7 +140,7 @@ trait Param[Typeclass[_], Type] extends Serializable {
   *  @param annotationsArray  an array of instantiated annotations applied to this case class
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type       generic type of this parameter */
-abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
+abstract class CaseClass[Typeclass[_], Type] (
   val typeName: TypeName,
   val isObject: Boolean,
   val isValueClass: Boolean,
@@ -160,31 +162,9 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
     *  @param makeParam  lambda for converting a generic [[Param]] into the value to be used for
     *                    this parameter in the construction of a new instance of the case class
     *  @return  a new instance of the case class */
-  final def construct[Return](makeParam: Param[Typeclass, Type] => Return): Type =
-    rawConstruct(parameters map makeParam)
+  def construct[Return](makeParam: Param[Typeclass, Type] => Return): Type
 
-  /**
-   * Like construct but allows each parameter to fail with an error.
-   *
-   * @see construct
-   */
-  final def constructEither[E, Return](makeParam: Param[Typeclass, Type] => Either[E, Return]): Either[E, Type] = {
-    // poor man's scalaz.Traverse
-    try {
-      Right(
-        rawConstruct(
-          parameters.map { p =>
-            makeParam(p) match {
-              case Left(e) => throw EarlyExit(e)
-              case Right(a) => a
-            }
-          }
-        )
-      )
-    } catch {
-      case EarlyExit(err) => Left(err.asInstanceOf[E])
-    }
-  }
+  def constructMonadic[Monad[_], PType](makeParam: Param[Typeclass, Type] => Monad[PType])(implicit monadic: Monadic[Monad]): Monad[Type]
 
   /** constructs a new instance of the case class type
     *

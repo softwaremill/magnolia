@@ -9,7 +9,10 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
   .settings(scalaMacroDependencies: _*)
   .settings(moduleName := "magnolia")
   .settings(
-    scalaVersion := crossScalaVersions.value.head
+    scalaVersion := crossScalaVersions.value.head,
+    libraryDependencies ++= Seq(
+      "com.propensive" %% "mercator" % "0.1.1"
+    )
   )
   .jvmSettings(
     crossScalaVersions := "2.12.4" :: "2.13.0-M4" :: "2.11.12" :: Nil
