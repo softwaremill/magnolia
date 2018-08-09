@@ -19,6 +19,7 @@ import scala.collection.mutable
 import scala.language.existentials
 import scala.language.higherKinds
 import scala.reflect.macros._
+import mercator._
 
 /** the object which defines the Magnolia macro */
 object Magnolia {
@@ -240,7 +241,7 @@ object Magnolia {
               ${genericType.typeSymbol.asClass.module}
 
             import _root_.scala.language.higherKinds
-            def constructMonadic[F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => F[Return])(implicit monadic: _root_.magnolia.Monadic[F]): F[$genericType] =
+            def constructMonadic[F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => F[Return])(implicit monadic: _root_.mercator.Monadic[F]): F[$genericType] =
               monadic.point(${genericType.typeSymbol.asClass.module})
 
             def rawConstruct(fieldValues: _root_.scala.Seq[_root_.scala.Any]): $genericType =
@@ -357,7 +358,7 @@ object Magnolia {
         
         val forParams = caseParams.zipWithIndex.map { case (typeclass, idx) =>
           val part = TermName(s"p$idx")
-          (part, if(typeclass.repeated) fq"$part <- new $magnoliaPkg.Monadic.Ops(null.asInstanceOf[${typeclass.paramType}])" else fq"$part <- new $magnoliaPkg.Monadic.Ops(makeParam($paramsVal($idx)).asInstanceOf[F[${typeclass.paramType}]])")
+          (part, if(typeclass.repeated) fq"$part <- new _root_.mercator.Ops(null.asInstanceOf[${typeclass.paramType}])" else fq"$part <- new _root_.mercator.Ops(makeParam($paramsVal($idx)).asInstanceOf[F[${typeclass.paramType}]])")
         }
        
         val constructMonadicImpl = if(forParams.length == 0) q"monadic.point(new $genericType())" else q"""
@@ -385,7 +386,7 @@ object Magnolia {
                 new $genericType(..$genericParams)
 
               import _root_.scala.language.higherKinds
-              def constructMonadic[F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => F[Return])(implicit monadic: _root_.magnolia.Monadic[F]): F[$genericType] = {
+              def constructMonadic[F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => F[Return])(implicit monadic: _root_.mercator.Monadic[F]): F[$genericType] = {
                 $constructMonadicImpl
               }
 
@@ -623,31 +624,3 @@ final class CallByNeed[+A](private[this] var eval: () => A) {
     result
   }
 }
-
-object Monadic {
-  implicit val optionMonadic: Monadic[Option] = new Monadic[Option] {
-    def point[A](value: A): Option[A] = Some(value)
-    def bind[A, B](from: Option[A], fn: A => Option[B]): Option[B] = from.flatMap(fn)
-    def map[A, B](from: Option[A], fn: A => B): Option[B] = from.map(fn)
-  }
-
-  type RightEither[+T] = Either[String, T]
-
-  implicit val eitherMonadic: Monadic[RightEither] = new Monadic[RightEither] {
-    def point[A](value: A): Either[String, A] = Right(value)
-    def bind[A, B](from: Either[String, A], fn: A => Either[String, B]): Either[String, B] = from.flatMap(fn)
-    def map[A, B](from: Either[String, A], fn: A => B): Either[String, B] = from.map(fn)
-  }
-
-  final implicit class Ops[M[_], A](val value: M[A]) extends AnyVal {
-    @inline def flatMap[B](fn: A => M[B])(implicit monadic: Monadic[M]): M[B] = monadic.bind[A, B](value, fn)
-    @inline def map[B](fn: A => B)(implicit monadic: Monadic[M]): M[B] = monadic.map[A, B](value, fn)
-  }
-}
-
-trait Monadic[M[_]] {
-  def point[A](value: A): M[A]
-  def bind[A, B](from: M[A], fn: A => M[B]): M[B]
-  def map[A, B](from: M[A], fn: A => B): M[B]
-}
-

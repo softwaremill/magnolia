@@ -17,6 +17,7 @@ package magnolia
 import language.higherKinds
 import language.experimental.macros
 import scala.annotation.tailrec
+import mercator._
 
 /** represents a subtype of a sealed trait
   *
