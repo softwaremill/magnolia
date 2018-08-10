@@ -27,40 +27,44 @@ trait GenericShow[Out] {
 
   /** the type constructor for new [[Show]] instances
     *
-    *  The first parameter is fixed as `String`, and the second parameter varies generically. */
+    *  The first parameter is decided in the conrete implementation class,
+    *  and the second parameter varies generically. */
   type Typeclass[T] = Show[Out, T]
 
-  def join(typeName: String, strings: Seq[String]): Out
-  def prefix(s: String, out: Out): Out
+  /** joins the values which were obtained by calling parameterValue for
+    *  each of the parameters.
+    */
+  def join(paramValues: Seq[Out]): Out
 
-  /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of
-    *  showing each parameter, and prefixing it with the class name */
+  /** computes the value for the whole type after the individual parameters
+    *  have been joined.
+    */
+  def typeValue(annotations: Seq[Any], typeName: String, joinedParameters: Out): Out
+
+  /** computes the value of a single parameter in the case class
+    */
+  def parameterValue(annotations: Seq[Any], label: String, paramValue: Out): Out
+
+  /** creates a new [[Show]] instance by labelling and joining the result of
+    *  showing each parameter.
+    *  Here is the generic part of the joining process and the actual implementation
+    *  is in the implementation class. */
   def combine[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = { value =>
     if (ctx.isValueClass) {
       val param = ctx.parameters.head
       param.typeclass.show(param.dereference(value))
     } else {
-      val paramStrings = ctx.parameters.map { param =>
-        val attribStr = if(param.annotations.isEmpty) "" else {
-          param.annotations.mkString("{", ", ", "}")
-        }
-        s"${param.label}$attribStr=${param.typeclass.show(param.dereference(value))}"
+      val paramValues: Seq[Out] = ctx.parameters.map { param =>
+        parameterValue(param.annotations, param.label, param.typeclass.show(param.dereference(value)))
       }
-
-      val anns = ctx.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
-      val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
-
-      join(ctx.typeName.short + annotationStr, paramStrings)
+      typeValue(ctx.annotations, ctx.typeName.short, join(paramValues))
     }
   }
 
-  /** choose which typeclass to use based on the subtype of the sealed trait
-    * and prefix with the annotations as discovered on the subtype. */
+  /** choose which typeclass to use based on the subtype of the sealed trait */
   def dispatch[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
     ctx.dispatch(value) { sub =>
-      val anns = sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
-      val annotationStr = if (anns.isEmpty) "" else anns.mkString("[", ",", "]")
-      prefix(annotationStr, sub.typeclass.show(sub.cast(value)))
+      sub.typeclass.show(sub.cast(value))
     }
 
   /** bind the Magnolia macro to this derivation object */
@@ -73,9 +77,21 @@ object Show extends GenericShow[String] {
   /** show typeclass for strings */
   implicit val string: Show[String, String] = (s: String) => s
 
-  def join(typeName: String, params: Seq[String]): String =
-    params.mkString(s"$typeName(", ",", ")")
-  def prefix(s: String, out: String): String = s + out
+  def join(paramValues: Seq[String]): String = paramValues.mkString(",")
+
+  def typeValue(annotations: Seq[Any], typeName: String, joinedParameters: String): String = {
+    val anns = annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
+    val annotationStr = if (anns.isEmpty) "" else anns.mkString("[", ",", "]")
+
+    s"$annotationStr$typeName($joinedParameters)"
+  }
+
+  def parameterValue(annotations: Seq[Any], label: String, paramValue: String): String = {
+    val attribStr = if(annotations.isEmpty) "" else {
+      annotations.mkString("{", ", ", "}")
+    }
+    s"${label}$attribStr=${paramValue}"
+  }
 
   /** show typeclass for integers */
   implicit val int: Show[String, Int] = (s: Int) => s.toString
@@ -84,5 +100,34 @@ object Show extends GenericShow[String] {
   implicit def seq[A](implicit A: Show[String, A]): Show[String, Seq[A]] =
     new Show[String, Seq[A]] {
       def show(as: Seq[A]): String = as.iterator.map(A.show).mkString("[", ",", "]")
+    }
+}
+
+
+/** Another implementation for GenericShow using Int.
+  *  The result from this transformation is the same
+  *  as which is produced by the WeakHash in hash.scala. */
+object ShowWeakHash extends GenericShow[Int] {
+
+  /** show typeclass for strings */
+  implicit val string: Show[Int, String] = (s: String) => s.map(_.toInt).sum
+
+  def join(paramValues: Seq[Int]): Int = paramValues.foldLeft(0)(_ ^ _)
+
+  def typeValue(annotations: Seq[Any], typeName: String, joinedParameters: Int): Int = {
+    joinedParameters
+  }
+
+  def parameterValue(annotations: Seq[Any], label: String, paramValue: Int): Int = {
+    paramValue
+  }
+
+  /** show typeclass for integers */
+  implicit val int: Show[Int, Int] = (i: Int) => i
+
+  /** show typeclass for sequences */
+  implicit def seq[A](implicit A: Show[Int, A]): Show[Int, Seq[A]] =
+    new Show[Int, Seq[A]] {
+      def show(as: Seq[A]): Int = as.iterator.map(A.show).sum
     }
 }

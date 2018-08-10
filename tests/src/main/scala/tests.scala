@@ -56,12 +56,18 @@ case object Red extends Color
 case object Green extends Color
 case object Blue extends Color
 
-case class MyAnnotation(order: Int) extends StaticAnnotation
+case class ParamAnnotation(order: Int) extends StaticAnnotation
+case class ClassAnnotation(order: Int) extends StaticAnnotation
 
 sealed trait AttributeParent
-@MyAnnotation(0) case class Attributed(
-  @MyAnnotation(1) p1: String,
-  @MyAnnotation(2) p2: Int
+@ClassAnnotation(0) case class Attributed(
+  @ParamAnnotation(1) p1: String,
+  @ParamAnnotation(2) p2: Int
+) extends AttributeParent
+
+@ClassAnnotation(1) case class NestedAttributed(
+  @ParamAnnotation(3) p3: String,
+  @ParamAnnotation(4) p4: Attributed
 ) extends AttributeParent
 
 case class `%%`(`/`: Int, `#`: String)
@@ -438,11 +444,24 @@ object Tests extends TestApp {
 
     test("capture attributes against params") {
       Show.gen[Attributed].show(Attributed("xyz", 100))
-    }.assert(_ == "Attributed{MyAnnotation(0)}(p1{MyAnnotation(1)}=xyz,p2{MyAnnotation(2)}=100)")
+    }.assert(_ == "[ClassAnnotation(0)]Attributed(p1{ParamAnnotation(1)}=xyz,p2{ParamAnnotation(2)}=100)")
 
-    test("capture attributes against subtypes") {
+    test("capture attributes against subtype does not change the result") {
       Show.gen[AttributeParent].show(Attributed("xyz", 100))
-    }.assert(_ == "[MyAnnotation(0)]Attributed{MyAnnotation(0)}(p1{MyAnnotation(1)}=xyz,p2{MyAnnotation(2)}=100)")
+    }.assert(_ == "[ClassAnnotation(0)]Attributed(p1{ParamAnnotation(1)}=xyz,p2{ParamAnnotation(2)}=100)")
+
+    test("capture attributes in nested types") {
+      Show.gen[AttributeParent].show(NestedAttributed("abc", Attributed("xyz", 100)))
+    }.assert(_ == "[ClassAnnotation(1)]NestedAttributed(p3{ParamAnnotation(3)}=abc,p4{ParamAnnotation(4)}=[ClassAnnotation(0)]Attributed(p1{ParamAnnotation(1)}=xyz,p2{ParamAnnotation(2)}=100))")
+
+    test("make sure that WeakHash and ShowWeakHash give the same results") {
+      import ShowWeakHash._
+      val a = ShowWeakHash.gen[Attributed].show(Attributed("xyz", 100))
+
+      import WeakHash._
+      val b = WeakHash.gen[Attributed].hash(Attributed("xyz", 100))
+      a - b
+    }.assert(_ == 0)
 
     test("show underivable type with fallback") {
       TypeNameInfo.gen[NotDerivable].name
