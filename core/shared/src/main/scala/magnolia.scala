@@ -345,22 +345,22 @@ object Magnolia {
             $scalaPkg.Array(..$annList)
           )"""
         }
-        
+
         val genericParams = caseParams.zipWithIndex.map { case (typeclass, idx) =>
           val arg = q"makeParam($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
           if(typeclass.repeated) q"$arg: _*" else arg
         }
-        
+
         val rawGenericParams = caseParams.zipWithIndex.map { case (typeclass, idx) =>
           val arg = q"fieldValues($idx).asInstanceOf[${typeclass.paramType}]"
           if(typeclass.repeated) q"$arg: _*" else arg
         }
-        
+
         val forParams = caseParams.zipWithIndex.map { case (typeclass, idx) =>
           val part = TermName(s"p$idx")
           (if(typeclass.repeated) q"$part: _*" else q"$part", fq"$part <- new _root_.mercator.Ops(makeParam($paramsVal($idx)).asInstanceOf[F[${typeclass.paramType}]])")
         }
-       
+
         val constructMonadicImpl = if(forParams.length == 0) q"monadic.point(new $genericType())" else q"""
           for(
             ..${forParams.map(_._2)}
@@ -634,7 +634,7 @@ private[magnolia] object CompileTimeState {
 }
 
 object CallByNeed { def apply[A](a: => A): CallByNeed[A] = new CallByNeed(() => a) }
-final class CallByNeed[+A](private[this] var eval: () => A) {
+final class CallByNeed[+A](private[this] var eval: () => A) extends Serializable {
   lazy val value: A = {
     val result = eval()
     eval = null
