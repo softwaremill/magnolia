@@ -240,7 +240,6 @@ object Magnolia {
             override def construct[Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => Return): $genericType =
               ${genericType.typeSymbol.asClass.module}
 
-            import _root_.scala.language.higherKinds
             def constructMonadic[F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => F[Return])(implicit monadic: _root_.mercator.Monadic[F]): F[$genericType] =
               monadic.point(${genericType.typeSymbol.asClass.module})
 
@@ -385,7 +384,6 @@ object Magnolia {
               override def construct[Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => Return): $genericType =
                 new $genericType(..$genericParams)
 
-              import _root_.scala.language.higherKinds
               def constructMonadic[F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => F[Return])(implicit monadic: _root_.mercator.Monadic[F]): F[$genericType] = {
                 $constructMonadicImpl
               }
