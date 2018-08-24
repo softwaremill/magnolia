@@ -106,6 +106,9 @@ sealed abstract class Halfy
 final case class Lefty() extends Halfy
 final case class Righty() extends Halfy
 
+@javax.annotation.Resource
+case class JavaAnnotated()
+
 object Tests extends TestApp {
 
   def tests(): Unit = for (_ <- 1 to 1) {
@@ -435,6 +438,10 @@ object Tests extends TestApp {
 
       Show.gen[Path[String]].show(OffRoad(Some(Crossroad(Destination("A"), Destination("B")))))
     }.assert(_ == "OffRoad(path=Crossroad(left=Destination(value=A),right=Destination(value=B)))")
+
+    test("construct a Show product instance for a Java-annotated class") {
+      Show.gen[JavaAnnotated].show(JavaAnnotated())
+    }.assert(_ == """JavaAnnotated()""")
 
     test("capture attributes against params") {
       Show.gen[Attributed].show(Attributed("xyz", 100))
