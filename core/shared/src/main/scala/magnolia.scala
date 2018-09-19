@@ -205,6 +205,12 @@ object Magnolia {
       val isCaseObject = classType.exists(_.isModuleClass)
       val isSealedTrait = classType.exists(_.isSealed)
 
+      val hasPrivateContructor =
+        genericType.decls.collect {
+          case m: MethodSymbol if m.isConstructor =>
+            m.isPrivate
+        }.headOption.getOrElse(false)
+
       val classAnnotationTrees = typeSymbol.annotations.map(_.tree)
 
       val primitives = Set(typeOf[Double],
@@ -248,7 +254,7 @@ object Magnolia {
           })
         """
         Some(impl)
-      } else if (isCaseClass || isValueClass) {
+      } else if ((isCaseClass || isValueClass) && !hasPrivateContructor) {
 
         val companionRef = GlobalUtil.patchedCompanionRef(c)(genericType.dealias)
 
