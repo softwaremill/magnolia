@@ -54,7 +54,7 @@ object HasDefault {
   implicit val boolean: HasDefault[Boolean] = new HasDefault[Boolean] { def defaultValue = Left("truth is a lie") }
 
   /** default value for sequences; the empty sequence */
-  implicit def seq[A]: HasDefault[Seq[A]] = new Typeclass[Seq[A]] { def default = Right(Seq.empty) }
+  implicit def seq[A]: HasDefault[Seq[A]] = new Typeclass[Seq[A]] { def defaultValue = Right(Seq.empty) }
 
   /** generates default instances of [[HasDefault]] for case classes and sealed traits */
   implicit def gen[T]: HasDefault[T] = macro Magnolia.gen[T]
