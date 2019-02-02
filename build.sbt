@@ -147,6 +147,6 @@ lazy val unmanagedSettings = unmanagedBase :=
     })
 
 lazy val scalaMacroDependencies: Seq[Setting[_]] = Seq(
-  libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-  libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value
+  libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",
+  libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided"
 )
