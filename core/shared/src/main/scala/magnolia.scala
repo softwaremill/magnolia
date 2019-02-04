@@ -206,10 +206,10 @@ object Magnolia {
       val isSealedTrait = classType.exists(_.isSealed)
 
       val hasPrivateContructor =
-        genericType.decls.collect {
+        genericType.decls.collectFirst {
           case m: MethodSymbol if m.isConstructor =>
             m.isPrivate
-        }.headOption.getOrElse(false)
+      }.getOrElse(false)
 
       val classAnnotationTrees = typeSymbol.annotations.map(_.tree)
 
@@ -366,7 +366,7 @@ object Magnolia {
           (if(typeclass.repeated) q"$part: _*" else q"$part", fq"$part <- new _root_.mercator.Ops(makeParam($paramsVal($idx)).asInstanceOf[F[${typeclass.paramType}]])")
         }
 
-        val constructMonadicImpl = if(forParams.length == 0) q"monadic.point(new $genericType())" else q"""
+        val constructMonadicImpl = if (forParams.isEmpty) q"monadic.point(new $genericType())" else q"""
           for(
             ..${forParams.map(_._2)}
           ) yield new $genericType(..${forParams.map(_._1)})
