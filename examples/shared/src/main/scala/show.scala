@@ -50,7 +50,12 @@ trait GenericShow[Out] {
       val anns = ctx.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
-      join(ctx.typeName.short + annotationStr, paramStrings)
+
+      def typeArgsString(typeName: TypeName): String =
+        if (typeName.typeArguments.isEmpty) ""
+        else typeName.typeArguments.map(arg => s"${ arg.short}${ typeArgsString(arg)}").mkString("[", ",", "]")
+
+      join(ctx.typeName.short + typeArgsString(ctx.typeName) + annotationStr, paramStrings)
     }
   }
 
@@ -59,7 +64,7 @@ trait GenericShow[Out] {
   def dispatch[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
     ctx.dispatch(value) { sub =>
       val anns = sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
-      val annotationStr = if (anns.isEmpty) "" else anns.mkString("[", ",", "]")
+      val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
       prefix(annotationStr, sub.typeclass.show(sub.cast(value)))
     }
 

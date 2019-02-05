@@ -228,10 +228,13 @@ object Magnolia {
       val resultType = appliedType(typeConstructor, genericType)
 
       val typeName = TermName(c.freshName("typeName"))
-      val typeNameDef = {
-        val ts = genericType.typeSymbol
-        q"val $typeName = $magnoliaPkg.TypeName(${ts.owner.fullName}, ${ts.name.decodedName.toString})"
+
+      def typeNameRec(t: Type): Tree = {
+        val ts = t.typeSymbol
+        val typeArgNames = t.typeArgs.map(typeNameRec(_))
+        q"$magnoliaPkg.TypeName(${ts.owner.fullName}, ${ts.name.decodedName.toString}, $typeArgNames)"
       }
+      val typeNameDef = q"val $typeName = ${typeNameRec(genericType)}"
 
       val result = if (isCaseObject) {
         val impl = q"""
@@ -434,7 +437,7 @@ object Magnolia {
         val assignments = typeclasses.zipWithIndex.map {
           case ((typ, typeclass), idx) =>
             q"""$subtypesVal($idx) = $magnoliaPkg.Magnolia.subtype[$typeConstructor, $genericType, $typ](
-            $magnoliaPkg.TypeName(${typ.typeSymbol.owner.fullName}, ${typ.typeSymbol.name.decodedName.toString}),
+            ${typeNameRec(typ)},
             $idx,
             $scalaPkg.Array(..${typ.typeSymbol.annotations.map(_.tree)}),
             _root_.magnolia.CallByNeed($typeclass),
