@@ -2,6 +2,11 @@
 import sbtcrossproject.{crossProject, CrossType}
 import com.typesafe.sbt.pgp.PgpKeys.publishSigned
 
+
+lazy val `2.11` = "2.11.12"
+lazy val `2.12` = "2.12.8"
+lazy val `2.13` = "2.13.0-M5"
+
 lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
   .in(file("core"))
   .settings(buildSettings: _*)
@@ -15,13 +20,13 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
     )
   )
   .jvmSettings(
-    crossScalaVersions := "2.12.4" :: "2.13.0-M4" :: "2.11.12" :: Nil
+    crossScalaVersions := `2.12` :: `2.13` :: `2.11` :: Nil
   )
   .jsSettings(
-    crossScalaVersions := "2.12.4" :: "2.13.0-M4" :: "2.11.12" :: Nil
+    crossScalaVersions := `2.12` :: `2.13` :: `2.11` :: Nil
   )
   .nativeSettings(
-    crossScalaVersions := "2.11.12" :: Nil
+    crossScalaVersions := `2.11` :: Nil
   )
 
 lazy val coreJVM = core.jvm
