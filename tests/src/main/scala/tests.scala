@@ -123,7 +123,7 @@ object Tests extends TestApp {
 
     test("serialize a Branch") {
       implicitly[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
-    }.assert(_ == "Branch(left=Leaf(value=LHS),right=Leaf(value=RHS))")
+    }.assert(_ == "Branch[String](left=Leaf[String](value=LHS),right=Leaf[String](value=RHS))")
 
     test("local implicit beats Magnolia") {
       implicit val showPerson: Show[String, Person] = new Show[String, Person] {
@@ -178,11 +178,11 @@ object Tests extends TestApp {
 
     test("serialize a Leaf") {
       implicitly[Show[String, Leaf[String]]].show(Leaf("testing"))
-    }.assert(_ == "Leaf(value=testing)")
+    }.assert(_ == "Leaf[String](value=testing)")
 
     test("serialize a Branch as a Tree") {
       implicitly[Show[String, Tree[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
-    }.assert(_ == "Branch(left=Leaf(value=LHS),right=Leaf(value=RHS))")
+    }.assert(_ == "Branch[String](left=Leaf[String](value=LHS),right=Leaf[String](value=RHS))")
 
     test("serialize case object") {
       implicitly[Show[String, Red.type]].show(Red)
@@ -277,7 +277,7 @@ object Tests extends TestApp {
 
     test("serialize a tuple") {
       tupleDerivation().show((42, "Hello World"))
-    }.assert(_ == "Tuple2(_1=42,_2=Hello World)")
+    }.assert(_ == "Tuple2[Int,String](_1=42,_2=Hello World)")
 
     test("serialize a value class") {
       Show.gen[Length].show(new Length(100))
@@ -286,7 +286,7 @@ object Tests extends TestApp {
     // Corrupt being covariant in L <: Seq[Company] enables the derivation for Corrupt[String, _]
     test("show a Politician with covariant lobby") {
       Show.gen[Politician[String]].show(Corrupt("wall", Seq(Company("Alice Inc"))))
-    }.assert(_ == "Corrupt(slogan=wall,lobby=[Company(name=Alice Inc)])")
+    }.assert(_ == "Corrupt[String,Seq[Company]](slogan=wall,lobby=[Company(name=Alice Inc)])")
 
     // LabelledBox being invariant in L <: String prohibits the derivation for LabelledBox[Int, _]
     test("can't show a Box with invariant label") {
@@ -390,7 +390,7 @@ object Tests extends TestApp {
 
     test("show a List[Int]") {
       Show.gen[List[Int]].show(List(1, 2, 3))
-    }.assert(_ == "::(head=1,tl$access$1=::(head=2,tl$access$1=::(head=3,tl$access$1=Nil())))")
+    }.assert(_ == "::[Int](head=1,tl$access$1=::[Int](head=2,tl$access$1=::[Int](head=3,tl$access$1=Nil())))")
 
     test("sealed trait typeName should be complete and unchanged") {
       TypeNameInfo.gen[Color].name
@@ -434,7 +434,7 @@ object Tests extends TestApp {
       ): Show[String, Option[A]] = (optA: Option[A]) => showA.show(optA.getOrElse(defaultA.defaultValue.right.get))
 
       Show.gen[Path[String]].show(OffRoad(Some(Crossroad(Destination("A"), Destination("B")))))
-    }.assert(_ == "OffRoad(path=Crossroad(left=Destination(value=A),right=Destination(value=B)))")
+    }.assert(_ == "OffRoad[String](path=Crossroad[String](left=Destination[String](value=A),right=Destination[String](value=B)))")
 
     test("capture attributes against params") {
       Show.gen[Attributed].show(Attributed("xyz", 100))
@@ -442,11 +442,11 @@ object Tests extends TestApp {
 
     test("capture attributes against subtypes") {
       Show.gen[AttributeParent].show(Attributed("xyz", 100))
-    }.assert(_ == "[MyAnnotation(0)]Attributed{MyAnnotation(0)}(p1{MyAnnotation(1)}=xyz,p2{MyAnnotation(2)}=100)")
+    }.assert(_ == "{MyAnnotation(0)}Attributed{MyAnnotation(0)}(p1{MyAnnotation(1)}=xyz,p2{MyAnnotation(2)}=100)")
 
     test("show underivable type with fallback") {
       TypeNameInfo.gen[NotDerivable].name
-    }.assert(_ == TypeName("", "Unknown Type"))
+    }.assert(_ == TypeName("", "Unknown Type", Seq.empty))
 
     test("allow no-coproduct derivation definitions") {
       scalac"""
