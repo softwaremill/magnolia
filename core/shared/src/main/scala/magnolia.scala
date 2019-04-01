@@ -249,7 +249,7 @@ object Magnolia {
             override def construct[Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => Return): $genericType =
               ${genericType.typeSymbol.asClass.module}
 
-            def constructMonadic[F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => F[Return])(implicit monadic: _root_.mercator.Monadic[F]): F[$genericType] =
+            def constructMonadic[_F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => _F[Return])(implicit monadic: _root_.mercator.Monadic[_F]): F[$genericType] =
               monadic.point(${genericType.typeSymbol.asClass.module})
 
             def rawConstruct(fieldValues: _root_.scala.Seq[_root_.scala.Any]): $genericType =
@@ -393,7 +393,7 @@ object Magnolia {
               override def construct[Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => Return): $genericType =
                 new $genericType(..$genericParams)
 
-              def constructMonadic[F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => F[Return])(implicit monadic: _root_.mercator.Monadic[F]): F[$genericType] = {
+              def constructMonadic[_F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => _F[Return])(implicit monadic: _root_.mercator.Monadic[_F]): F[$genericType] = {
                 $constructMonadicImpl
               }
 
