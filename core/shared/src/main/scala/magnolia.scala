@@ -237,6 +237,7 @@ object Magnolia {
       val typeNameDef = q"val $typeName = ${typeNameRec(genericType)}"
 
       val result = if (isCaseObject) {
+        val f = TypeName(c.freshName("F"))
         val impl = q"""
           $typeNameDef
           ${c.prefix}.combine(new $magnoliaPkg.CaseClass[$typeConstructor, $genericType](
@@ -249,7 +250,7 @@ object Magnolia {
             override def construct[Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => Return): $genericType =
               ${genericType.typeSymbol.asClass.module}
 
-            def constructMonadic[_F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => _F[Return])(implicit monadic: _root_.mercator.Monadic[_F]): F[$genericType] =
+            def constructMonadic[$f[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => $f[Return])(implicit monadic: _root_.mercator.Monadic[$f]): $f[$genericType] =
               monadic.point(${genericType.typeSymbol.asClass.module})
 
             def rawConstruct(fieldValues: _root_.scala.Seq[_root_.scala.Any]): $genericType =
@@ -364,9 +365,11 @@ object Magnolia {
           if(typeclass.repeated) q"$arg: _*" else arg
         }
 
+        val f = TypeName(c.freshName("F"))
+
         val forParams = caseParams.zipWithIndex.map { case (typeclass, idx) =>
           val part = TermName(s"p$idx")
-          (if(typeclass.repeated) q"$part: _*" else q"$part", fq"$part <- new _root_.mercator.Ops(makeParam($paramsVal($idx)).asInstanceOf[F[${typeclass.paramType}]])")
+          (if(typeclass.repeated) q"$part: _*" else q"$part", fq"$part <- new _root_.mercator.Ops(makeParam($paramsVal($idx)).asInstanceOf[$f[${typeclass.paramType}]])")
         }
 
         val constructMonadicImpl = if (forParams.isEmpty) q"monadic.point(new $genericType())" else q"""
@@ -393,7 +396,7 @@ object Magnolia {
               override def construct[Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => Return): $genericType =
                 new $genericType(..$genericParams)
 
-              def constructMonadic[_F[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => _F[Return])(implicit monadic: _root_.mercator.Monadic[_F]): F[$genericType] = {
+              def constructMonadic[$f[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => $f[Return])(implicit monadic: _root_.mercator.Monadic[$f]):$f[$genericType] = {
                 $constructMonadicImpl
               }
 
