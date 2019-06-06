@@ -211,7 +211,7 @@ object Magnolia {
             m.isPrivate
       }.getOrElse(false)
 
-      val classAnnotationTrees = typeSymbol.annotations.map(_.tree)
+      val classAnnotationTrees = typeSymbol.annotations.map(_.tree).filterNot(_.tpe.typeSymbol.isJavaAnnotation)
 
       val primitives = Set(typeOf[Double],
                            typeOf[Float],
