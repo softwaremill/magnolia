@@ -108,6 +108,7 @@ final case class Lefty() extends Halfy
 final case class Righty() extends Halfy
 
 @MyAnnotation(0)
+@javax.annotation.Resource
 @JavaExampleAnnotation(description = "Some model")
 case class MyDto(foo: String, bar: Int)
 
