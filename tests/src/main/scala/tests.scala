@@ -107,6 +107,11 @@ sealed abstract class Halfy
 final case class Lefty() extends Halfy
 final case class Righty() extends Halfy
 
+@MyAnnotation(0)
+@javax.annotation.Resource
+@JavaExampleAnnotation(description = "Some model")
+case class MyDto(foo: String, bar: Int)
+
 object Tests extends TestApp {
 
   def tests(): Unit = for (_ <- 1 to 1) {
@@ -221,6 +226,10 @@ object Tests extends TestApp {
         |    in parameter 'integer' of product type Alpha
         |    in parameter 'alpha' of product type Beta
         |"""))
+
+    test("serialize case class with Java annotations by skipping them") {
+      Show.gen[MyDto].show(MyDto("foo", 42))
+    }.assert(_ == "MyDto{MyAnnotation(0)}(foo=foo,bar=42)")
 
     test("not attempt to instantiate Unit when producing error stack") {
       scalac"""
