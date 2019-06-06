@@ -215,6 +215,17 @@ object Tests extends TestApp {
       )
     }.assert(_ == Address("53 High Street", Person("Richard Jones", 44)))
 
+    test("show error stack") {
+      scalac"""
+        case class Alpha(integer: Double)
+        case class Beta(alpha: Alpha)
+        Show.gen[Beta]
+      """
+    }.assert(_ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type Double
+        |    in parameter 'integer' of product type Alpha
+        |    in parameter 'alpha' of product type Beta
+        |"""))
+
     test("serialize case class with Java annotations by skipping them") {
       Show.gen[MyDto].show(MyDto("foo", 42))
     }.assert(_ == "MyDto{MyAnnotation(0)}(foo=foo,bar=42)")
