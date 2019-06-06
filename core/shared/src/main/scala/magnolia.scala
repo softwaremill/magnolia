@@ -211,7 +211,9 @@ object Magnolia {
             m.isPrivate
       }.getOrElse(false)
 
-      val classAnnotationTrees = typeSymbol.annotations.map(_.tree).filterNot(_.tpe.typeSymbol.isJavaAnnotation)
+      val isJavaAnnotation: Tree => Boolean = _.tpe.typeSymbol.isJavaAnnotation
+
+      val classAnnotationTrees = typeSymbol.annotations.map(_.tree).filterNot(isJavaAnnotation)
 
       val primitives = Set(typeOf[Double],
                            typeOf[Float],
@@ -339,7 +341,7 @@ object Magnolia {
         } getOrElse List(q"$scalaPkg.None")
 
         val annotations: List[List[Tree]] = headParamList.toList.flatten map { param =>
-          param.annotations map { _.tree }
+          param.annotations.map (_.tree).filterNot(isJavaAnnotation)
         }
 
         val assignments = caseParams.zip(defaults).zip(annotations).zipWithIndex.map {
@@ -442,7 +444,7 @@ object Magnolia {
             q"""$subtypesVal($idx) = $magnoliaPkg.Magnolia.subtype[$typeConstructor, $genericType, $typ](
             ${typeNameRec(typ)},
             $idx,
-            $scalaPkg.Array(..${typ.typeSymbol.annotations.map(_.tree)}),
+            $scalaPkg.Array(..${typ.typeSymbol.annotations.map(_.tree).filterNot(isJavaAnnotation)}),
             _root_.magnolia.CallByNeed($typeclass),
             (t: $genericType) => t.isInstanceOf[$typ],
             (t: $genericType) => t.asInstanceOf[$typ]
