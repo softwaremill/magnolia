@@ -36,7 +36,7 @@ lazy val coreNative = core.native
 lazy val examples = crossProject(JVMPlatform, JSPlatform, NativePlatform)
   .in(file("examples"))
   .settings(buildSettings: _*)
-  .settings(publishSettings: _*)
+  .settings(noPublishSettings)
   .settings(moduleName := "magnolia-examples")
   .jvmSettings(
     crossScalaVersions := (crossScalaVersions in coreJVM).value,
@@ -59,6 +59,7 @@ lazy val examplesNative = examples.native
 lazy val tests = project
   .in(file("tests"))
   .settings(buildSettings: _*)
+  .settings(noPublishSettings)
   .settings(unmanagedSettings)
   .settings(moduleName := "magnolia-tests")
   .settings(
@@ -75,10 +76,7 @@ lazy val tests = project
 
 lazy val root = (project in file("."))
   .aggregate(coreJVM, coreJS, coreNative, examplesJVM, examplesJS, examplesNative, tests)
-  .settings(
-    publish := {},
-    publishLocal := {}
-  )
+  .settings(noPublishSettings)
 
 lazy val benchmarks = project
   .in(file("benchmarks"))
@@ -154,4 +152,9 @@ lazy val unmanagedSettings = unmanagedBase :=
 lazy val scalaMacroDependencies: Seq[Setting[_]] = Seq(
   libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",
   libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided"
+)
+
+val noPublishSettings = Seq(
+  publish := {},
+  publishLocal := {}
 )
