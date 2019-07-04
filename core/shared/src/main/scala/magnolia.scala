@@ -211,7 +211,7 @@ object Magnolia {
             m.isPrivate
       }.getOrElse(false)
 
-      val isJavaAnnotation: Tree => Boolean = _.tpe.typeSymbol.isJavaAnnotation
+      val isJavaAnnotation: Tree => Boolean = _.tpe <:< typeOf[java.lang.annotation.Annotation]
 
       val classAnnotationTrees = typeSymbol.annotations.map(_.tree).filterNot(isJavaAnnotation)
 
