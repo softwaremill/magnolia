@@ -1,69 +1,38 @@
 // shadow sbt-scalajs' crossProject and CrossType until Scala.js 1.0.0 is released
-import sbtcrossproject.{crossProject, CrossType}
-import com.typesafe.sbt.pgp.PgpKeys.publishSigned
+import sbtcrossproject.crossProject
+import com.softwaremill.PublishTravis.publishTravisSettings
 
+val v2_12 = "2.12.8"
+val v2_13 = "2.13.0"
 
-lazy val `2.11` = "2.11.12"
-lazy val `2.12` = "2.12.8"
-lazy val `2.13` = "2.13.0-M5"
-
-lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
+lazy val core = crossProject(JVMPlatform, JSPlatform)
   .in(file("core"))
-  .settings(buildSettings: _*)
-  .settings(publishSettings: _*)
-  .settings(scalaMacroDependencies: _*)
+  .settings(buildSettings)
+  .settings(publishSettings)
+  .settings(scalaMacroDependencies)
   .settings(moduleName := "magnolia")
-  .settings(
-    scalaVersion := crossScalaVersions.value.head,
-    libraryDependencies ++= Seq(
-      "com.propensive" %% "mercator" % "0.1.1"
-    )
-  )
-  .jvmSettings(
-    crossScalaVersions := `2.12` :: `2.13` :: `2.11` :: Nil
-  )
-  .jsSettings(
-    crossScalaVersions := `2.12` :: `2.13` :: `2.11` :: Nil
-  )
-  .nativeSettings(
-    crossScalaVersions := `2.11` :: Nil
-  )
+  .settings(libraryDependencies ++= Seq("com.propensive" %% "mercator" % "0.2.1"))
 
 lazy val coreJVM = core.jvm
 lazy val coreJS = core.js
-lazy val coreNative = core.native
 
-lazy val examples = crossProject(JVMPlatform, JSPlatform, NativePlatform)
+lazy val examples = crossProject(JVMPlatform, JSPlatform)
   .in(file("examples"))
-  .settings(buildSettings: _*)
+  .settings(buildSettings)
   .settings(noPublishSettings)
   .settings(moduleName := "magnolia-examples")
-  .jvmSettings(
-    crossScalaVersions := (crossScalaVersions in coreJVM).value,
-    scalaVersion := (scalaVersion in coreJVM).value
-  )
-  .jsSettings(
-    crossScalaVersions := (crossScalaVersions in coreJS).value,
-    scalaVersion := (scalaVersion in coreJS).value
-  )
-  .nativeSettings(
-    crossScalaVersions := (crossScalaVersions in coreNative).value,
-    scalaVersion := (scalaVersion in coreNative).value
-  )
   .dependsOn(core)
 
 lazy val examplesJVM = examples.jvm
 lazy val examplesJS = examples.js
-lazy val examplesNative = examples.native
 
 lazy val tests = project
   .in(file("tests"))
-  .settings(buildSettings: _*)
+  .settings(buildSettings)
   .settings(noPublishSettings)
   .settings(unmanagedSettings)
   .settings(moduleName := "magnolia-tests")
   .settings(
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),
     initialCommands in console := """import magnolia.tests._; import magnolia.examples._;""",
     libraryDependencies ++= Seq(
       // These two to allow compilation under Java 9...
@@ -72,10 +41,16 @@ lazy val tests = project
       "com.sun.xml.bind" % "jaxb-impl" % "2.3.0" % "compile"
     )
   )
+  // compiling and running the tests only for 2.12
+  .settings(skip := scalaVersion.value != v2_12)
+  .settings(test := Def.taskDyn { if (scalaVersion.value == v2_12) (run in Compile).toTask("") else Def.task {} }.value)
   .dependsOn(examplesJVM)
 
 lazy val root = (project in file("."))
-  .aggregate(coreJVM, coreJS, coreNative, examplesJVM, examplesJS, examplesNative, tests)
+  .aggregate(coreJVM, coreJS, examplesJVM, examplesJS, tests)
+  .settings(buildSettings)
+  .settings(publishSettings)
+  .settings(publishTravisSettings)
   .settings(noPublishSettings)
 
 lazy val benchmarks = project
@@ -87,11 +62,9 @@ lazy val benchmarks = project
 lazy val buildSettings = Seq(
   organization := "com.propensive",
   name := "magnolia",
-  version := "0.10.0",
   scalacOptions ++= Seq(
     "-deprecation",
     "-feature",
-    "-Xfuture",
     "-Ywarn-value-discard",
     "-Ywarn-dead-code",
     "-Ywarn-numeric-widen",
@@ -101,6 +74,7 @@ lazy val buildSettings = Seq(
       case Some((2, v)) if v <= 12 =>
         Seq(
           "-Xexperimental",
+          "-Xfuture",
           "-Ywarn-nullary-unit",
           "-Ywarn-inaccessible",
           "-Ywarn-adapted-args"
@@ -110,51 +84,42 @@ lazy val buildSettings = Seq(
     }
   },
   scmInfo := Some(
-    ScmInfo(url("https://github.com/propensive/magnolia"),
-            "scm:git:git@github.com:propensive/magnolia.git")
-  )
+    ScmInfo(url("https://github.com/propensive/mercator"),
+      "scm:git:git@github.com:propensive/mercator.git")
+  ),
+  crossScalaVersions := v2_12 :: v2_13 :: Nil,
+  scalaVersion := crossScalaVersions.value.head
 )
 
-lazy val publishSettings = Seq(
-  homepage := Some(url("http://magnolia.work/")),
+lazy val publishSettings = ossPublishSettings ++ Seq(
+  homepage := Some(url("http://propensive.com/")),
+  organizationHomepage := Some(url("http://propensive.com/")),
   licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
-  autoAPIMappings := true,
-  publishMavenStyle := true,
-  publishArtifact in Test := false,
-  pomIncludeRepository := { _ =>
-    false
-  },
-  publishTo := {
-    val nexus = "https://oss.sonatype.org/"
-    if (isSnapshot.value)
-      Some("snapshots" at nexus + "content/repositories/snapshots")
-    else
-      Some("releases" at nexus + "service/local/staging/deploy/maven2")
-  },
-  pomExtra := (
-    <developers>
-      <developer>
-        <id>propensive</id>
-        <name>Jon Pretty</name>
-        <url>https://github.com/propensive/magnolia/</url>
-      </developer>
-    </developers>
-  )
+  developers := List(
+    Developer(
+      id = "propensive",
+      name = "Jon Pretty",
+      email = "",
+      url = new URL("https://github.com/propensive/mercator/")
+    )
+  ),
+  scmInfo := Some(
+    ScmInfo(
+      url("https://github.com/propensive/" + name.value),
+      "scm:git:git@github.com/propensive/" + name.value + ".git"
+    )
+  ),
+  sonatypeProfileName := "com.propensive",
 )
 
 lazy val unmanagedSettings = unmanagedBase :=
   baseDirectory.value / "lib" /
     (CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, 11)) => "2.11"
-      case _             => "2.12"
+      case Some((major, minor)) => s"$major.$minor"
+      case _ => ""
     })
 
 lazy val scalaMacroDependencies: Seq[Setting[_]] = Seq(
   libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",
   libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided"
-)
-
-val noPublishSettings = Seq(
-  publish := {},
-  publishLocal := {}
 )
