@@ -5,8 +5,6 @@ scala:
 before_install:
 - openssl aes-256-cbc -K $encrypted_a92a7858a56e_key -iv $encrypted_a92a7858a56e_iv
   -in secrets.tar.enc -out secrets.tar -d
-- openssl aes-256-cbc -K $encrypted_4bc7aeb7f96e_key -iv $encrypted_4bc7aeb7f96e_iv
-  -in secrets.tar.enc -out secrets.tar -d
 - tar xvf secrets.tar
 before_cache:
 - du -h -d 1 $HOME/.ivy2/
