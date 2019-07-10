@@ -1,32 +1,34 @@
 language: scala
 scala:
-  - 2.12.8
-  - 2.13.0
+- 2.12.8
+- 2.13.0
 before_install:
-  - openssl aes-256-cbc -K $encrypted_4bc7aeb7f96e_key -iv $encrypted_4bc7aeb7f96e_iv
-    -in secrets.tar.enc -out secrets.tar -d
-  - tar xvf secrets.tar
+- openssl aes-256-cbc -K $encrypted_a92a7858a56e_key -iv $encrypted_a92a7858a56e_iv
+  -in secrets.tar.enc -out secrets.tar -d
+- openssl aes-256-cbc -K $encrypted_4bc7aeb7f96e_key -iv $encrypted_4bc7aeb7f96e_iv
+  -in secrets.tar.enc -out secrets.tar -d
+- tar xvf secrets.tar
 before_cache:
-  - du -h -d 1 $HOME/.ivy2/
-  - du -h -d 2 $HOME/.sbt/
-  - du -h -d 4 $HOME/.coursier/
-  - find $HOME/.sbt -name "*.lock" -type f -delete
-  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete
-  - find $HOME/.coursier/cache -name "*.lock" -type f -delete
+- du -h -d 1 $HOME/.ivy2/
+- du -h -d 2 $HOME/.sbt/
+- du -h -d 4 $HOME/.coursier/
+- find $HOME/.sbt -name "*.lock" -type f -delete
+- find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete
+- find $HOME/.coursier/cache -name "*.lock" -type f -delete
 cache:
   directories:
-    - "$HOME/.sbt/1.0"
-    - "$HOME/.sbt/boot/scala*"
-    - "$HOME/.sbt/cache"
-    - "$HOME/.sbt/launchers"
-    - "$HOME/.ivy2/cache"
-    - "$HOME/.coursier"
+  - "$HOME/.sbt/1.0"
+  - "$HOME/.sbt/boot/scala*"
+  - "$HOME/.sbt/cache"
+  - "$HOME/.sbt/launchers"
+  - "$HOME/.ivy2/cache"
+  - "$HOME/.coursier"
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION test
+- sbt ++$TRAVIS_SCALA_VERSION test
 deploy:
-  - provider: script
-    script: sbt publishRelease
-    skip_cleanup: true
-    on:
-      all_branches: true
-      condition: $TRAVIS_SCALA_VERSION = "2.12.8" && $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?
+- provider: script
+  script: sbt publishRelease
+  skip_cleanup: true
+  on:
+    all_branches: true
+    condition: $TRAVIS_SCALA_VERSION = "2.12.8" && $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?
