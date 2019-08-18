@@ -11,5 +11,5 @@ recursively-defined datatypes out-of-the-box, and incurs no significant
 time-penalty during compilation. If derivation fails, error messages are
 detailed and informative.
 
-Please see the [Magnolia](http://magnolia.work/) website for more information.
+Please see the [Magnolia](https://magnolia.work/opensource/magnolia) website for more information.
 
