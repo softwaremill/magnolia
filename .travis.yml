@@ -3,9 +3,7 @@ scala:
 - 2.12.8
 - 2.13.0
 before_install:
-- openssl aes-256-cbc -K $encrypted_a92a7858a56e_key -iv $encrypted_a92a7858a56e_iv
-  -in secrets.tar.enc -out secrets.tar -d
-- tar xvf secrets.tar
+- bash scripts/decrypt_files_if_not_pr.sh
 before_cache:
 - du -h -d 1 $HOME/.ivy2/
 - du -h -d 2 $HOME/.sbt/
