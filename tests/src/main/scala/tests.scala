@@ -23,6 +23,8 @@ import contextual.data.txt._
 import magnolia.examples._
 import magnolia.TypeName
 
+import java.time.LocalDate
+
 import scala.annotation.StaticAnnotation
 import scala.util.control.NonFatal
 
@@ -111,6 +113,9 @@ final case class Righty() extends Halfy
 @javax.annotation.Resource
 @JavaExampleAnnotation(description = "Some model")
 case class MyDto(foo: String, bar: Int)
+
+@SerialVersionUID(42) case class Schedule(events: Seq[Event])
+case class Event(date: LocalDate)
 
 object Tests extends TestApp {
 
@@ -422,6 +427,16 @@ object Tests extends TestApp {
         |    in chained implicit Show.Typeclass for type Seq[(Long, String)]
         |    in parameter '_2' of product type (Int, Seq[(Long, String)])
         |""") }
+
+    test("show chained error stack when leaf instance is missing") {
+      scalac"""Show.gen[Schedule]"""
+    } assert { //
+      _ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type java.time.LocalDate
+        |    in parameter 'date' of product type magnolia.tests.Event
+        |    in chained implicit Show.Typeclass for type Seq[magnolia.tests.Event]
+        |    in parameter 'events' of product type magnolia.tests.Schedule
+        |""")
+    }
 
     test("show a recursive case class") {
       Show.gen[Recursive].show(Recursive(Seq(Recursive(Nil))))
