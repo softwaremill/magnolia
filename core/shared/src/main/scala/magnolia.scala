@@ -115,6 +115,9 @@ object Magnolia {
       abstractTypes.map(_.asClass).flatMap(knownSubclasses(_)) ::: concreteTypes
     }
 
+    def annotationsOf(symbol: Symbol): List[Tree] =
+      symbol.annotations.map(_.tree).filterNot(_.tpe.typeSymbol.isJavaAnnotation)
+
     val typeDefs = prefixType.baseClasses.flatMap { cls =>
       cls.asType.toType.decls.filter(_.isType).find(_.name.toString == "Typeclass").map { tpe =>
         tpe.asType.toType.asSeenFrom(prefixType, cls)
@@ -211,9 +214,7 @@ object Magnolia {
             m.isPrivate
       }.getOrElse(false)
 
-      val isJavaAnnotation: Tree => Boolean = _.tpe.typeSymbol.isJavaAnnotation
-
-      val classAnnotationTrees = typeSymbol.annotations.map(_.tree).filterNot(isJavaAnnotation)
+      val classAnnotationTrees = annotationsOf(typeSymbol)
 
       val primitives = Set(typeOf[Double],
                            typeOf[Float],
@@ -340,10 +341,7 @@ object Magnolia {
           }
         } getOrElse List(q"$scalaPkg.None")
 
-        val annotations: List[List[Tree]] = headParamList.toList.flatten map { param =>
-          param.annotations.map (_.tree).filterNot(isJavaAnnotation)
-        }
-
+        val annotations = headParamList.getOrElse(Nil).map(annotationsOf(_))
         val assignments = caseParams.zip(defaults).zip(annotations).zipWithIndex.map {
           case (((CaseParam(param, repeated, _, paramType, ref), defaultVal), annList), idx) =>
             val call = if(isValueClass) q"$magnoliaPkg.Magnolia.valueParam" else q"$magnoliaPkg.Magnolia.param"
@@ -444,7 +442,7 @@ object Magnolia {
             q"""$subtypesVal($idx) = $magnoliaPkg.Magnolia.subtype[$typeConstructor, $genericType, $typ](
             ${typeNameRec(typ)},
             $idx,
-            $scalaPkg.Array(..${typ.typeSymbol.annotations.map(_.tree).filterNot(isJavaAnnotation)}),
+            $scalaPkg.Array(..${annotationsOf(typ.typeSymbol)}),
             _root_.magnolia.CallByNeed($typeclass),
             (t: $genericType) => t.isInstanceOf[$typ],
             (t: $genericType) => t.asInstanceOf[$typ]
