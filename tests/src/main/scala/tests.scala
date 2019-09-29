@@ -117,6 +117,9 @@ case class MyDto(foo: String, bar: Int)
 @SerialVersionUID(42) case class Schedule(events: Seq[Event])
 case class Event(date: LocalDate)
 
+case class RPerson(age: Int, name: String, children: Seq[RPerson])
+case class GPerson(children: Seq[RPerson])
+
 object Tests extends TestApp {
 
   def tests(): Unit = for (_ <- 1 to 1) {
@@ -198,6 +201,10 @@ object Tests extends TestApp {
     test("serialize case object") {
       implicitly[Show[String, Red.type]].show(Red)
     }.assert(_ == "Red()")
+
+    test("serialize self recursive type") {
+      implicitly[Show[String, GPerson]].show(GPerson(Nil))
+    }.assert(_ == "GPerson(children=[])")
 
     test("access default constructor values") {
       implicitly[HasDefault[Item]].defaultValue

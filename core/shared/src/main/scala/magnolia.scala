@@ -169,7 +169,7 @@ object Magnolia {
       else q"val $name = $rhs"
     }
 
-    def typeclassTree(genericType: Type, typeConstructor: Type): Either[String, Tree] = {
+    def typeclassTree(genericType: Type, typeConstructor: Type, assignedName: TermName): Either[String, Tree] = {
       val searchType = appliedType(typeConstructor, genericType)
       val deferredRef = for (methodName <- stack find searchType) yield {
         val methodAsString = methodName.decodedName.toString
@@ -178,7 +178,7 @@ object Magnolia {
 
       deferredRef.fold {
         val path = ChainedImplicit(s"$prefixName.Typeclass", genericType.toString)
-        val frame = stack.Frame(path, searchType, termNames.EMPTY)
+        val frame = stack.Frame(path, searchType, assignedName)
         stack.recurse(frame, searchType) {
           Option(c.inferImplicitValue(searchType))
             .filterNot(_.isEmpty)
@@ -302,10 +302,10 @@ object Magnolia {
                 val path = ProductType(paramName, genericType.toString)
                 val frame = stack.Frame(path, resultType, assignedName)
                 val searchType = appliedType(typeConstructor, paramType)
-                val derivedImplicit = stack.recurse(frame, searchType) {
-                  typeclassTree(paramType, typeConstructor)
-                }.fold(error, identity)
                 val ref = TermName(c.freshName("paramTypeclass"))
+                val derivedImplicit = stack.recurse(frame, searchType) {
+                  typeclassTree(paramType, typeConstructor, ref)
+                }.fold(error, identity)
                 val assigned = deferredVal(ref, searchType, derivedImplicit)
                 CaseParam(param, repeated, assigned, paramType, ref) :: acc
               } { backRef =>
@@ -427,7 +427,7 @@ object Magnolia {
           val path = CoproductType(genericType.toString)
           val frame = stack.Frame(path, resultType, assignedName)
           subType -> stack.recurse(frame, appliedType(typeConstructor, subType)) {
-            typeclassTree(subType, typeConstructor)
+            typeclassTree(subType, typeConstructor, termNames.ERROR)
           }.fold(error, identity)
         }
 
