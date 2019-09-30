@@ -622,7 +622,7 @@ private[magnolia] object CompileTimeState {
     override def toString: String =
       frames.mkString("magnolia stack:\n", "\n", "\n")
 
-    final case class Frame(path: TypePath, searchType: C#Type, term: C#TermName)
+    case class Frame(path: TypePath, searchType: C#Type, term: C#TermName)
   }
 
   object Stack {
