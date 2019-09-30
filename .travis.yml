@@ -1,7 +1,9 @@
 language: scala
+jdk:
+- openjdk8
 scala:
-- 2.12.8
-- 2.13.0
+- 2.12.10
+- 2.13.1
 before_install:
 - bash scripts/decrypt_files_if_not_pr.sh
 before_cache:
@@ -27,4 +29,4 @@ deploy:
   skip_cleanup: true
   on:
     all_branches: true
-    condition: $TRAVIS_SCALA_VERSION = "2.12.8" && $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?
+    condition: $TRAVIS_SCALA_VERSION = "2.12.10" && $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?
