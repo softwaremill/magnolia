@@ -120,6 +120,26 @@ case class Event(date: LocalDate)
 case class RPerson(age: Int, name: String, children: Seq[RPerson])
 case class GPerson(children: Seq[RPerson])
 
+case class ProtectedCons protected (name: String)
+object ProtectedCons {
+  def apply(firstName: String, familyName: String): ProtectedCons =
+    new ProtectedCons(firstName + " " + familyName)
+  implicit val show: Show[String, ProtectedCons] = Show.gen
+}
+
+case class PrivateCons private (name: String)
+object PrivateCons {
+  def apply(firstName: String, familyName: String): PrivateCons =
+    new PrivateCons(firstName + " " + familyName)
+  implicit val show: Show[String, PrivateCons] = Show.gen
+}
+
+class PrivateValueClass private (val value: Int) extends AnyVal
+object PrivateValueClass {
+  def apply(l: Int) = new PrivateValueClass(l)
+  implicit val show: Show[String, PrivateValueClass] = Show.gen
+}
+
 object Tests extends TestApp {
 
   def tests(): Unit = for (_ <- 1 to 1) {
@@ -213,6 +233,18 @@ object Tests extends TestApp {
     test("serialize case object as a sealed trait") {
       implicitly[Show[String, Color]].show(Blue)
     }.assert(_ == "Blue()")
+
+    test("serialize case class with protected constructor") {
+      ProtectedCons.show.show(ProtectedCons("dada", "phil"))
+    }.assert(_ == "ProtectedCons(name=dada phil)")
+
+    test("serialize case class with private constructor") {
+      PrivateCons.show.show(PrivateCons("dada", "phil"))
+    }.assert(_ == "PrivateCons(name=dada phil)")
+
+    test("serialize value case class with private constructor") {
+      PrivateValueClass.show.show(PrivateValueClass(42))
+    }.assert(_ == "42")
 
     test("decode a company") {
       Decoder.gen[Company].decode("""Company(name=Acme Inc)""")
