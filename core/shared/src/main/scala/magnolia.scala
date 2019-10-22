@@ -251,6 +251,9 @@ object Magnolia {
             def constructMonadic[$f[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => $f[Return])(implicit monadic: _root_.mercator.Monadic[$f]): $f[$genericType] =
               monadic.point(${genericType.typeSymbol.asClass.module})
 
+            def constructEither[Err, PType](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => _root_.scala.Either[Err, PType]): _root_.scala.Either[_root_.scala.List[Err], $genericType] =
+              _root_.scala.Right(${genericType.typeSymbol.asClass.module})
+
             def rawConstruct(fieldValues: _root_.scala.Seq[_root_.scala.Any]): $genericType =
               ${genericType.typeSymbol.asClass.module}
           })
@@ -368,6 +371,31 @@ object Magnolia {
           ) yield new $genericType(..${forParams.map(_._1)})
         """
 
+        val constructEitherImpl = if (caseParams.isEmpty) q"_root_.scala.Right(new $genericType())" else {
+          val eitherVals = caseParams.zipWithIndex.map { case (typeclass, idx) =>
+            val part = TermName(s"p$idx")
+            val pat = TermName(s"v$idx")
+            (
+              part,
+              if(typeclass.repeated) q"$pat: _*" else q"$pat",
+              q"val $part = makeParam($paramsVal($idx)).asInstanceOf[_root_.scala.Either[Err, ${typeclass.paramType}]]",
+              pq"_root_.scala.Right($pat)",
+            )
+          }
+
+          q"""
+           ..${eitherVals.map(_._3)}
+           (..${eitherVals.map(_._1)}) match {
+             case (..${eitherVals.map(_._4)}) =>
+               _root_.scala.Right(new $genericType(..${eitherVals.map(_._2)}))
+             case _ =>
+               _root_.scala.Left(
+                 _root_.scala.List(..${eitherVals.map(_._1)}).filter(_.isLeft).map(_.left.get)
+               )
+           }
+         """
+        }
+
         Some(q"""{
             ..$preAssignments
             val $paramsVal: $scalaPkg.Array[$magnoliaPkg.Param[$typeConstructor, $genericType]] =
@@ -388,6 +416,10 @@ object Magnolia {
 
               def constructMonadic[$f[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => $f[Return])(implicit monadic: _root_.mercator.Monadic[$f]):$f[$genericType] = {
                 $constructMonadicImpl
+              }
+
+              def constructEither[Err, PType](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => _root_.scala.Either[Err, PType]): _root_.scala.Either[_root_.scala.List[Err], $genericType] = {
+                $constructEitherImpl
               }
 
               def rawConstruct(fieldValues: _root_.scala.Seq[_root_.scala.Any]): $genericType = {

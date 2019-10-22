@@ -166,6 +166,8 @@ abstract class CaseClass[Typeclass[_], Type] (
 
   def constructMonadic[Monad[_], PType](makeParam: Param[Typeclass, Type] => Monad[PType])(implicit monadic: Monadic[Monad]): Monad[Type]
 
+  def constructEither[Err, PType](makeParam: Param[Typeclass, Type] => Either[Err, PType]): Either[List[Err], Type]
+
   /** constructs a new instance of the case class type
     *
     *  Like [[construct]] this method is implemented by Magnolia and lets you construct case class
