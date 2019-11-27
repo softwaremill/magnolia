@@ -100,6 +100,19 @@ object Magnolia {
     val prefixObject = prefixType.typeSymbol
     val prefixName = prefixObject.name.decodedName
 
+    object DeferredRef {
+      private val symbol = symbolOf[Deferred.type].asClass.module
+
+      def apply(searchType: Type, method: String): Tree =
+        q"$symbol.apply[$searchType]($method)"
+
+      def unapply(tree: Tree): Option[String] = tree match {
+        case q"$module.apply[$_](${Literal(Constant(method: String))})"
+          if module.symbol == symbol => Some(method)
+        case _ => None
+      }
+    }
+
     def error(message: String): Nothing =
       c.abort(c.enclosingPosition, s"magnolia: $message")
 
@@ -152,19 +165,22 @@ object Magnolia {
     val tSealed = weakTypeOf[T].typeSymbol.isClass && weakTypeOf[T].typeSymbol.asClass.isSealed
     def semiauto(s: Type): Boolean = tSealed && s <:< weakTypeOf[T]
 
+    // Trees that contain Deferred references might not be self contained and should not be cached.
+    def shouldCache(tree: Tree): Boolean = !tree.exists {
+      case DeferredRef(_) => true
+      case _ => false
+    }
+
     val expandDeferred = new Transformer {
       override def transform(tree: Tree) = tree match {
-        case q"$magnolia.Deferred.apply[$_](${Literal(Constant(method: String))})"
-            if magnolia.symbol == magnoliaPkg =>
-          q"${TermName(method)}"
-        case _ =>
-          super.transform(tree)
+        case DeferredRef(method) => q"${TermName(method)}"
+        case _ => super.transform(tree)
       }
     }
 
     def deferredVal(name: TermName, tpe: Type, rhs: Tree): Tree = {
       val shouldBeLazy = rhs.exists {
-        case q"$magnolia.Deferred.apply[$_]($_)" => magnolia.symbol == magnoliaPkg
+        case DeferredRef(_) => true
         case tree => enclosingVals.contains(tree.symbol)
       }
 
@@ -174,15 +190,13 @@ object Magnolia {
 
     def typeclassTree(genericType: Type, typeConstructor: Type, assignedName: TermName): Either[String, Tree] = {
       val searchType = appliedType(typeConstructor, genericType)
-      val deferredRef = for (methodName <- stack find searchType) yield {
-        val methodAsString = methodName.decodedName.toString
-        q"$magnoliaPkg.Deferred.apply[$searchType]($methodAsString)"
-      }
+      val deferredRef = for (methodName <- stack find searchType)
+        yield DeferredRef(searchType, methodName.decodedName.toString)
 
       deferredRef.fold {
         val path = ChainedImplicit(s"$prefixName.Typeclass", genericType.toString)
         val frame = stack.Frame(path, searchType, assignedName)
-        stack.recurse(frame, searchType) {
+        stack.recurse(frame, searchType, shouldCache) {
           Option(c.inferImplicitValue(searchType))
             .filterNot(_.isEmpty)
             .orElse {
@@ -298,7 +312,7 @@ object Magnolia {
                 val frame = stack.Frame(path, resultType, assignedName)
                 val searchType = appliedType(typeConstructor, paramType)
                 val ref = TermName(c.freshName("paramTypeclass"))
-                val derivedImplicit = stack.recurse(frame, searchType) {
+                val derivedImplicit = stack.recurse(frame, searchType, shouldCache) {
                   typeclassTree(paramType, typeConstructor, ref)
                 }.fold(error, identity)
                 val assigned = deferredVal(ref, searchType, derivedImplicit)
@@ -418,7 +432,7 @@ object Magnolia {
         val typeclasses = for (subType <- subtypes) yield {
           val path = CoproductType(genericType.toString)
           val frame = stack.Frame(path, resultType, assignedName)
-          subType -> stack.recurse(frame, appliedType(typeConstructor, subType)) {
+          subType -> stack.recurse(frame, appliedType(typeConstructor, subType), shouldCache) {
             typeclassTree(subType, typeConstructor, termNames.ERROR)
           }.fold(error, identity)
         }
@@ -584,6 +598,11 @@ private[magnolia] object CompileTimeState {
     def pop(): Unit = frames = frames drop 1
     def push(frame: Frame): Unit = frames ::= frame
 
+    def within[A](frame: Frame)(thunk: => A): A = {
+      push(frame)
+      try thunk finally pop()
+    }
+
     def clear(): Unit = {
       frames = Nil
       errors = Nil
@@ -594,14 +613,24 @@ private[magnolia] object CompileTimeState {
       case Frame(_, tpe, term) if tpe =:= searchType => term
     }
 
-    def recurse[T <: C#Tree](frame: Frame, searchType: C#Type)(fn: => Either[String, C#Tree]): Either[String, C#Tree] = {
-      push(frame)
-      val cached = cache.get(searchType)
-      val result = cached.fold(fn)(Right(_))
-      if (cached.isEmpty) result.fold(_ => errors ::= frame, cache(searchType) = _)
-      if (result.isRight) errors = Nil
-      pop()
-      result
+    def recurse[T <: C#Tree](frame: Frame, searchType: C#Type, shouldCache: C#Tree => Boolean)(
+      thunk: => Either[String, C#Tree]
+    ): Either[String, C#Tree] = within(frame) {
+      cache.get(searchType) match {
+        case Some(cached) =>
+          errors = Nil
+          Right(cached)
+        case None =>
+          thunk match {
+            case failure @ Left(_) =>
+              errors ::= frame
+              failure
+            case success @ Right(tree) =>
+              if (shouldCache(tree)) cache(searchType) = tree
+              errors = Nil
+              success
+          }
+      }
     }
 
     def trace: (Option[Frame], List[TypePath]) = {

@@ -140,6 +140,9 @@ object PrivateValueClass {
   implicit val show: Show[String, PrivateValueClass] = Show.gen
 }
 
+case class KArray(value: List[KArray])
+case class Wrapper(v:Option[KArray])
+
 object Tests extends TestApp {
 
   def tests(): Unit = for (_ <- 1 to 1) {
@@ -523,5 +526,9 @@ object Tests extends TestApp {
         WeakHash.gen[Entity]
       """
     }.assert(_ == TypecheckError("magnolia: the method `dispatch` must be defined on the derivation object WeakHash to derive typeclasses for sealed traits"))
+
+    test("equality of Wrapper") {
+      Eq.gen[Wrapper].equal(Wrapper(Some(KArray(KArray(Nil) :: Nil))), Wrapper(Some(KArray(KArray(Nil) :: KArray(Nil) :: Nil))))
+    }.assert(_ == false)
   }
 }
