@@ -275,6 +275,10 @@ object Tests extends TestApp {
       Show.gen[MyDto].show(MyDto("foo", 42))
     }.assert(_ == "MyDto{MyAnnotation(0)}(foo=foo,bar=42)")
 
+    test("serialize case class with Java annotations which comes from external module by skipping them") {
+      Show.gen[JavaAnnotatedCase].show(JavaAnnotatedCase(1))
+    }.assert(_ == "MyDto{MyAnnotation(0)}(foo=foo,bar=42)")
+
     test("not attempt to instantiate Unit when producing error stack") {
       scalac"""
         case class Gamma(unit: Unit)
