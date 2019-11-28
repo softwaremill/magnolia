@@ -95,6 +95,7 @@ object Magnolia {
 
     val repeatedParamClass = definitions.RepeatedParamClass
     val scalaSeqType = typeOf[Seq[_]].typeConstructor
+    val javaAnnotationType = typeOf[java.lang.annotation.Annotation]
 
     val prefixType = c.prefix.tree.tpe
     val prefixObject = prefixType.typeSymbol
@@ -130,8 +131,9 @@ object Magnolia {
       abstractTypes.map(_.asClass).flatMap(knownSubclasses(_)) ::: concreteTypes
     }
 
-    def annotationsOf(symbol: Symbol): List[Tree] =
-      symbol.annotations.map(_.tree).filterNot(_.tpe.typeSymbol.isJavaAnnotation)
+    def annotationsOf(symbol: Symbol): List[Tree] = {
+      symbol.annotations.map(_.tree).filterNot(_.tpe <:< javaAnnotationType)
+    }
 
     val typeDefs = prefixType.baseClasses.flatMap { cls =>
       cls.asType.toType.decls.filter(_.isType).find(_.name.toString == "Typeclass").map { tpe =>
