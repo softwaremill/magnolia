@@ -406,7 +406,7 @@ object Magnolia {
                _root_.scala.Right(new $genericType(..${eitherVals.map(_._2)}))
              case _ =>
                _root_.scala.Left(
-                 _root_.scala.List(..${eitherVals.map(_._1)}).filter(_.isLeft).map(_.left.get)
+                 $magnoliaPkg.Magnolia.keepLeft(..${eitherVals.map(_._1)})
                )
            }
          """
@@ -602,6 +602,10 @@ object Magnolia {
       val msg = "`" + typeName + "` has " + paramsLength + " fields, not " + fieldValues.size
       throw new java.lang.IllegalArgumentException(msg)
     }
+
+  final def keepLeft[A, B](values: Either[A, B]*): List[A] =
+    values.toList.collect { case Left(v) => v }
+
 }
 
 private[magnolia] final case class DirectlyReentrantException()
