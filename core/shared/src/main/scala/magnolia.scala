@@ -125,10 +125,10 @@ object Magnolia {
       .filter(encl => encl.isVal || encl.isLazy)
       .toSet[Symbol]
 
-    def knownSubclasses(sym: ClassSymbol): List[Symbol] = {
-      val children = sym.knownDirectSubclasses.toList
+    def knownSubclasses(sym: ClassSymbol): Set[Symbol] = {
+      val children = sym.knownDirectSubclasses
       val (abstractTypes, concreteTypes) = children.partition(_.isAbstract)
-      abstractTypes.map(_.asClass).flatMap(knownSubclasses(_)) ::: concreteTypes
+      abstractTypes.map(_.asClass).flatMap(knownSubclasses(_)) ++ concreteTypes
     }
 
     def annotationsOf(symbol: Symbol): List[Tree] = {
@@ -446,7 +446,7 @@ object Magnolia {
           }""")
       } else if (isSealedTrait) {
         checkMethod("dispatch", "sealed traits", "SealedTrait[Typeclass, _]")
-        val genericSubtypes = knownSubclasses(classType.get)
+        val genericSubtypes = knownSubclasses(classType.get).toList.sortBy(_.fullName)
         val subtypes = genericSubtypes.map { sub =>
           val subType = sub.asType.toType // FIXME: Broken for path dependent types
           val typeParams = sub.asType.typeParams

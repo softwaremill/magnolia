@@ -58,6 +58,8 @@ sealed trait Color
 case object Red extends Color
 case object Green extends Color
 case object Blue extends Color
+case object Orange extends Color
+case object Pink extends Color
 
 case class MyAnnotation(order: Int) extends StaticAnnotation
 
@@ -457,9 +459,15 @@ object Tests extends TestApp {
       TypeNameInfo.gen[Color].name
     }.assert(_.full == "magnolia.tests.Color")
 
+    test("sealed trait subtypes should be ordered") {
+      TypeNameInfo.gen[Color].subtypeNames
+    }.assert(_.map(_.short) == Seq("Blue", "Green", "Orange", "Pink", "Red"))
+
     test("case class typeName should be complete and unchanged") {
       implicit val stringTypeName: TypeNameInfo[String] = new TypeNameInfo[String] {
         def name = ???
+
+        def subtypeNames = ???
       }
       TypeNameInfo.gen[Fruit].name
     }.assert(_.full == "magnolia.tests.Fruit")
