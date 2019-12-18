@@ -610,7 +610,7 @@ object Magnolia {
       throw new java.lang.IllegalArgumentException(msg)
     }
 
-  final def keepLeft[A, B](values: Either[A, B]*): List[A] =
+  final def keepLeft[A](values: Either[A, _]*): List[A] =
     values.toList.collect { case Left(v) => v }
 
 }
