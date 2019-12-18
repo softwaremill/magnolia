@@ -387,22 +387,29 @@ object Magnolia {
           ) yield new $genericType(..${forParams.map(_._1)})
         """
 
-        val constructEitherImpl = if (caseParams.isEmpty) q"_root_.scala.Right(new $genericType())" else {
-          val eitherVals = caseParams.zipWithIndex.map { case (typeclass, idx) =>
-            val part = TermName(s"p$idx")
-            val pat = TermName(s"v$idx")
-            (
-              part,
-              if(typeclass.repeated) q"$pat: _*" else q"$pat",
-              q"val $part = makeParam($paramsVal($idx)).asInstanceOf[_root_.scala.Either[Err, ${typeclass.paramType}]]",
-              pq"_root_.scala.Right($pat)",
-            )
-          }
+        val constructEitherImpl =
+          if (caseParams.isEmpty) q"_root_.scala.Right(new $genericType())"
+          else {
+            val eitherVals = caseParams.zipWithIndex.map {
+              case (typeclass, idx) =>
+                val part = TermName(s"p$idx")
+                val pat = TermName(s"v$idx")
+                (
+                  part,
+                  if (typeclass.repeated) q"$pat: _*" else q"$pat",
+                  q"val $part = makeParam($paramsVal($idx)).asInstanceOf[_root_.scala.Either[Err, ${typeclass.paramType}]]",
+                  pq"_root_.scala.Right($pat)",
+                )
+            }
+
+            // DESNOTE(2019-12-05, pjrt): Due to limits on tuple sizes, and lack of <*>, we split the params
+            // into a list of tuples of at most 22 in size
+            val limited = eitherVals.grouped(22).toList
 
           q"""
            ..${eitherVals.map(_._3)}
-           (..${eitherVals.map(_._1)}) match {
-             case (..${eitherVals.map(_._4)}) =>
+           (..${limited.map(k => q"(..${k.map(_._1)})")}) match {
+             case (..${limited.map(k => q"(..${k.map(_._4)})")}) =>
                _root_.scala.Right(new $genericType(..${eitherVals.map(_._2)}))
              case _ =>
                _root_.scala.Left(
