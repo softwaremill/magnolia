@@ -406,7 +406,7 @@ object Magnolia {
                _root_.scala.Right(new $genericType(..${eitherVals.map(_._2)}))
              case _ =>
                _root_.scala.Left(
-                 _root_.scala.List(..${eitherVals.map(_._1)}).filter(_.isLeft).map(_.left.get)
+                 _root_.scala.List(..${eitherVals.map(_._1)}).collect { case Left(x) => x }
                )
            }
          """
