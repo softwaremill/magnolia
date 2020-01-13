@@ -596,5 +596,9 @@ object Tests extends TestApp {
                  "p23")
       Eq.gen[VeryLong].equal(vl, vl)
     }.assert(_ == true)
+
+    test("not attempt to derive instances for Java enums") {
+      scalac"Show.gen[WeekDay]"
+    }.assert(_ == TypecheckError(txt"magnolia: could not infer Show.Typeclass for type magnolia.tests.WeekDay"))
   }
 }
