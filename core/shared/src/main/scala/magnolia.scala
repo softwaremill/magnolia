@@ -221,10 +221,10 @@ object Magnolia {
       val assignedName = TermName(c.freshName(s"${genericTypeName}Typeclass")).encodedName.toTermName
       val typeSymbol = genericType.typeSymbol
       val classType = if (typeSymbol.isClass) Some(typeSymbol.asClass) else None
+      val isRefinedType = PartialFunction.cond(genericType.dealias) { case _: RefinedType => true }
       val isCaseClass = classType.exists(_.isCaseClass)
       val isCaseObject = classType.exists(_.isModuleClass)
       val isSealedTrait = classType.exists(_.isSealed)
-
       val classAnnotationTrees = annotationsOf(typeSymbol)
 
       val primitives = Set(typeOf[Double],
@@ -238,9 +238,7 @@ object Magnolia {
                            typeOf[Unit])
 
       val isValueClass = genericType <:< typeOf[AnyVal] && !primitives.exists(_ =:= genericType)
-
       val resultType = appliedType(typeConstructor, genericType)
-
       val typeName = TermName(c.freshName("typeName"))
 
       def typeNameRec(t: Type): Tree = {
@@ -248,9 +246,12 @@ object Magnolia {
         val typeArgNames = t.typeArgs.map(typeNameRec(_))
         q"$magnoliaPkg.TypeName(${ts.owner.fullName}, ${ts.name.decodedName.toString}, $typeArgNames)"
       }
+
       val typeNameDef = q"val $typeName = ${typeNameRec(genericType)}"
 
-      val result = if (isCaseObject) {
+      val result = if (isRefinedType) {
+        error(s"could not infer $prefixName.Typeclass for refined type $genericType")
+      } else if (isCaseObject) {
         val f = TypeName(c.freshName("F"))
         val impl = q"""
           $typeNameDef
