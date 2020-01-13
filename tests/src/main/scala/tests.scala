@@ -606,5 +606,9 @@ object Tests extends TestApp {
     test("not attempt to derive instances for refined types") {
       scalac"Show.gen[Character]"
     }.assert(_ == TypecheckError(txt"magnolia: could not infer Show.Typeclass for refined type magnolia.tests.Character.Id"))
+
+    test("not attempt to derive instances for Java enums") {
+      scalac"Show.gen[WeekDay]"
+    }.assert(_ == TypecheckError(txt"magnolia: could not infer Show.Typeclass for type magnolia.tests.WeekDay"))
   }
 }
