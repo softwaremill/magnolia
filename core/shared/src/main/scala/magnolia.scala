@@ -223,8 +223,7 @@ object Magnolia {
       val classType = if (typeSymbol.isClass) Some(typeSymbol.asClass) else None
       val isCaseClass = classType.exists(_.isCaseClass)
       val isCaseObject = classType.exists(_.isModuleClass)
-      val isSealedTrait = classType.exists(_.isSealed)
-
+      val isSealedTrait = classType.exists(ct => ct.isSealed && !ct.isJavaEnum)
       val classAnnotationTrees = annotationsOf(typeSymbol)
 
       val primitives = Set(typeOf[Double],
