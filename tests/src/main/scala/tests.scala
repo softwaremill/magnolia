@@ -171,6 +171,12 @@ case class VeryLong(
   p23: String
 )
 
+case class Character(id: Character.Id)
+object Character {
+  trait Tag extends Any
+  type Id = Long with Tag
+}
+
 object Tests extends TestApp {
 
   def tests(): Unit = for (_ <- 1 to 1) {
@@ -596,6 +602,10 @@ object Tests extends TestApp {
                  "p23")
       Eq.gen[VeryLong].equal(vl, vl)
     }.assert(_ == true)
+
+    test("not attempt to derive instances for refined types") {
+      scalac"Show.gen[Character]"
+    }.assert(_ == TypecheckError(txt"magnolia: could not infer Show.Typeclass for refined type magnolia.tests.Character.Id"))
 
     test("not attempt to derive instances for Java enums") {
       scalac"Show.gen[WeekDay]"
