@@ -63,6 +63,7 @@ lazy val buildSettings = Seq(
   organization := "com.propensive",
   name := "magnolia",
   scalacOptions ++= Seq(
+    "-language:higherKinds",
     "-deprecation",
     "-feature",
     "-Ywarn-value-discard",
