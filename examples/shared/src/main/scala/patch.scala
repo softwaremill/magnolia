@@ -57,7 +57,7 @@ object Patcher extends LowerPriorityPatcher {
   def dispatch[T](ctx: SealedTrait[Patcher, T]): Patcher[T] =
     new Patcher[T] {
       def patch(value: T, fieldValues: Seq[Any]): T =
-        ctx.dispatch(value)(sub ⇒ sub.typeclass.patch(sub cast value, fieldValues))
+        ctx.dispatch(value)(sub => sub.typeclass.patch(sub cast value, fieldValues))
     }
 
   implicit def gen[T]: Patcher[T] = macro Magnolia.gen[T]
