@@ -1,5 +1,3 @@
-// shadow sbt-scalajs' crossProject and CrossType until Scala.js 1.0.0 is released
-import sbtcrossproject.crossProject
 import com.softwaremill.PublishTravis.publishTravisSettings
 
 val v2_12 = "2.12.10"
