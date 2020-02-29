@@ -17,7 +17,6 @@ package magnolia
 import scala.annotation.compileTimeOnly
 import scala.collection.mutable
 import scala.language.existentials
-import scala.language.higherKinds
 import scala.reflect.macros._
 import mercator._
 

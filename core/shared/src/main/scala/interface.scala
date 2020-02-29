@@ -14,7 +14,6 @@
  */
 package magnolia
 
-import language.higherKinds
 import language.experimental.macros
 import scala.annotation.tailrec
 import mercator._

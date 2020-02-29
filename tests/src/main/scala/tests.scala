@@ -15,7 +15,6 @@
 package magnolia.tests
 
 import language.experimental.macros
-import language.higherKinds
 import estrapade.{TestApp, test}
 import contextual.data.scalac._
 import contextual.data.fqt._
