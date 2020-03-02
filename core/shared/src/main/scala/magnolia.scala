@@ -24,6 +24,8 @@ import mercator._
 object Magnolia {
   import CompileTimeState._
 
+  private val SyntheticAccessorName = "(.+)\\$access\\$\\d+".r
+
   /** derives a generic typeclass instance for the type `T`
     *
     *  This is a macro definition method which should be bound to a method defined inside a Magnolia
@@ -292,23 +294,30 @@ object Magnolia {
             m.asMethod
         }
 
-        case class CaseParam(sym: MethodSymbol,
-                             repeated: Boolean,
-                             typeclass: Tree,
-                             paramType: Type,
-                             ref: TermName
-                            )
+
+        case class CaseParam(
+          sym: MethodSymbol,
+          name: String,
+          repeated: Boolean,
+          typeclass: Tree,
+          paramType: Type,
+          ref: TermName
+        )
 
         val caseParamsReversed = caseClassParameters.foldLeft[List[CaseParam]](Nil) {
           (acc, param) =>
-            val paramName = param.name.decodedName.toString
-            val paramTypeSubstituted = param.typeSignatureIn(genericType).resultType
-
-            val (repeated, paramType) = paramTypeSubstituted match {
+            val (repeated, paramType) = param.typeSignatureIn(genericType).resultType match {
               case TypeRef(_, `repeatedParamClass`, typeArgs) =>
                 true -> appliedType(scalaSeqType, typeArgs)
               case tpe =>
                 false -> tpe
+            }
+
+            // Ideally `param.accessed.name` would work, but it's not available for synthetic accessors.
+            val paramName = param.name.decodedName.toString match {
+              case decoded if !param.isSynthetic => decoded
+              case SyntheticAccessorName(original) => original
+              case other => other
             }
 
             acc
@@ -322,9 +331,9 @@ object Magnolia {
                   typeclassTree(paramType, typeConstructor, ref)
                 }.fold(error, identity)
                 val assigned = deferredVal(ref, searchType, derivedImplicit)
-                CaseParam(param, repeated, assigned, paramType, ref) :: acc
+                CaseParam(param, paramName, repeated, assigned, paramType, ref) :: acc
               } { backRef =>
-                CaseParam(param, repeated, q"()", paramType, backRef.ref) :: acc
+                CaseParam(param, paramName, repeated, q"()", paramType, backRef.ref) :: acc
               }
         }
 
@@ -353,16 +362,16 @@ object Magnolia {
 
         val annotations = headParamList.getOrElse(Nil).map(annotationsOf(_))
         val assignments = caseParams.zip(defaults).zip(annotations).zipWithIndex.map {
-          case (((CaseParam(param, repeated, _, paramType, ref), defaultVal), annList), idx) =>
-            val call = if(isValueClass) q"$magnoliaPkg.Magnolia.valueParam" else q"$magnoliaPkg.Magnolia.param"
+          case (((CaseParam(param, paramName, repeated, _, paramType, ref), defaultVal), annList), idx) =>
+            val call = if (isValueClass) q"$magnoliaPkg.Magnolia.valueParam" else q"$magnoliaPkg.Magnolia.param"
             q"""$paramsVal($idx) = $call[$typeConstructor, $genericType, $paramType](
-            ${param.name.decodedName.toString},
-            ${if(!isValueClass) q"$idx" else q"(g: $genericType) => g.${param.name}: $paramType"},
-            $repeated,
-            _root_.magnolia.CallByNeed($ref),
-            _root_.magnolia.CallByNeed($defaultVal),
-            $scalaPkg.Array(..$annList)
-          )"""
+              $paramName,
+              ${if (!isValueClass) q"$idx" else q"_.${param.name}"},
+              $repeated,
+              _root_.magnolia.CallByNeed($ref),
+              _root_.magnolia.CallByNeed($defaultVal),
+              $scalaPkg.Array(..$annList)
+            )"""
         }
 
         val genericParams = caseParams.zipWithIndex.map { case (typeclass, idx) =>

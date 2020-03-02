@@ -484,7 +484,7 @@ object Tests extends TestApp {
 
     test("show a List[Int]") {
       Show.gen[List[Int]].show(List(1, 2, 3))
-    }.assert(_ == "::[Int](head=1,tl$access$1=::[Int](head=2,tl$access$1=::[Int](head=3,tl$access$1=Nil())))")
+    }.assert(_ == "::[Int](head=1,tl=::[Int](head=2,tl=::[Int](head=3,tl=Nil())))")
 
     test("sealed trait typeName should be complete and unchanged") {
       TypeNameInfo.gen[Color].name
