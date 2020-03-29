@@ -2,7 +2,7 @@ language: scala
 jdk:
 - openjdk8
 scala:
-- 2.12.10
+- 2.12.11
 - 2.13.1
 before_install:
 - bash scripts/decrypt_files_if_not_pr.sh
@@ -12,7 +12,7 @@ before_cache:
 - du -h -d 4 $HOME/.coursier/
 - find $HOME/.sbt -name "*.lock" -type f -delete
 - find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete
-- find $HOME/.coursier/cache -name "*.lock" -type f -delete
+- find $HOME/.cache/coursier -name "*.lock" -type f -delete
 cache:
   directories:
   - "$HOME/.sbt/1.0"
@@ -20,7 +20,7 @@ cache:
   - "$HOME/.sbt/cache"
   - "$HOME/.sbt/launchers"
   - "$HOME/.ivy2/cache"
-  - "$HOME/.coursier"
+  - "$HOME/.cache/coursier"
 script:
 - sbt ++$TRAVIS_SCALA_VERSION test
 deploy:
@@ -29,4 +29,4 @@ deploy:
   skip_cleanup: true
   on:
     all_branches: true
-    condition: $TRAVIS_SCALA_VERSION = "2.12.10" && $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?
+    condition: $TRAVIS_SCALA_VERSION = "2.12.11" && $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?
