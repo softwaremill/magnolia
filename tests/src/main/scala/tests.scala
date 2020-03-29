@@ -176,6 +176,12 @@ object Character {
   type Id = Long with Tag
 }
 
+final case class Abc(
+  private val a: Int,
+  private val b: Long,
+  c: String
+)
+
 object Tests extends TestApp {
 
   def tests(): Unit = for (_ <- 1 to 1) {
@@ -190,6 +196,11 @@ object Tests extends TestApp {
     test("construct a Show coproduct instance") {
       Show.gen[Person].show(Person("John Smith", 34))
     }.assert(_ == "Person(name=John Smith,age=34)")
+
+    test("construct a Show instance for product with partially private fields") {
+      implicit val showLong: Show[String, Long] = _.toString
+      Show.gen[Abc].show(Abc(12, 54L, "pm"))
+    }.assert(_ == "Abc(a=12,b=54,c=pm)")
 
     test("serialize a Branch") {
       implicitly[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
