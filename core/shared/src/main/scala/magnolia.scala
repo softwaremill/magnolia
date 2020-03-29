@@ -685,15 +685,17 @@ private[magnolia] object CompileTimeState {
   object Stack {
     // Cheating to satisfy Singleton bound (which improves type inference).
     private val dummyContext: whitebox.Context = null
-    private val global = new Stack[dummyContext.type]
-    private val workSet = mutable.Set.empty[whitebox.Context#Symbol]
+    private val threadLocalStack = ThreadLocal.withInitial[Stack[dummyContext.type]](() => new Stack[dummyContext.type])
+    private val threadLocalWorkSet = ThreadLocal.withInitial[mutable.Set[whitebox.Context#Symbol]](() => mutable.Set.empty)
 
     def withContext(c: whitebox.Context)(fn: Stack[c.type] => c.Tree): c.Tree = {
+      val stack = threadLocalStack.get()
+      val workSet = threadLocalWorkSet.get()
       workSet += c.macroApplication.symbol
       val depth = c.enclosingMacros.count(m => workSet(m.macroApplication.symbol))
-      try fn(global.asInstanceOf[Stack[c.type]])
+      try fn(stack.asInstanceOf[Stack[c.type]])
       finally if (depth <= 1) {
-        global.clear()
+        stack.clear()
         workSet.clear()
       }
     }
