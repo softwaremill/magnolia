@@ -184,7 +184,7 @@ object Magnolia {
         case tree => enclosingVals.contains(tree.symbol)
       }
 
-      if (!fullauto || shouldBeLazy) q"lazy val $name: $tpe = $rhs"
+      if (shouldBeLazy) q"lazy val $name: $tpe = $rhs"
       else q"val $name = $rhs"
     }
 
