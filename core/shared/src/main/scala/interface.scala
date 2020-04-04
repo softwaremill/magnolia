@@ -50,11 +50,7 @@ trait Subtype[Typeclass[_], Type] extends Serializable {
   override def toString: String = s"Subtype(${typeName.full})"
 }
 
-/** represents a parameter of a case class
-  *
-  *  @tparam Typeclass  type constructor for the typeclass being derived
-  *  @tparam Type       generic type of this parameter */
-trait Param[Typeclass[_], Type] extends Serializable {
+trait ReadOnlyParam[Typeclass[_], Type] extends Serializable {
 
   /** the type of the parameter being represented
     *
@@ -62,7 +58,7 @@ trait Param[Typeclass[_], Type] extends Serializable {
     *  <pre>
     *  case class Person(name: String, age: Int)
     *  </pre>
-    *  the [[Param]] instance corresponding to the `age` parameter would have a [[PType]] equal to
+    *  the [[ReadOnlyParam]] instance corresponding to the `age` parameter would have a [[PType]] equal to
     *  the type [[scala.Int]]. However, in practice, this type will never be universally quantified.
     */
   type PType
@@ -78,7 +74,7 @@ trait Param[Typeclass[_], Type] extends Serializable {
     * <pre>
     * case class Account(id: String, emails: String*)
     * </pre>
-    * the [[Param]] instance corresponding to the `emails` parameter would be `repeated` and have a
+    * the [[ReadOnlyParam]] instance corresponding to the `emails` parameter would be `repeated` and have a
     * [[PType]] equal to the type `Seq[String]`. Note that only the last parameter of a case class
     * can be repeated. */
   def repeated: Boolean
@@ -88,13 +84,10 @@ trait Param[Typeclass[_], Type] extends Serializable {
     *  This is the instance of the type `Typeclass[PType]` which will have been discovered by
     *  implicit search, or derived by Magnolia.
     *
-    *  Its type is existentially quantified on this [[Param]] instance, and depending on the
+    *  Its type is existentially quantified on this [[ReadOnlyParam]] instance, and depending on the
     *  nature of the particular typeclass, it may either accept or produce types which are also
-    *  existentially quantified on this same [[Param]] instance. */
+    *  existentially quantified on this same [[ReadOnlyParam]] instance. */
   def typeclass: Typeclass[PType]
-
-  /** provides the default value for this parameter, as defined in the case class constructor */
-  def default: Option[PType]
 
   /** dereferences a value of the case class type, `Type`, to access the value of the parameter
     *  being represented
@@ -103,10 +96,10 @@ trait Param[Typeclass[_], Type] extends Serializable {
     *  and types, it is not possible to directly access the parameter values without reflection,
     *  which is undesirable. This method, whose implementation is provided by the Magnolia macro,
     *  will dereference a case class instance to access the parameter corresponding to this
-    *  [[Param]].
+    *  [[ReadOnlyParam]].
     *
     *  Whilst the type of the resultant parameter value cannot be universally known at the use, its
-    *  type will be existentially quantified on this [[Param]] instance, and the return type of the
+    *  type will be existentially quantified on this [[ReadOnlyParam]] instance, and the return type of the
     *  corresponding `typeclass` method will be existentially quantified on the same value. This is
     *  sufficient for the compiler to determine that the two values are compatible, and the value may
     *  be applied to the typeclass (in whatever way that particular typeclass provides).
@@ -123,7 +116,43 @@ trait Param[Typeclass[_], Type] extends Serializable {
     *  [[scala.collection.Seq]] to hide the mutable collection API. */
   final def annotations: Seq[Any] = annotationsArray
 
+  override def toString: String = s"ReadOnlyParam($label)"
+}
+
+/** represents a parameter of a case class
+  *
+  *  @tparam Typeclass  type constructor for the typeclass being derived
+  *  @tparam Type       generic type of this parameter */
+trait Param[Typeclass[_], Type] extends ReadOnlyParam[Typeclass, Type] {
+
+  /** provides the default value for this parameter, as defined in the case class constructor */
+  def default: Option[PType]
+
   override def toString: String = s"Param($label)"
+}
+
+// FIXME: docs
+abstract class ReadOnlyCaseClass[Typeclass[_], Type](
+  val typeName: TypeName,
+  val isObject: Boolean,
+  val isValueClass: Boolean,
+  parametersArray: Array[ReadOnlyParam[Typeclass, Type]],
+  annotationsArray: Array[Any]
+) extends Serializable {
+
+  override def toString: String = s"ReadOnlyCaseClass(${typeName.full}, ${parameters.mkString(",")})"
+
+  /** a sequence of [[ReadOnlyParam]] objects representing all of the parameters in the case class
+   *
+   *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
+   *  [[scala.collection.Seq]] to hide the mutable collection API. */
+  def parameters: Seq[ReadOnlyParam[Typeclass, Type]] = parametersArray
+
+  /** a sequence of objects representing all of the annotations on the case class
+   *
+   *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
+   *  [[scala.collection.Seq]] to hide the mutable collection API. */
+  final def annotations: Seq[Any] = annotationsArray
 }
 
 /** represents a case class or case object and the context required to construct a new typeclass
@@ -140,12 +169,25 @@ trait Param[Typeclass[_], Type] extends Serializable {
   *  @tparam Typeclass  type constructor for the typeclass being derived
   *  @tparam Type       generic type of this parameter */
 abstract class CaseClass[Typeclass[_], Type] (
-  val typeName: TypeName,
-  val isObject: Boolean,
-  val isValueClass: Boolean,
+  override val typeName: TypeName,
+  override val isObject: Boolean,
+  override val isValueClass: Boolean,
   parametersArray: Array[Param[Typeclass, Type]],
   annotationsArray: Array[Any]
-) extends Serializable {
+) extends ReadOnlyCaseClass[Typeclass, Type](
+  typeName,
+  isObject,
+  isValueClass,
+  // Safe to cast as we're never mutating the array
+  parametersArray.asInstanceOf[Array[ReadOnlyParam[Typeclass, Type]]],
+  annotationsArray
+) {
+
+  /** a sequence of [[Param]] objects representing all of the parameters in the case class
+   *
+   *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
+   *  [[scala.collection.Seq]] to hide the mutable collection API. */
+  override def parameters: Seq[Param[Typeclass, Type]] = parametersArray
 
   override def toString: String = s"CaseClass(${typeName.full}, ${parameters.mkString(",")})"
   /** constructs a new instance of the case class type
@@ -180,18 +222,6 @@ abstract class CaseClass[Typeclass[_], Type] (
     *  @return  a new instance of the case class
     *  @throws  IllegalArgumentException if the size of `paramValues` differs from the size of [[parameters]] */
   def rawConstruct(fieldValues: Seq[Any]): Type
-
-  /** a sequence of [[Param]] objects representing all of the parameters in the case class
-    *
-    *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
-    *  [[scala.collection.Seq]] to hide the mutable collection API. */
-  final def parameters: Seq[Param[Typeclass, Type]] = parametersArray
-
-  /** a sequence of objects representing all of the annotations on the case class
-    *
-    *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
-    *  [[scala.collection.Seq]] to hide the mutable collection API. */
-  final def annotations: Seq[Any] = annotationsArray
 }
 
 /** represents a sealed trait and the context required to construct a new typeclass instance

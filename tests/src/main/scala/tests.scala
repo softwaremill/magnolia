@@ -285,13 +285,25 @@ object Tests extends TestApp {
       ProtectedCons.show.show(ProtectedCons("dada", "phil"))
     }.assert(_ == "ProtectedCons(name=dada phil)")
 
-    test("serialize case class with private constructor") {
+    test("serialize case class with accessible private constructor") {
       PrivateCons.show.show(PrivateCons("dada", "phil"))
     }.assert(_ == "PrivateCons(name=dada phil)")
 
-    test("serialize value case class with private constructor") {
+    test("serialize value case class with accessible private constructor") {
       PrivateValueClass.show.show(PrivateValueClass(42))
     }.assert(_ == "42")
+
+    test("read-only typeclass can serialize case class with inaccessible private constructor") {
+      implicitly[Print[PrivateCons]].print(PrivateCons("dada", "phil"))
+    }.assert(_ == "PrivateCons(dada phil)")
+
+    test("read-only typeclass can serialize value case class with inaccessible private constructor") {
+      implicitly[Print[PrivateValueClass]].print(PrivateValueClass(42))
+    }.assert(_ == "42")
+
+    test("read-only typeclass can serialize case class with protected constructor") {
+      implicitly[Print[ProtectedCons]].print(ProtectedCons("dada", "phil"))
+    }.assert(_ == "ProtectedCons(dada phil)")
 
     test("decode a company") {
       Decoder.gen[Company].decode("""Company(name=Acme Inc)""")
