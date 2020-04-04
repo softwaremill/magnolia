@@ -51,8 +51,8 @@ lazy val root = (project in file("."))
   .settings(publishTravisSettings)
   .settings(noPublishSettings)
 
-lazy val benchmarks = project
-  .in(file("benchmarks"))
+lazy val bench = project
+  .in(file("bench"))
   .settings(buildSettings: _*)
   .settings(moduleName := "magnolia-benchmarks")
   .dependsOn(examplesJVM)
