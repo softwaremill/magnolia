@@ -131,7 +131,16 @@ trait Param[Typeclass[_], Type] extends ReadOnlyParam[Typeclass, Type] {
   override def toString: String = s"Param($label)"
 }
 
-// FIXME: docs
+/**[[ReadOnlyCaseClass]] represents a case class or case object. It provides access to all of the parameters
+ * of the case class, the full name of the case class type, and a boolean to determine whether the type is a
+ * case class or case object.
+ *
+ *  @param typeName         the name of the case class
+ *  @param isObject         true only if this represents a case object rather than a case class
+ *  @param parametersArray  an array of [[Param]] values for this case class
+ *  @param annotationsArray  an array of instantiated annotations applied to this case class
+ *  @tparam Typeclass  type constructor for the typeclass being derived
+ *  @tparam Type       generic type of this parameter */
 abstract class ReadOnlyCaseClass[Typeclass[_], Type](
   val typeName: TypeName,
   val isObject: Boolean,
@@ -155,19 +164,15 @@ abstract class ReadOnlyCaseClass[Typeclass[_], Type](
   final def annotations: Seq[Any] = annotationsArray
 }
 
-/** represents a case class or case object and the context required to construct a new typeclass
-  *  instance corresponding to it
-  *
-  *  Instances of [[CaseClass]] provide access to all of the parameters of the case class, the full
-  *  name of the case class type, and a boolean to determine whether the type is a case class or case
-  *  object.
-  *
-  *  @param typeName         the name of the case class
-  *  @param isObject         true only if this represents a case object rather than a case class
-  *  @param parametersArray  an array of [[Param]] values for this case class
-  *  @param annotationsArray  an array of instantiated annotations applied to this case class
-  *  @tparam Typeclass  type constructor for the typeclass being derived
-  *  @tparam Type       generic type of this parameter */
+/** [[CaseClass]] contains all information that exists in a [[ReadOnlyCaseClass]], as well as methods and context
+ *  required for construct an instance of this case class/object (e.g. default values for constructor parameters)
+ *
+ *  @param typeName         the name of the case class
+ *  @param isObject         true only if this represents a case object rather than a case class
+ *  @param parametersArray  an array of [[Param]] values for this case class
+ *  @param annotationsArray  an array of instantiated annotations applied to this case class
+ *  @tparam Typeclass  type constructor for the typeclass being derived
+ *  @tparam Type       generic type of this parameter */
 abstract class CaseClass[Typeclass[_], Type] (
   override val typeName: TypeName,
   override val isObject: Boolean,
