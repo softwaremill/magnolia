@@ -202,6 +202,10 @@ object Tests extends TestApp {
       Show.gen[Abc].show(Abc(12, 54L, "pm"))
     }.assert(_ == "Abc(a=12,b=54,c=pm)")
 
+    test("construct a Show instance for value case class") {
+      Show.gen[ServiceName1].show(ServiceName1("service"))
+    }.assert(_ == "service")
+
     test("serialize a Branch") {
       implicitly[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
     }.assert(_ == "Branch[String](left=Leaf[String](value=LHS),right=Leaf[String](value=RHS))")
@@ -449,8 +453,8 @@ object Tests extends TestApp {
         case NonFatal(e) => e.getMessage
       }
     }.assert{x =>
-      //tiny hack because Java 9 inserts the "java.base/" module name in the error message
-      x.startsWith("scala.Symbol cannot be cast to") && x.endsWith("java.lang.Integer")
+      // Tiny hack because different Java versions have different error messages.
+      x.startsWith("scala.Symbol cannot be cast to") && x.contains("java.lang.Integer")
     }
 
     class ParentClass {

@@ -303,9 +303,10 @@ object Magnolia {
           optList.map(_.map(_.asTerm))
         }
 
-        val caseClassParameters = genericType.decls.sorted.collect {
-          case p: TermSymbol if (isValueClass && p.isParamAccessor && p.isMethod) || (p.isCaseAccessor && !p.isMethod) => p
-        }
+        val caseClassParameters = genericType.decls.sorted.collect(
+          if (isValueClass) { case p: TermSymbol if p.isParamAccessor && p.isMethod => p }
+          else { case p: TermSymbol if p.isCaseAccessor && !p.isMethod => p }
+        )
 
         case class CaseParam(
           paramName: TermName,
