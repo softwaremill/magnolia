@@ -268,19 +268,19 @@ object Magnolia {
         val classBody = if (isReadOnlyTypeclass) List(q"") else
         List(
           q"""
-            override def construct[Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => Return): $genericType =
+            override def construct[Return](makeParam: $magnoliaPkg.Param[$typeConstructor, $genericType] => Return): $genericType =
               ${genericType.typeSymbol.asClass.module}
            """,
           q"""
-            def constructMonadic[$f[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => $f[Return])(implicit monadic: _root_.mercator.Monadic[$f]): $f[$genericType] =
+            def constructMonadic[$f[_], Return](makeParam: $magnoliaPkg.Param[$typeConstructor, $genericType] => $f[Return])(implicit monadic: _root_.mercator.Monadic[$f]): $f[$genericType] =
               monadic.point(${genericType.typeSymbol.asClass.module})
            """,
           q"""
-            def constructEither[Err, PType](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => _root_.scala.Either[Err, PType]): _root_.scala.Either[_root_.scala.List[Err], $genericType] =
-              _root_.scala.Right(${genericType.typeSymbol.asClass.module})
+            def constructEither[Err, PType](makeParam: $magnoliaPkg.Param[$typeConstructor, $genericType] => $scalaPkg.Either[Err, PType]): $scalaPkg.Either[$scalaPkg.List[Err], $genericType] =
+              $scalaPkg.Right(${genericType.typeSymbol.asClass.module})
           """,
           q"""
-            def rawConstruct(fieldValues: _root_.scala.Seq[_root_.scala.Any]): $genericType =
+            def rawConstruct(fieldValues: $scalaPkg.Seq[$scalaPkg.Any]): $genericType =
               ${genericType.typeSymbol.asClass.module}
            """)
         val impl = q"""
@@ -356,7 +356,7 @@ object Magnolia {
               ${paramName.toString.trim},
               ${if (isValueClass) q"_.$paramName" else q"$idx"},
               $repeated,
-              _root_.magnolia.CallByNeed($ref),
+              $magnoliaPkg.CallByNeed($ref),
               $scalaPkg.Array($annList)
             )"""
           }
@@ -414,7 +414,7 @@ object Magnolia {
         """
 
           val constructEitherImpl =
-            if (caseParams.isEmpty) q"_root_.scala.Right(new $genericType())"
+            if (caseParams.isEmpty) q"$scalaPkg.Right(new $genericType())"
             else {
               val eitherVals = caseParams.zipWithIndex.map {
                 case (typeclass, idx) =>
@@ -423,8 +423,8 @@ object Magnolia {
                   (
                     part,
                     if (typeclass.repeated) q"$pat: _*" else q"$pat",
-                    q"val $part = makeParam($paramsVal($idx)).asInstanceOf[_root_.scala.Either[Err, ${typeclass.paramType}]]",
-                    pq"_root_.scala.Right($pat)",
+                    q"val $part = makeParam($paramsVal($idx)).asInstanceOf[$scalaPkg.Either[Err, ${typeclass.paramType}]]",
+                    pq"$scalaPkg.Right($pat)",
                   )
               }
 
@@ -447,21 +447,21 @@ object Magnolia {
 
             List(
             q"""
-              override def construct[Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => Return): $genericType =
+              override def construct[Return](makeParam: $magnoliaPkg.Param[$typeConstructor, $genericType] => Return): $genericType =
                 new $genericType(..$genericParams)
              """,
             q"""
-              def constructMonadic[$f[_], Return](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => $f[Return])(implicit monadic: _root_.mercator.Monadic[$f]):$f[$genericType] = {
+              def constructMonadic[$f[_], Return](makeParam: $magnoliaPkg.Param[$typeConstructor, $genericType] => $f[Return])(implicit monadic: _root_.mercator.Monadic[$f]):$f[$genericType] = {
                 $constructMonadicImpl
               }
              """,
             q"""
-              def constructEither[Err, PType](makeParam: _root_.magnolia.Param[$typeConstructor, $genericType] => _root_.scala.Either[Err, PType]): _root_.scala.Either[_root_.scala.List[Err], $genericType] = {
+              def constructEither[Err, PType](makeParam: $magnoliaPkg.Param[$typeConstructor, $genericType] => $scalaPkg.Either[Err, PType]): $scalaPkg.Either[$scalaPkg.List[Err], $genericType] = {
                 $constructEitherImpl
               }
              """,
             q"""
-              def rawConstruct(fieldValues: _root_.scala.Seq[_root_.scala.Any]): $genericType = {
+              def rawConstruct(fieldValues: $scalaPkg.Seq[$scalaPkg.Any]): $genericType = {
                 $magnoliaPkg.Magnolia.checkParamLengths(fieldValues, $paramsVal.length, $typeName.full)
                 new $genericType(..$rawGenericParams)
               }
