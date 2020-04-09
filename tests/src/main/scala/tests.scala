@@ -182,6 +182,18 @@ final case class Abc(
   c: String
 )
 
+sealed trait Covariant[+A]
+sealed trait Contravariant[-A]
+sealed trait Exactly[A] extends Covariant[A] with Contravariant[A]
+
+object Exactly {
+  case object Any extends Exactly[Any]
+  case class Custom[A](value: A) extends Exactly[A]
+  case object Int extends Exactly[Int]
+  case object Nothing extends Exactly[Nothing]
+  case object String extends Exactly[String]
+}
+
 object Tests extends TestApp {
 
   def tests(): Unit = for (_ <- 1 to 1) {
@@ -636,5 +648,20 @@ object Tests extends TestApp {
     test("not attempt to derive instances for Java enums") {
       scalac"Show.gen[WeekDay]"
     }.assert(_ == TypecheckError(txt"magnolia: could not infer Show.Typeclass for type magnolia.tests.WeekDay"))
+
+    test("determine subtypes of Exactly[Int]") {
+      implicit def hideFallbackWarning: TypeNameInfo[Int] = TypeNameInfo.fallback[Int]
+      TypeNameInfo.gen[Exactly[Int]].subtypeNames.map(_.short).mkString(" | ")
+    }.assert(_ == "Custom | Int")
+
+    test("determine subtypes of Covariant[String]") {
+      implicit def hideFallbackWarning: TypeNameInfo[String] = TypeNameInfo.fallback[String]
+      TypeNameInfo.gen[Covariant[String]].subtypeNames.map(_.short).mkString(" | ")
+    }.assert(_ == "Custom | Nothing | String")
+
+    test("determine subtypes of Contravariant[Double]") {
+      implicit def hideFallbackWarning: TypeNameInfo[Double] = TypeNameInfo.fallback[Double]
+      TypeNameInfo.gen[Contravariant[Double]].subtypeNames.map(_.short).mkString(" | ")
+    }.assert(_ == "Any | Custom")
   }
 }
