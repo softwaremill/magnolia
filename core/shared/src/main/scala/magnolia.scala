@@ -492,14 +492,14 @@ object Magnolia {
       } else if (isSealedTrait) {
         checkMethod("dispatch", "sealed traits", "SealedTrait[Typeclass, _]")
         val genericSubtypes = knownSubclasses(classType.get).toList.sortBy(_.fullName)
-        val subtypes = genericSubtypes.map { sub =>
+        val subtypes = genericSubtypes.flatMap { sub =>
           val subType = sub.asType.toType // FIXME: Broken for path dependent types
           val typeParams = sub.asType.typeParams
           val typeArgs = thisType(sub).baseType(genericType.typeSymbol).typeArgs
           val mapping = (typeArgs.map(_.typeSymbol), genericType.typeArgs).zipped.toMap
           val newTypeArgs = typeParams.map(mapping.withDefault(_.asType.toType))
           val applied = appliedType(subType.typeConstructor, newTypeArgs)
-          existentialAbstraction(typeParams, applied)
+          if (applied <:< genericType) existentialAbstraction(typeParams, applied) :: Nil else Nil
         }
 
         if (subtypes.isEmpty) {
