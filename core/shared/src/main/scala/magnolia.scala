@@ -362,16 +362,17 @@ object Magnolia {
             )"""
           }
         } else {
-          val defaults = headParamList.fold(List[Tree](q"$scalaPkg.None")) { params =>
-            val x = TermName(c.freshName("x"))
-            val A = TypeName(c.freshName("A"))
-            val dummyArgs = params.filterNot(_.isParamWithDefault).map(p => q"${p.name} = $x")
-            // `A <: Nothing` to avoid dead code warnings
-            val dummy = c.typecheck(q"def $x[$A <: Nothing]($x: $A) = new $genericType(..$dummyArgs)")
-            val defaultParams = dummy.collect { case sel: Select if sel.symbol.isSynthetic => sel }.iterator
-            for (p <- params) yield {
-              if (!p.isParamWithDefault) q"$scalaPkg.None"
-              else q"$scalaPkg.Some(${defaultParams.next()})"
+          val defaults = headParamList.fold[List[Tree]](Nil) { params =>
+            if (params.exists(_.isParamWithDefault)) {
+              val x = TermName(c.freshName("x"))
+              val A = TypeName(c.freshName("A"))
+              val dummyArgs = params.filterNot(_.isParamWithDefault).map(p => q"${p.name} = $x")
+              // `A <: Nothing` to avoid dead code warnings
+              val dummy = c.typecheck(q"def $x[$A <: $scalaPkg.Nothing]($x: $A) = new $genericType(..$dummyArgs)")
+              val defaults = dummy.collect { case sel @ Select(_, name) if name.toString.contains("$default$") => sel }.iterator
+              params.map(p => if (p.isParamWithDefault) q"$scalaPkg.Some(${defaults.next()})" else q"$scalaPkg.None")
+            } else {
+              params.map(_ => q"$scalaPkg.None")
             }
           }
 

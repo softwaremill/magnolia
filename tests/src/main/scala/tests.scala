@@ -194,6 +194,8 @@ object Exactly {
   case object String extends Exactly[String]
 }
 
+case class ParamsWithDefault(a: Int = 3, b: Int = 4)
+
 object Tests extends TestApp {
 
   def tests(): Unit = for (_ <- 1 to 1) {
@@ -217,6 +219,11 @@ object Tests extends TestApp {
     test("construct a Show instance for value case class") {
       Show.gen[ServiceName1].show(ServiceName1("service"))
     }.assert(_ == "service")
+
+    test("construct a Show instance for product with multiple default values") {
+      implicit val showLong: Show[String, Long] = _.toString
+      Show.gen[ParamsWithDefault].show(ParamsWithDefault())
+    }.assert(_ == "ParamsWithDefault(a=3,b=4)")
 
     test("serialize a Branch") {
       implicitly[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
@@ -466,7 +473,7 @@ object Tests extends TestApp {
       }
     }.assert{x =>
       // Tiny hack because different Java versions have different error messages.
-      x.startsWith("scala.Symbol cannot be cast to") && x.contains("java.lang.Integer")
+      x.contains("scala.Symbol cannot be cast to") && x.contains("java.lang.Integer")
     }
 
     class ParentClass {
