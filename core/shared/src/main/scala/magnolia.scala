@@ -84,9 +84,15 @@ object Magnolia {
     import c.universe._
     import c.internal._
 
+    def error(message: String): Nothing = c.abort(c.enclosingPosition, s"magnolia: $message")
+
     val debug = c.macroApplication.symbol.annotations
       .find(_.tree.tpe <:< typeOf[debug])
-      .flatMap(_.tree.children.tail.collectFirst { case Literal(Constant(s: String)) => s })
+      .flatMap(_.tree.children.tail.collectFirst {
+        case Literal(Constant(s: String)) => s
+        case tree if typeOf[debug].companion.decls.exists(_ == tree.symbol) => ""  // Default constructor, i.e. @debug or @debug()
+        case other => error(s"Invalid argument $other in @debug annotation. Only string literals or empty constructor supported")
+      })
 
     val magnoliaPkg = c.mirror.staticPackage("magnolia")
     val scalaPkg = c.mirror.staticPackage("scala")
@@ -111,9 +117,6 @@ object Magnolia {
         case _ => None
       }
     }
-
-    def error(message: String): Nothing =
-      c.abort(c.enclosingPosition, s"magnolia: $message")
 
     val enclosingVals = Iterator
       .iterate(enclosingOwner)(_.owner)
