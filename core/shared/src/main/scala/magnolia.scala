@@ -311,13 +311,25 @@ object Magnolia {
           else { case p: TermSymbol if p.isCaseAccessor && !p.isMethod => p }
         )
 
-        case class CaseParam(
-          paramName: TermName,
-          repeated: Boolean,
-          typeclass: Tree,
-          paramType: Type,
-          ref: TermName
-        )
+        val factoryMethod = TermName {
+          if (isReadOnlyTypeclass && isValueClass) "readOnlyValueParam"
+          else if (isReadOnlyTypeclass) "readOnlyParam"
+          else if (isValueClass) "valueParam"
+          else "param"
+        }
+
+        case class CaseParam(paramName: TermName, repeated: Boolean, typeclass: Tree, paramType: Type, ref: TermName) {
+
+          def compile(params: TermName, idx: Int, default: Option[Tree], annotations: List[Tree]): Tree =
+            q"""$params($idx) = $magnoliaPkg.Magnolia.$factoryMethod[$typeConstructor, $genericType, $paramType](
+              ${paramName.toString.trim},
+              ${if (isValueClass) q"_.$paramName" else q"$idx"},
+              $repeated,
+              $magnoliaPkg.CallByNeed($ref),
+              ..${default.toList.map(d => q"$magnoliaPkg.CallByNeed($d)")},
+              $scalaPkg.Array(..$annotations)
+            )"""
+        }
 
         val caseParamsReversed = caseClassParameters.foldLeft[List[CaseParam]](Nil) {
           (acc, param) =>
@@ -352,18 +364,8 @@ object Magnolia {
 
         val annotations = headParamList.getOrElse(Nil).map(annotationsOf(_))
         val assignments = if (isReadOnlyTypeclass) {
-          caseParams.zip(annotations).zipWithIndex.map {
-            case ((CaseParam(paramName, repeated, _, paramType, ref), annList), idx) =>
-            val call = if (isValueClass) q"$magnoliaPkg.Magnolia.readOnlyValueParam"
-                       else q"$magnoliaPkg.Magnolia.readOnlyParam"
-            q"""$paramsVal($idx) = $call[$typeConstructor, $genericType, $paramType](
-              ${paramName.toString.trim},
-              ${if (isValueClass) q"_.$paramName" else q"$idx"},
-              $repeated,
-              $magnoliaPkg.CallByNeed($ref),
-              $scalaPkg.Array($annList)
-            )"""
-          }
+          for (((param, annList), idx) <- caseParams.zip(annotations).zipWithIndex)
+            yield param.compile(paramsVal, idx, None, annList)
         } else {
           val defaults = headParamList.fold[List[Tree]](Nil) { params =>
             if (params.exists(_.isParamWithDefault)) {
@@ -379,18 +381,8 @@ object Magnolia {
             }
           }
 
-          caseParams.zip(defaults).zip(annotations).zipWithIndex.map {
-            case (((CaseParam(paramName, repeated, _, paramType, ref), defaultVal), annList), idx) =>
-              val call = if (isValueClass) q"$magnoliaPkg.Magnolia.valueParam" else q"$magnoliaPkg.Magnolia.param"
-              q"""$paramsVal($idx) = $call[$typeConstructor, $genericType, $paramType](
-              ${paramName.toString.trim},
-              ${if (isValueClass) q"_.$paramName" else q"$idx"},
-              $repeated,
-              _root_.magnolia.CallByNeed($ref),
-              _root_.magnolia.CallByNeed($defaultVal),
-              $scalaPkg.Array(..$annList)
-            )"""
-          }
+          for ((((param, default), annList), idx) <- caseParams.zip(defaults).zip(annotations).zipWithIndex)
+            yield param.compile(paramsVal, idx, Some(default), annList)
         }
 
         val caseClassBody = if (isReadOnlyTypeclass) List(q"") else {
