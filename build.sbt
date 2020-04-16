@@ -9,7 +9,9 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
   .settings(publishSettings)
   .settings(scalaMacroDependencies)
   .settings(moduleName := "magnolia")
-  .settings(libraryDependencies ++= Seq("com.propensive" %% "mercator" % "0.2.1"))
+  .settings(libraryDependencies ++= Seq(
+    ("com.propensive" %% "mercator" % "0.2.1").exclude("org.scala-lang", "scala-reflect")
+  ))
 
 lazy val coreJVM = core.jvm
 lazy val coreJS = core.js
@@ -18,6 +20,7 @@ lazy val examples = crossProject(JVMPlatform, JSPlatform)
   .in(file("examples"))
   .settings(buildSettings)
   .settings(noPublishSettings)
+  .settings(scalaMacroDependencies)
   .settings(moduleName := "magnolia-examples")
   .dependsOn(core)
 
