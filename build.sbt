@@ -32,6 +32,7 @@ lazy val tests = project
   .settings(buildSettings)
   .settings(noPublishSettings)
   .settings(unmanagedSettings)
+  .settings(scalaMacroDependencies)
   .settings(moduleName := "magnolia-tests")
   .settings(
     initialCommands in console := """import magnolia.tests._; import magnolia.examples._;""",
