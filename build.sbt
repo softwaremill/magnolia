@@ -32,10 +32,10 @@ lazy val tests = project
   .settings(buildSettings)
   .settings(noPublishSettings)
   .settings(unmanagedSettings)
-  .settings(scalaMacroDependencies)
   .settings(moduleName := "magnolia-tests")
   .settings(
     initialCommands in console := """import magnolia.tests._; import magnolia.examples._;""",
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     libraryDependencies ++= Seq(
       // These two to allow compilation under Java 9...
       // Specifically to import XML stuff that got modularised
