@@ -311,17 +311,17 @@ object Magnolia {
           else { case p: TermSymbol if p.isCaseAccessor && !p.isMethod => p }
         )
 
-        val factoryMethod = TermName {
-          if (isReadOnlyTypeclass && isValueClass) "readOnlyValueParam"
-          else if (isReadOnlyTypeclass) "readOnlyParam"
-          else if (isValueClass) "valueParam"
-          else "param"
+        val (factoryObject, factoryMethod) = {
+          if (isReadOnlyTypeclass && isValueClass) (TermName("ReadOnlyParam"), TermName("valueParam"))
+          else if (isReadOnlyTypeclass) (TermName("ReadOnlyParam"), TermName("apply"))
+          else if (isValueClass) (TermName("Param"), TermName("valueParam"))
+          else (TermName("Param"), TermName("apply"))
         }
 
         case class CaseParam(paramName: TermName, repeated: Boolean, typeclass: Tree, paramType: Type, ref: TermName) {
 
           def compile(params: TermName, idx: Int, default: Option[Tree], annotations: List[Tree]): Tree =
-            q"""$params($idx) = $magnoliaPkg.MagnoliaUtil.$factoryMethod[$typeConstructor, $genericType, $paramType](
+            q"""$params($idx) = $magnoliaPkg.$factoryObject.$factoryMethod[$typeConstructor, $genericType, $paramType](
               ${paramName.toString.trim},
               ${if (isValueClass) q"_.$paramName" else q"$idx"},
               $repeated,
@@ -514,7 +514,7 @@ object Magnolia {
 
         val assignments = typeclasses.zipWithIndex.map {
           case ((typ, typeclass), idx) =>
-            q"""$subtypesVal($idx) = $magnoliaPkg.MagnoliaUtil.subtype[$typeConstructor, $genericType, $typ](
+            q"""$subtypesVal($idx) = $magnoliaPkg.Subtype.apply[$typeConstructor, $genericType, $typ](
             ${typeNameRec(typ)},
             $idx,
             $scalaPkg.Array(..${annotationsOf(typ.typeSymbol)}),
@@ -583,7 +583,7 @@ object Magnolia {
                                 anns: Array[Any],
                                 tc: CallByNeed[Tc[S]],
                                 isType: T => Boolean,
-                                asType: T => S): Subtype[Tc, T] = MagnoliaUtil.subtype(name, idx, anns, tc, isType, asType)
+                                asType: T => S): Subtype[Tc, T] = Subtype(name, idx, anns, tc, isType, asType)
 
   private[Magnolia] def readOnlyParam[Tc[_], T, P](
     name: String,
@@ -591,7 +591,7 @@ object Magnolia {
     isRepeated: Boolean,
     typeclassParam: CallByNeed[Tc[P]],
     annotationsArrayParam: Array[Any]
-  ): ReadOnlyParam[Tc, T] = MagnoliaUtil.readOnlyParam(name, idx, isRepeated, typeclassParam, annotationsArrayParam)
+  ): ReadOnlyParam[Tc, T] = ReadOnlyParam(name, idx, isRepeated, typeclassParam, annotationsArrayParam)
 
   private[Magnolia] def readOnlyValueParam[Tc[_], T, P](
     name: String,
@@ -599,7 +599,7 @@ object Magnolia {
     isRepeated: Boolean,
     typeclassParam: CallByNeed[Tc[P]],
     annotationsArrayParam: Array[Any]
-  ): ReadOnlyParam[Tc, T] = MagnoliaUtil.readOnlyValueParam(name, deref, isRepeated, typeclassParam, annotationsArrayParam)
+  ): ReadOnlyParam[Tc, T] = ReadOnlyParam.valueParam(name, deref, isRepeated, typeclassParam, annotationsArrayParam)
 
   /** constructs a new [[Param]] instance
     *
@@ -611,7 +611,7 @@ object Magnolia {
                          typeclassParam: CallByNeed[Tc[P]],
                          defaultVal: CallByNeed[Option[P]],
                          annotationsArrayParam: Array[Any]
-                        ): Param[Tc, T] = MagnoliaUtil.param(name, idx, isRepeated, typeclassParam, defaultVal, annotationsArrayParam)
+                        ): Param[Tc, T] = Param.apply(name, idx, isRepeated, typeclassParam, defaultVal, annotationsArrayParam)
 
   private[Magnolia] def valueParam[Tc[_], T, P](name: String,
                          deref: T => P,
@@ -619,7 +619,7 @@ object Magnolia {
                          typeclassParam: CallByNeed[Tc[P]],
                          defaultVal: CallByNeed[Option[P]],
                          annotationsArrayParam: Array[Any]
-                        ): Param[Tc, T] = MagnoliaUtil.valueParam(name, deref, isRepeated, typeclassParam, defaultVal, annotationsArrayParam)
+                        ): Param[Tc, T] = Param.valueParam(name, deref, isRepeated, typeclassParam, defaultVal, annotationsArrayParam)
 
   private[Magnolia] final def checkParamLengths(fieldValues: Seq[Any], paramsLength: Int, typeName: String): Unit = MagnoliaUtil.checkParamLengths(fieldValues, paramsLength, typeName)
 
