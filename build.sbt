@@ -9,7 +9,9 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
   .settings(publishSettings)
   .settings(scalaMacroDependencies)
   .settings(moduleName := "magnolia")
-  .settings(libraryDependencies ++= Seq("com.propensive" %% "mercator" % "0.2.1"))
+  .settings(libraryDependencies ++= Seq(
+    ("com.propensive" %% "mercator" % "0.2.1").exclude("org.scala-lang", "scala-reflect")
+  ))
 
 lazy val coreJVM = core.jvm
 lazy val coreJS = core.js
@@ -18,6 +20,7 @@ lazy val examples = crossProject(JVMPlatform, JSPlatform)
   .in(file("examples"))
   .settings(buildSettings)
   .settings(noPublishSettings)
+  .settings(scalaMacroDependencies)
   .settings(moduleName := "magnolia-examples")
   .dependsOn(core)
 
@@ -32,6 +35,7 @@ lazy val tests = project
   .settings(moduleName := "magnolia-tests")
   .settings(
     initialCommands in console := """import magnolia.tests._; import magnolia.examples._;""",
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     libraryDependencies ++= Seq(
       // These two to allow compilation under Java 9...
       // Specifically to import XML stuff that got modularised
