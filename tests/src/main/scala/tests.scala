@@ -176,6 +176,14 @@ object Character {
   type Id = Long with Tag
 }
 
+case class AnotherCharacter(id: AnotherCharacter.Id)
+object AnotherCharacter {
+  trait Tag extends Any
+  type Id = Long with Tag
+
+  implicit val idShow: Show[String, Id] = _.toString
+}
+
 final case class Abc(
   private val a: Int,
   private val b: Long,
@@ -651,6 +659,10 @@ object Tests extends TestApp {
     test("not attempt to derive instances for refined types") {
       scalac"Show.gen[Character]"
     }.assert(_ == TypecheckError(txt"magnolia: could not infer Show.Typeclass for refined type magnolia.tests.Character.Id"))
+
+    test("derive instances for types with refined types if implicit provided") {
+      scalac"Show.gen[AnotherCharacter]"
+    }.assert(_ == Returns(fqt"magnolia.examples.Show[String,magnolia.tests.AnotherCharacter]"))
 
     test("not attempt to derive instances for Java enums") {
       scalac"Show.gen[WeekDay]"
