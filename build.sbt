@@ -10,7 +10,9 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
   .settings(scalaMacroDependencies)
   .settings(moduleName := "magnolia")
   .settings(libraryDependencies ++= Seq(
-    ("com.propensive" %% "mercator" % "0.2.1").exclude("org.scala-lang", "scala-reflect")
+    ("com.propensive" %% "mercator" % "0.2.1")
+      .exclude("org.scala-lang", "scala-reflect")
+      .exclude("org.scala-lang", "scala-compiler")
   ))
 
 lazy val coreJVM = core.jvm
