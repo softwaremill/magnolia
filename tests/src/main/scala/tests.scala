@@ -682,5 +682,16 @@ object Tests extends TestApp {
       implicit def hideFallbackWarning: TypeNameInfo[Double] = TypeNameInfo.fallback[Double]
       TypeNameInfo.gen[Contravariant[Double]].subtypeNames.map(_.short).mkString(" | ")
     }.assert(_ == "Any | Custom")
+
+    test("allow derivation result to have arbitrary type") {
+      (ExportedTypeclass.gen[Length], ExportedTypeclass.gen[Color])
+    }.assert(_ == (ExportedTypeclass.Exported(), ExportedTypeclass.Exported()))
+
+    test("no support for arbitrary derivation result type for recursive classes yet") {
+      scalac"ExportedTypeclass.gen[Recursive]"
+    }.assert(_ == TypecheckError(
+      txt"""magnolia: could not find ExportedTypeclass.Typeclass for type Seq[magnolia.tests.Recursive]
+           |    in parameter 'children' of product type magnolia.tests.Recursive
+           |"""))
   }
 }
