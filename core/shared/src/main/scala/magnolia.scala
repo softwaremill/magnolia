@@ -536,7 +536,7 @@ object Magnolia {
               $typeName,
               $subtypesVal: $scalaPkg.Array[$magnoliaPkg.Subtype[$typeConstructor, $genericType]],
               $scalaPkg.Array(..$classAnnotationTrees)
-            )): $resultType
+            ))
           }""")
       } else if (!typeSymbol.isParameter) {
         c.prefix.tree.tpe.baseClasses
