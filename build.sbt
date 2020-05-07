@@ -1,33 +1,34 @@
 import com.softwaremill.PublishTravis.publishTravisSettings
 
-val v2_12 = "2.12.11"
-val v2_13 = "2.13.1"
+val v2_12 = "0.25.0-bin-20200506-93ef012-NIGHTLY"
+// val v2_12 = "2.12.11"
+// val v2_13 = "2.13.1"
 
-lazy val core = crossProject(JVMPlatform, JSPlatform)
+lazy val core = crossProject(JVMPlatform/* , JSPlatform */)
   .in(file("core"))
   .settings(buildSettings)
   .settings(publishSettings)
-  .settings(scalaMacroDependencies)
+  // .settings(scalaMacroDependencies)
   .settings(moduleName := "magnolia")
   .settings(libraryDependencies ++= Seq(
-    ("com.propensive" %% "mercator" % "0.2.1")
-      .exclude("org.scala-lang", "scala-reflect")
-      .exclude("org.scala-lang", "scala-compiler")
+    ("com.propensive" %% "mercator" % "0.4.0-dotty-SNAPSHOT")
+      // .exclude("org.scala-lang", "scala-reflect")
+      // .exclude("org.scala-lang", "scala-compiler")
   ))
 
 lazy val coreJVM = core.jvm
-lazy val coreJS = core.js
+// lazy val coreJS = core.js
 
-lazy val examples = crossProject(JVMPlatform, JSPlatform)
+lazy val examples = crossProject(JVMPlatform/* , JSPlatform */)
   .in(file("examples"))
   .settings(buildSettings)
   .settings(noPublishSettings)
-  .settings(scalaMacroDependencies)
+  // .settings(scalaMacroDependencies)
   .settings(moduleName := "magnolia-examples")
   .dependsOn(core)
 
 lazy val examplesJVM = examples.jvm
-lazy val examplesJS = examples.js
+// lazy val examplesJS = examples.js
 
 lazy val tests = project
   .in(file("tests"))
@@ -37,7 +38,7 @@ lazy val tests = project
   .settings(moduleName := "magnolia-tests")
   .settings(
     initialCommands in console := """import magnolia.tests._; import magnolia.examples._;""",
-    libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+    // libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     libraryDependencies ++= Seq(
       // These two to allow compilation under Java 9...
       // Specifically to import XML stuff that got modularised
@@ -46,12 +47,13 @@ lazy val tests = project
     )
   )
   // compiling and running the tests only for 2.12
-  .settings(skip := scalaVersion.value != v2_12)
-  .settings(test := Def.taskDyn { if (scalaVersion.value == v2_12) (run in Compile).toTask("") else Def.task {} }.value)
+  .settings(crossScalaVersions := Seq(v2_12))
+  // .settings(skip := scalaVersion.value != v2_12)
+  // .settings(test := Def.taskDyn { if (scalaVersion.value == v2_12) (run in Compile).toTask("") else Def.task {} }.value)
   .dependsOn(examplesJVM)
 
 lazy val root = (project in file("."))
-  .aggregate(coreJVM, coreJS, examplesJVM, examplesJS, tests)
+  .aggregate(coreJVM/* , coreJS */, examplesJVM/* , examplesJS */, tests)
   .settings(buildSettings)
   .settings(publishSettings)
   .settings(publishTravisSettings)
@@ -89,10 +91,10 @@ lazy val buildSettings = Seq(
     }
   },
   scmInfo := Some(
-    ScmInfo(url("https://github.com/propensive/mercator"),
-      "scm:git:git@github.com:propensive/mercator.git")
+    ScmInfo(url("https://github.com/propensive/magnolia"),
+      "scm:git:git@github.com:propensive/magnolia.git")
   ),
-  crossScalaVersions := v2_12 :: v2_13 :: Nil,
+  crossScalaVersions := v2_12 :: Nil,// :: v2_13 :: Nil,
   scalaVersion := crossScalaVersions.value.head
 )
 
@@ -105,7 +107,7 @@ lazy val publishSettings = ossPublishSettings ++ Seq(
       id = "propensive",
       name = "Jon Pretty",
       email = "",
-      url = new URL("https://github.com/propensive/mercator/")
+      url = new URL("https://github.com/propensive/magnolia/")
     )
   ),
   scmInfo := Some(
