@@ -204,6 +204,13 @@ object Exactly {
 
 case class ParamsWithDefault(a: Int = 3, b: Int = 4)
 
+sealed trait Parent
+trait BadChild extends Parent // escape hatch!
+sealed trait GoodChild extends Parent
+final case class Huey(height: Int) extends GoodChild
+class Dewey(val height: Int) extends GoodChild
+final case class Louie(height: Int) extends BadChild
+
 object Tests extends TestApp {
 
   def tests(): Unit = for (_ <- 1 to 1) {
@@ -685,7 +692,7 @@ object Tests extends TestApp {
 
     test("allow derivation result to have arbitrary type") {
       (ExportedTypeclass.gen[Length], ExportedTypeclass.gen[Color])
-    }.assert(_ == (ExportedTypeclass.Exported(), ExportedTypeclass.Exported()))
+    }.assert(_ == ((ExportedTypeclass.Exported(), ExportedTypeclass.Exported())))
 
     test("no support for arbitrary derivation result type for recursive classes yet") {
       scalac"ExportedTypeclass.gen[Recursive]"
@@ -693,5 +700,17 @@ object Tests extends TestApp {
       txt"""magnolia: could not find ExportedTypeclass.Typeclass for type Seq[magnolia.tests.Recursive]
            |    in parameter 'children' of product type magnolia.tests.Recursive
            |"""))
+
+    test("report an error when an abstract member of a sealed hierarchy is not sealed") {
+      scalac"Show.gen[Parent]"
+    }.assert {
+      _ == TypecheckError("magnolia: child trait BadChild of trait Parent is not sealed")
+    }
+
+    test("report an error when a concrete member of a sealed hierarchy is neither final nor a case class") {
+      scalac"Show.gen[GoodChild]"
+    }.assert {
+      _ == TypecheckError("magnolia: child class Dewey of trait GoodChild is neither final nor a case class")
+    }
   }
 }
