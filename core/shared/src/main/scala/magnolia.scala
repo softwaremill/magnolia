@@ -100,6 +100,7 @@ object Magnolia {
     val repeatedParamClass = definitions.RepeatedParamClass
     val scalaSeqType = typeOf[Seq[_]].typeConstructor
     val javaAnnotationType = typeOf[java.lang.annotation.Annotation]
+    val typeClassName = TypeName("Typeclass")
 
     val prefixType = c.prefix.tree.tpe
     val prefixObject = prefixType.typeSymbol
@@ -120,25 +121,34 @@ object Magnolia {
 
     val enclosingVals = Iterator
       .iterate(enclosingOwner)(_.owner)
-      .takeWhile(encl => encl != null && encl != NoSymbol)
-      .filter(_.isTerm)
-      .map(_.asTerm)
-      .filter(encl => encl.isVal || encl.isLazy)
+      .takeWhile(enclosing => enclosing != null && enclosing != NoSymbol)
+      .collect { case enclosing: TermSymbol if enclosing.isVal || enclosing.isLazy => enclosing }
       .toSet[Symbol]
 
-    def knownSubclasses(sym: ClassSymbol): Set[Symbol] = {
-      val children = sym.knownDirectSubclasses
-      val (abstractTypes, concreteTypes) = children.partition(_.isAbstract)
-      abstractTypes.map(_.asClass).flatMap(knownSubclasses(_)) ++ concreteTypes
+    def knownSubclassesOf(parent: ClassSymbol): Set[Symbol] = {
+      val (abstractChildren, concreteChildren) = parent.knownDirectSubclasses.partition(_.isAbstract)
+      for (child <- concreteChildren) {
+        child.typeSignature // load type signature
+        if (!child.isFinal && !child.asClass.isCaseClass)
+          error(s"child $child of $parent is neither final nor a case class")
+      }
+
+      concreteChildren union abstractChildren.flatMap { child =>
+        child.typeSignature // load type signature
+        val childClass = child.asClass
+        if (childClass.isSealed) knownSubclassesOf(childClass)
+        else error(s"child $child of $parent is not sealed")
+      }
     }
 
-    def annotationsOf(symbol: Symbol): List[Tree] = {
-      symbol.annotations.map(_.tree).filterNot(_.tpe <:< javaAnnotationType)
+    def annotationsOf(symbol: Symbol): List[Tree] = symbol.annotations.collect {
+      case annotation if !(annotation.tree.tpe <:< javaAnnotationType) => annotation.tree
     }
 
-    val typeDefs = prefixType.baseClasses.flatMap { cls =>
-      cls.asType.toType.decls.filter(_.isType).find(_.name.toString == "Typeclass").map { tpe =>
-        tpe.asType.toType.asSeenFrom(prefixType, cls)
+    val typeDefs = prefixType.baseClasses.flatMap { baseClass =>
+      baseClass.asType.toType.decls.collectFirst {
+        case tpe: TypeSymbol if tpe.name == typeClassName =>
+          tpe.toType.asSeenFrom(prefixType, baseClass)
       }
     }
 
@@ -487,7 +497,7 @@ object Magnolia {
           }""")
       } else if (isSealedTrait) {
         checkMethod("dispatch", "sealed traits", "SealedTrait[Typeclass, _]")
-        val genericSubtypes = knownSubclasses(classType.get).toList.sortBy(_.fullName)
+        val genericSubtypes = knownSubclassesOf(classType.get).toList.sortBy(_.fullName)
         val subtypes = genericSubtypes.flatMap { sub =>
           val subType = sub.asType.toType // FIXME: Broken for path dependent types
           val typeParams = sub.asType.typeParams
