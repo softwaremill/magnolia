@@ -103,8 +103,6 @@ trait Print[T] {
 }
 
 object Print {
-  type Typeclass[T] = Print[T]
-  
   def combine[T](ctx: ReadOnlyCaseClass[Print, T]): Print[T] = { value =>
     if (ctx.isValueClass) {
       val param = ctx.parameters.head
