@@ -128,9 +128,9 @@ object Print:
   given Print[String] = a => a
   given Print[Int] = _.toString
 
-enum MyList derives Print:
-  case Cons(h: Int, t: String)
+enum MyList[+T] derives Print:
+  case Cons(h: T, t: MyList[T])
   case End
 
 @main
-def run = println(MyList.Cons(1, "foo").print)
+def run = println(MyList.Cons(1, MyList.Cons(2, MyList.End)).print)
