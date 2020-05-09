@@ -44,8 +44,21 @@ object Magnolia {
     Print.dispatch(st)
   }
 
-  inline def parametersOf[Parent, T <: Tuple](tpeName: String, idx: Int)(using m: Mirror.ProductOf[Parent]): List[ReadOnlyParam[Print, Parent]] = {
-    Nil
+  inline def parametersOf[Parent, T <: Tuple](idx: Int)(using m: Mirror.ProductOf[Parent]): List[ReadOnlyParam[Print, Parent]] = {
+    inline erasedValue[T] match {
+      case _: Unit => Nil
+      case _: (h *: t) =>
+        val param: ReadOnlyParam[Print, Parent] =
+          ReadOnlyParam[Print, Parent, h](
+            name = "param", //todo
+            idx = idx,
+            isRepeated = false, //todo
+            typeclassParam = CallByNeed(summonInline[Print[h]]),
+            annotationsArrayParam = Array()
+          )
+
+        param :: parametersOf[Parent, t](idx + 1)
+    }
   }
   
   inline def combineInternal[T](using m: Mirror.ProductOf[T]): Print[T] = {
@@ -57,7 +70,7 @@ object Magnolia {
         typeName = TypeName("", tpeName, Nil),
         isObject = false,
         isValueClass = false,
-        parametersArray = parametersOf[T, m.MirroredElemTypes],
+        parametersArray = parametersOf[T, m.MirroredElemTypes](0).toArray,
         annotationsArray = Array()
       ){}
 
