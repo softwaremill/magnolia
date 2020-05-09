@@ -128,9 +128,6 @@ object Print:
   given Print[String] = a => a
   given Print[Int] = _.toString
 
-  implicit def seq[T](implicit printT: Print[T]): Print[Seq[T]] = values =>
-    values.map(printT.print).mkString("[", ",", "]")
-
 enum MyList derives Print:
   case Cons(h: Int, t: String)
   case End
