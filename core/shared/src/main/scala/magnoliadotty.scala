@@ -98,29 +98,23 @@ class TCInterface[Typeclass[_]](
   val dispatch: [T] => (cc: SealedTrait[Typeclass, T]) => Typeclass[T]
 )
 
-trait Print[T] {
+trait Print[T]:
   def (t: T).print: String
-}
 
-object Print {
-  def combine[T](ctx: ReadOnlyCaseClass[Print, T]): Print[T] = { value =>
-    if (ctx.isValueClass) {
+object Print:
+  def combine[T](ctx: ReadOnlyCaseClass[Print, T]): Print[T] = value =>
+    if (ctx.isValueClass) then
       val param = ctx.parameters.head
       param.typeclass.print(param.dereference(value))
-    }
-    else {
+    else
       ctx.parameters.map { param =>
         param.label + " = " + param.typeclass.print(param.dereference(value))
       }.mkString(s"${ctx.typeName.short}(", ", ", ")")
-    }
-  }
 
-
-  def dispatch[T](ctx: SealedTrait[Print, T]): Print[T] = { value =>
+  def dispatch[T](ctx: SealedTrait[Print, T]): Print[T] = value =>
     ctx.dispatch(value) { sub =>
       sub.typeclass.print(sub.cast(value))
     }
-  }
 
   //how to use given here?
   inline implicit def derived[T](using Mirror.Of[T]): Print[T] = 
@@ -134,11 +128,8 @@ object Print {
   given Print[String] = a => a
   given Print[Int] = _.toString
 
-  implicit def seq[T](implicit printT: Print[T]): Print[Seq[T]] = { values =>
+  implicit def seq[T](implicit printT: Print[T]): Print[Seq[T]] = values =>
     values.map(printT.print).mkString("[", ",", "]")
-  }
-  
-}
 
 enum MyList derives Print:
   case Cons(h: Int, t: String)
