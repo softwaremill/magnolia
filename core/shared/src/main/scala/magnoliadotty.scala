@@ -92,15 +92,15 @@ object Magnolia {
   }
 }
 
-trait Print[T] {
-  def (t: T).print: String
-}
-
 //ideally we won't have this at all
 class TCInterface[Typeclass[_]](
   val combine: [T] => (cc: ReadOnlyCaseClass[Typeclass, T]) => Typeclass[T],
   val dispatch: [T] => (cc: SealedTrait[Typeclass, T]) => Typeclass[T]
 )
+
+trait Print[T] {
+  def (t: T).print: String
+}
 
 object Print {
   type Typeclass[T] = Print[T]
