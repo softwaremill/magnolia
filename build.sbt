@@ -1,6 +1,6 @@
 import com.softwaremill.PublishTravis.publishTravisSettings
 
-val v2_12 = "0.25.0-bin-20200506-93ef012-NIGHTLY"
+val v2_12 = "0.25.0-bin-20200508-f5b1d79-NIGHTLY"
 // val v2_12 = "2.12.11"
 // val v2_13 = "2.13.1"
 
