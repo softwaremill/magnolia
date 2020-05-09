@@ -15,10 +15,15 @@ object Magnolia {
   inline def subtypesOf[Parent, T <: Tuple](tpeName: String, idx: Int)(using m: Mirror.SumOf[Parent]): List[Subtype[Print, Parent]] =
     inline erasedValue[T] match {
       case _: Unit => Nil
-      case _: (h *: t) => 
-        //todo: type names https://github.com/lampepfl/dotty/issues/8739
+      case _: ((h, label) *: t) =>
+        //todo: better way of getting type names https://github.com/lampepfl/dotty/issues/8739
+
+        val childName = inline constValue[label] match {
+          case childName: String => childName
+        }
+
         val headSubtype = Subtype[Print, Parent, Parent](
-          name = TypeName(tpeName, "foo", Nil),
+          name = TypeName(tpeName, childName, Nil),
           idx = idx,
           anns = Array(),
           tc = CallByNeed(summonInline[Print[h]].asInstanceOf[Print[Parent]]),
@@ -32,7 +37,7 @@ object Magnolia {
   inline def dispatchInternal[T](using m: Mirror.SumOf[T]): Print[T] = {
     val tpeName = constValue[m.MirroredLabel]
 
-    val subtypes = subtypesOf[T, m.MirroredElemTypes](tpeName, 0)
+    val subtypes = subtypesOf[T, Tuple.Zip[m.MirroredElemTypes, m.MirroredElemLabels]](tpeName, 0)
 
     //todo parent type
     val st: SealedTrait[Print, T]  = new SealedTrait[Print, T](
@@ -47,10 +52,14 @@ object Magnolia {
   inline def parametersOf[Parent, T <: Tuple](idx: Int)(using m: Mirror.ProductOf[Parent]): List[ReadOnlyParam[Print, Parent]] = {
     inline erasedValue[T] match {
       case _: Unit => Nil
-      case _: (h *: t) =>
+      case _: ((h, label) *: t) =>
+        val paramName = constValue[label] match {
+          case paramName: String => paramName
+        }
+
         val param: ReadOnlyParam[Print, Parent] =
           ReadOnlyParam[Print, Parent, h](
-            name = "param", //todo
+            name = paramName,
             idx = idx,
             isRepeated = false, //todo
             typeclassParam = CallByNeed(summonInline[Print[h]]),
@@ -70,7 +79,7 @@ object Magnolia {
         typeName = TypeName("", tpeName, Nil),
         isObject = false,
         isValueClass = false,
-        parametersArray = parametersOf[T, m.MirroredElemTypes](0).toArray,
+        parametersArray = parametersOf[T, Tuple.Zip[m.MirroredElemTypes, m.MirroredElemLabels]](0).toArray,
         annotationsArray = Array()
       ){}
 
@@ -99,8 +108,8 @@ object Print {
     }
     else {
       ctx.parameters.map { param =>
-        param.typeclass.print(param.dereference(value))
-      }.mkString(s"${ctx.typeName.short}(", ",", ")")
+        param.label + " = " + param.typeclass.print(param.dereference(value))
+      }.mkString(s"${ctx.typeName.short}(", ", ", ")")
     }
   }
 
