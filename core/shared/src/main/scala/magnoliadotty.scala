@@ -6,9 +6,9 @@ import scala.compiletime.summonInline
 import scala.compiletime.summonFrom
 
 
-object Magnolia{
+object Magnolia {
 
-  inline def subtypesOf[Parent, T <: Tuple, Typeclass[_]](tpeName: String, idx: Int)(using m: Mirror.SumOf[Parent]): List[Subtype[Typeclass, Parent]] =
+  inline def subtypesOf[Typeclass[_], Parent, T <: Tuple](tpeName: String, idx: Int)(using m: Mirror.SumOf[Parent]): List[Subtype[Typeclass, Parent]] =
     inline erasedValue[T] match {
       case _: Unit => Nil
       case _: ((h, label) *: t) =>
@@ -22,19 +22,19 @@ object Magnolia{
           name = TypeName(tpeName, childName, Nil),
           idx = idx,
           anns = Array(),
-          tc = CallByNeed(summonInline[Typeclass[h]].asInstanceOf[Typeclass[Parent]]),
+          tc = CallByNeed(summonInline[Typeclass[h]].asInstanceOf[Typeclass[Parent]]), //weird cast but ok
           isType = m.ordinal(_) == idx,
           asType = a => a
         )
 
-        headSubtype :: subtypesOf[Parent, t, Typeclass](tpeName, idx + 1)
+        headSubtype :: subtypesOf[Typeclass, Parent, t](tpeName, idx + 1)
     }
 
     
-  inline def dispatchInternal[T, Typeclass[_]](inline interface: TCInterface[Typeclass])(using m: Mirror.SumOf[T]): Typeclass[T] = {
+  inline def dispatchInternal[Typeclass[_], T](interface: TCInterface[Typeclass])(using m: Mirror.SumOf[T]): Typeclass[T] = {
     val tpeName = constValue[m.MirroredLabel]
 
-    val subtypes = subtypesOf[T, Tuple.Zip[m.MirroredElemTypes, m.MirroredElemLabels], Typeclass](tpeName, 0)
+    val subtypes = subtypesOf[Typeclass, T, Tuple.Zip[m.MirroredElemTypes, m.MirroredElemLabels]](tpeName, 0)
 
     //todo parent type
     val st: SealedTrait[Typeclass, T]  = new SealedTrait[Typeclass, T](
@@ -46,7 +46,7 @@ object Magnolia{
     interface.dispatch(st)
   }
 
-  inline def parametersOf[Parent, T <: Tuple, Typeclass[_]](idx: Int)(using m: Mirror.ProductOf[Parent]): List[ReadOnlyParam[Typeclass, Parent]] = {
+  inline def parametersOf[Typeclass[_], Parent, T <: Tuple](idx: Int)(using m: Mirror.ProductOf[Parent]): List[ReadOnlyParam[Typeclass, Parent]] = {
     inline erasedValue[T] match {
       case _: Unit => Nil
       case _: ((h, label) *: t) =>
@@ -63,11 +63,11 @@ object Magnolia{
             annotationsArrayParam = Array()
           )
 
-        param :: parametersOf[Parent, t, Typeclass](idx + 1)
+        param :: parametersOf[Typeclass, Parent, t](idx + 1)
     }
   }
   
-  inline def combineInternal[T, Typeclass[_]](inline interface: TCInterface[Typeclass])(using m: Mirror.ProductOf[T]): Typeclass[T] = {
+  inline def combineInternal[Typeclass[_], T](interface: TCInterface[Typeclass])(using m: Mirror.ProductOf[T]): Typeclass[T] = {
     val tpeName = constValue[m.MirroredLabel]
 
     val cc: ReadOnlyCaseClass[Typeclass, T] = 
@@ -76,7 +76,7 @@ object Magnolia{
         typeName = TypeName("", tpeName, Nil),
         isObject = false,
         isValueClass = false,
-        parametersArray = parametersOf[T, Tuple.Zip[m.MirroredElemTypes, m.MirroredElemLabels], Typeclass](0).toArray,
+        parametersArray = parametersOf[Typeclass, T, Tuple.Zip[m.MirroredElemTypes, m.MirroredElemLabels]](0).toArray,
         annotationsArray = Array()
       ){}
 
@@ -84,16 +84,16 @@ object Magnolia{
     interface.combine(cc)
   }
 
-  inline def gen[Typeclass[_], T](inline interface: TCInterface[Typeclass])(using m: Mirror.Of[T]): Typeclass[T] = {
+  inline def gen[Typeclass[_], T](interface: TCInterface[Typeclass])(using m: Mirror.Of[T]): Typeclass[T] = {
     inline m match {
-      case sum: Mirror.SumOf[T] => dispatchInternal[T, Typeclass](interface)(using sum)
-      case prod: Mirror.ProductOf[T] => combineInternal[T, Typeclass](interface)(using prod)
+      case sum: Mirror.SumOf[T] => dispatchInternal[Typeclass, T](interface)(using sum)
+      case prod: Mirror.ProductOf[T] => combineInternal[Typeclass, T](interface)(using prod)
     }
   }
 }
 
 trait Print[T] {
-  def print(t: T): String
+  def (t: T).print: String
 }
 
 //ideally we won't have this at all
@@ -124,7 +124,8 @@ object Print {
     }
   }
 
-  inline implicit def derived[T: Mirror.Of]: Print[T] = 
+  //how to use given here?
+  inline implicit def derived[T](using Mirror.Of[T]): Print[T] = 
     Magnolia.gen[Print, T](
       new TCInterface[Print](
         [T] => (cc: ReadOnlyCaseClass[Print, T]) => combine(cc),
@@ -132,8 +133,8 @@ object Print {
       )
     )
 
-  implicit val string: Print[String] = a => a
-  implicit val int: Print[Int] = _.toString
+  given Print[String] = a => a
+  given Print[Int] = _.toString
 
   implicit def seq[T](implicit printT: Print[T]): Print[Seq[T]] = { values =>
     values.map(printT.print).mkString("[", ",", "]")
@@ -146,5 +147,4 @@ enum MyList derives Print:
   case End
 
 @main
-def run = println(summon[Print[MyList]].print(MyList.Cons(1, "foo")))
-// def run = println(summon[Print[MyList]].print(MyList.Cons(1)))
+def run = println(MyList.Cons(1, "foo").print)
