@@ -85,6 +85,7 @@ object Magnolia {
     import c.internal._
 
     def error(message: String): Nothing = c.abort(c.enclosingPosition, s"magnolia: $message")
+    def warning(message: String): Unit = c.warning(c.enclosingPosition, s"magnolia: $message")
 
     val debug = c.macroApplication.symbol.annotations
       .find(_.tree.tpe <:< typeOf[debug])
@@ -119,11 +120,38 @@ object Magnolia {
       }
     }
 
-    val enclosingVals = Iterator
-      .iterate(enclosingOwner)(_.owner)
-      .takeWhile(enclosing => enclosing != null && enclosing != NoSymbol)
-      .collect { case enclosing: TermSymbol if enclosing.isVal || enclosing.isLazy => enclosing }
-      .toSet[Symbol]
+    /** Returns the chain of owners of `symbol` up to the root package in reverse order.
+      * The owner of a symbol is the enclosing package/trait/class/object/method/val/var where it is defined.
+      * More efficient than [[ownerChainOf]] because it does not materialize the owner chain.
+      */
+    def reverseOwnerChainOf(symbol: Symbol): Iterator[Symbol] =
+      Iterator.iterate(symbol)(_.owner).takeWhile(owner => owner != null && owner != NoSymbol)
+
+    /** Returns the chain of owners of `symbol` up to the root package.
+      * @see [[reverseOwnerChainOf]]
+      */
+    def ownerChainOf(symbol: Symbol): Iterator[Symbol] =
+      reverseOwnerChainOf(symbol).toVector.reverseIterator
+
+    /** Returns a type-checked reference to the companion object of `clazz` if any.
+      * Unlike `clazz.companion` works also for local classes nested in methods/vals/vars.
+      */
+    def companionOf(clazz: ClassSymbol): Option[Tree] = {
+      val path = ownerChainOf(clazz)
+        .zipAll(ownerChainOf(enclosingOwner), NoSymbol, NoSymbol)
+        .dropWhile { case (x, y) => x == y }
+        .takeWhile(_._1 != NoSymbol)
+        .map(_._1.name.toTermName)
+
+      if (path.isEmpty) None else {
+        val companion = c.typecheck(path.foldLeft[Tree](Ident(path.next()))(Select(_, _)), silent = true)
+        if (companion.isEmpty) None else Some(companion)
+      }
+    }
+
+    val enclosingVals = reverseOwnerChainOf(enclosingOwner).collect {
+      case enclosing: TermSymbol if enclosing.isVal || enclosing.isLazy => enclosing
+    }.toSet[Symbol]
 
     def knownSubclassesOf(parent: ClassSymbol): Set[Symbol] = {
       val (abstractChildren, concreteChildren) = parent.knownDirectSubclasses.partition(_.isAbstract)
@@ -310,11 +338,9 @@ object Magnolia {
         """
         Some(impl)
       } else if (isCaseClass || isValueClass) {
-        val headParamList = {
-          val primaryConstructor = classType.map(_.primaryConstructor)
-          val optList = primaryConstructor.flatMap(_.asMethod.typeSignature.paramLists.headOption)
-          optList.map(_.map(_.asTerm))
-        }
+        val headParamList = classType
+          .flatMap(_.primaryConstructor.asMethod.typeSignatureIn(genericType).paramLists.headOption)
+          .map(_.map(_.asTerm))
 
         val caseClassParameters = genericType.decls.sorted.collect(
           if (isValueClass) { case p: TermSymbol if p.isParamAccessor && p.isMethod => p }
@@ -369,49 +395,54 @@ object Magnolia {
         }
 
         val caseParams = caseParamsReversed.reverse
-        val paramsVal = TermName(c.freshName("parameters"))
-        val preAssignments = caseParams.map(_.typeclass)
-
+        val paramsWithIndex = caseParams.zipWithIndex
+        val paramsVal = c.freshName(TermName("parameters"))
         val annotations = headParamList.getOrElse(Nil).map(annotationsOf(_))
+
         val assignments = if (isReadOnlyTypeclass) {
-          for (((param, annList), idx) <- caseParams.zip(annotations).zipWithIndex)
+          for (((param, idx), annList) <- paramsWithIndex zip annotations)
             yield param.compile(paramsVal, idx, None, annList)
         } else {
           val defaults = headParamList.fold[List[Tree]](Nil) { params =>
-            if (params.exists(_.isParamWithDefault)) {
-              val x = TermName(c.freshName("x"))
-              val A = TypeName(c.freshName("A"))
-              val dummyArgs = params.filterNot(_.isParamWithDefault).map(p => q"${p.name} = $x")
-              // `A <: Nothing` to avoid dead code warnings
-              val dummy = c.typecheck(q"def $x[$A <: $scalaPkg.Nothing]($x: $A) = new $genericType(..$dummyArgs)")
-              val defaults = dummy.collect { case sel @ Select(_, name) if name.toString.contains("$default$") => sel }.iterator
-              params.map(p => if (p.isParamWithDefault) q"$scalaPkg.Some(${defaults.next()})" else q"$scalaPkg.None")
-            } else {
-              params.map(_ => q"$scalaPkg.None")
+            val none = reify(None).tree
+            def allNone = params.map(_ => none)
+            if (!params.exists(_.isParamWithDefault)) allNone
+            else classType.flatMap(ct => companionOf(ct)).fold(allNone) { companion =>
+              val companionType = companion.tpe
+              for ((p, idx) <- params.zipWithIndex) yield if (!p.isParamWithDefault) none else {
+                val default = companionType.member(TermName(s"<init>$$default$$${idx + 1}").encodedName)
+                if (default.typeSignature.finalResultType <:< p.typeSignature) {
+                  q"${reify(Some)}($companion.$default)"
+                } else {
+                  warning(s"ignoring default value for parameter ${p.name} of $genericType due to type mismatch")
+                  none
+                }
+              }
             }
           }
 
-          for ((((param, default), annList), idx) <- caseParams.zip(defaults).zip(annotations).zipWithIndex)
+          for ((((param, idx), default), annList) <- paramsWithIndex zip defaults zip annotations)
             yield param.compile(paramsVal, idx, Some(default), annList)
         }
 
-        val caseClassBody = if (isReadOnlyTypeclass) List(q"") else {
-
-          val genericParams = caseParams.zipWithIndex.map { case (typeclass, idx) =>
+        val caseClassBody = if (isReadOnlyTypeclass) List(EmptyTree) else {
+          val genericParams = paramsWithIndex.map { case (typeclass, idx) =>
             val arg = q"makeParam($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
-            if(typeclass.repeated) q"$arg: _*" else arg
+            if (typeclass.repeated) q"$arg: _*" else arg
           }
 
-          val rawGenericParams = caseParams.zipWithIndex.map { case (typeclass, idx) =>
+          val rawGenericParams = paramsWithIndex.map { case (typeclass, idx) =>
             val arg = q"fieldValues($idx).asInstanceOf[${typeclass.paramType}]"
             if(typeclass.repeated) q"$arg: _*" else arg
           }
 
-          val f = TypeName(c.freshName("F"))
-
-          val forParams = caseParams.zipWithIndex.map { case (typeclass, idx) =>
-            val part = TermName(s"p$idx")
-            (if(typeclass.repeated) q"$part: _*" else q"$part", fq"$part <- new _root_.mercator.Ops(makeParam($paramsVal($idx)).asInstanceOf[$f[${typeclass.paramType}]])")
+          val f = c.freshName(TypeName("F"))
+          val forParams = paramsWithIndex.map { case (typeclass, idx) =>
+            val p = TermName(s"p$idx")
+            (
+              if (typeclass.repeated) q"$p: _*" else q"$p",
+              fq"$p <- new _root_.mercator.Ops(makeParam($paramsVal($idx)).asInstanceOf[$f[${typeclass.paramType}]])"
+            )
           }
 
           val constructMonadicImpl = if (forParams.isEmpty) q"monadic.point(new $genericType())" else q"""
@@ -423,16 +454,15 @@ object Magnolia {
           val constructEitherImpl =
             if (caseParams.isEmpty) q"$scalaPkg.Right(new $genericType())"
             else {
-              val eitherVals = caseParams.zipWithIndex.map {
-                case (typeclass, idx) =>
-                  val part = TermName(s"p$idx")
-                  val pat = TermName(s"v$idx")
-                  (
-                    part,
-                    if (typeclass.repeated) q"$pat: _*" else q"$pat",
-                    q"val $part = makeParam($paramsVal($idx)).asInstanceOf[$scalaPkg.Either[Err, ${typeclass.paramType}]]",
-                    pq"$scalaPkg.Right($pat)",
-                  )
+              val eitherVals = paramsWithIndex.map { case (param, idx) =>
+                val p = TermName(s"p$idx")
+                val v = TermName(s"v$idx")
+                (
+                  p,
+                  if (param.repeated) q"$v: _*" else q"$v",
+                  q"val $p = makeParam($paramsVal($idx)).asInstanceOf[$scalaPkg.Either[Err, ${param.paramType}]]",
+                  pq"$scalaPkg.Right($v)",
+                )
               }
 
               // DESNOTE(2019-12-05, pjrt): Due to limits on tuple sizes, and lack of <*>, we split the params
@@ -478,7 +508,7 @@ object Magnolia {
 
         Some(
           q"""{
-            ..$preAssignments
+            ..${caseParams.map(_.typeclass)}
             val $paramsVal: $scalaPkg.Array[$magParamType[$typeConstructor, $genericType]] =
               new $scalaPkg.Array(${assignments.length})
             ..$assignments
@@ -553,7 +583,7 @@ object Magnolia {
           .find { cls =>
             cls.asType.toType.decl(TermName("fallback")) != NoSymbol
           }.map { _ =>
-            c.warning(c.enclosingPosition, s"magnolia: using fallback derivation for $genericType")
+            warning(s"using fallback derivation for $genericType")
             q"""${c.prefix}.fallback[$genericType]"""
           }
       } else None
