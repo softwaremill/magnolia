@@ -203,6 +203,7 @@ object Exactly {
 }
 
 case class ParamsWithDefault(a: Int = 3, b: Int = 4)
+case class ParamsWithDefaultGeneric[A, B](a: A = "A", b: B = "B")
 
 sealed trait Parent
 trait BadChild extends Parent // escape hatch!
@@ -227,27 +228,27 @@ object Tests extends TestApp {
     }.assert(_ == "Person(name=John Smith,age=34)")
 
     test("construct a Show instance for product with partially private fields") {
-      implicit val showLong: Show[String, Long] = _.toString
-      Show.gen[Abc].show(Abc(12, 54L, "pm"))
-    }.assert(_ == "Abc(a=12,b=54,c=pm)")
+      Show.gen[Abc].show(Abc(12, 54, "pm"))
+    }.assert(_ == "Abc(a=12,b=54L,c=pm)")
 
     test("construct a Show instance for value case class") {
       Show.gen[ServiceName1].show(ServiceName1("service"))
     }.assert(_ == "service")
 
-    test("construct a Show instance for product with multiple default values") {
-      implicit val showLong: Show[String, Long] = _.toString
+    test("construct a Show instance for a product with multiple default values") {
       Show.gen[ParamsWithDefault].show(ParamsWithDefault())
     }.assert(_ == "ParamsWithDefault(a=3,b=4)")
+
+    test("construct a HasDefault instance for a generic product with default values") {
+      HasDefault.gen[ParamsWithDefaultGeneric[String, Int]].defaultValue
+    }.assert(_ == Right(ParamsWithDefaultGeneric("A", 0)))
 
     test("serialize a Branch") {
       implicitly[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
     }.assert(_ == "Branch[String](left=Leaf[String](value=LHS),right=Leaf[String](value=RHS))")
 
     test("local implicit beats Magnolia") {
-      implicit val showPerson: Show[String, Person] = new Show[String, Person] {
-        def show(p: Person) = "nobody"
-      }
+      implicit val showPerson: Show[String, Person] = _ => "nobody"
       implicitly[Show[String, Address]].show(Address("Home", Person("John Smith", 44)))
     }.assert(_ == "Address(line1=Home,occupant=nobody)")
 
@@ -566,12 +567,12 @@ object Tests extends TestApp {
 
     test("show chained error stack") {
       scalac"""
-        Show.gen[(Int, Seq[(Long, String)])]
+        Show.gen[(Int, Seq[(Double, String)])]
       """
-    } assert { _ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type Long
-        |    in parameter '_1' of product type (Long, String)
-        |    in chained implicit Show.Typeclass for type Seq[(Long, String)]
-        |    in parameter '_2' of product type (Int, Seq[(Long, String)])
+    } assert { _ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type Double
+        |    in parameter '_1' of product type (Double, String)
+        |    in chained implicit Show.Typeclass for type Seq[(Double, String)]
+        |    in parameter '_2' of product type (Int, Seq[(Double, String)])
         |""") }
 
     test("show chained error stack when leaf instance is missing") {

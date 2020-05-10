@@ -75,19 +75,15 @@ trait GenericShow[Out] {
 /** companion object to [[Show]] */
 object Show extends GenericShow[String] {
 
-  /** show typeclass for strings */
-  implicit val string: Show[String, String] = (s: String) => s
-
+  def prefix(s: String, out: String): String = s + out
   def join(typeName: String, params: Seq[String]): String =
     params.mkString(s"$typeName(", ",", ")")
-  def prefix(s: String, out: String): String = s + out
 
-  /** show typeclass for integers */
-  implicit val int: Show[String, Int] = (s: Int) => s.toString
+  implicit val string: Show[String, String] = identity
+  implicit val int: Show[String, Int] = _.toString
+  implicit val long: Show[String, Long] = _.toString + "L"
 
   /** show typeclass for sequences */
   implicit def seq[A](implicit A: Show[String, A]): Show[String, Seq[A]] =
-    new Show[String, Seq[A]] {
-      def show(as: Seq[A]): String = as.iterator.map(A.show).mkString("[", ",", "]")
-    }
+    _.iterator.map(A.show).mkString("[", ",", "]")
 }
