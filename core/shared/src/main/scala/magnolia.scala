@@ -137,15 +137,20 @@ object Magnolia {
       * Unlike `clazz.companion` works also for local classes nested in methods/vals/vars.
       */
     def companionOf(clazz: ClassSymbol): Option[Tree] = {
-      val path = ownerChainOf(clazz)
-        .zipAll(ownerChainOf(enclosingOwner), NoSymbol, NoSymbol)
-        .dropWhile { case (x, y) => x == y }
-        .takeWhile(_._1 != NoSymbol)
-        .map(_._1.name.toTermName)
+      val fastCompanion = clazz.companion
+      if (fastCompanion != NoSymbol) {
+        Some(internal.gen.mkAttributedRef(fastCompanion))
+      } else {
+        val path = ownerChainOf(clazz)
+          .zipAll(ownerChainOf(enclosingOwner), NoSymbol, NoSymbol)
+          .dropWhile { case (x, y) => x == y }
+          .takeWhile(_._1 != NoSymbol)
+          .map(_._1.name.toTermName)
 
-      if (path.isEmpty) None else {
-        val companion = c.typecheck(path.foldLeft[Tree](Ident(path.next()))(Select(_, _)), silent = true)
-        if (companion.isEmpty) None else Some(companion)
+        if (path.isEmpty) None else {
+          val companion = c.typecheck(path.foldLeft[Tree](Ident(path.next()))(Select(_, _)), silent = true)
+          if (companion.isEmpty) None else Some(companion)
+        }
       }
     }
 
