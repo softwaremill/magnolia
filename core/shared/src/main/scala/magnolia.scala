@@ -175,9 +175,32 @@ object Magnolia {
     }
 
     def annotationsOf(symbol: Symbol): List[Tree] = symbol.annotations.collect {
-      case annotation if !(annotation.tree.tpe <:< javaAnnotationType) => annotation.tree
+      case annotation if !(annotation.tree.tpe <:< javaAnnotationType) =>
+        annotation.tree
     }
 
+    def typeAnnotationsOf(symbol: Symbol, fromParents: Boolean): List[Tree] = {
+      val tpeAnns = if (fromParents) {
+        val parents = symbol.typeSignature match {
+          case ClassInfoType(ps, _, _) => ps.filterNot(_ == symbol.typeSignature)
+          case _ => Nil
+        }
+
+        parents.flatMap {
+          case AnnotatedType(typeAnnotations, _) => typeAnnotations
+          case _ => Nil
+        }
+      } else {
+        symbol.typeSignature match {
+          case AnnotatedType(typeAnnotations, _) => typeAnnotations
+          case _ =>
+            Nil
+        }
+      }
+
+      tpeAnns.map(_.tree).filterNot(_.tpe <:< javaAnnotationType)
+    }
+    
     val typeDefs = prefixType.baseClasses.flatMap { baseClass =>
       baseClass.asType.toType.decls.collectFirst {
         case tpe: TypeSymbol if tpe.name == typeClassName =>
@@ -282,6 +305,7 @@ object Magnolia {
 
       val isSealedTrait = classType.exists(ct => ct.isSealed && !ct.isJavaEnum)
       val classAnnotationTrees = annotationsOf(typeSymbol)
+      val classTypeAnnotationTrees = typeAnnotationsOf(typeSymbol, true)
 
       val primitives = Set(typeOf[Double],
                            typeOf[Float],
@@ -334,7 +358,8 @@ object Magnolia {
             true,
             false,
             new $scalaPkg.Array(0),
-            $scalaPkg.Array(..$classAnnotationTrees)
+            $scalaPkg.Array(..$classAnnotationTrees),
+            $scalaPkg.Array(..$classTypeAnnotationTrees)
           ) {
             ..$classBody
           })
@@ -359,14 +384,15 @@ object Magnolia {
 
         case class CaseParam(paramName: TermName, repeated: Boolean, typeclass: Tree, paramType: Type, ref: TermName) {
 
-          def compile(params: TermName, idx: Int, default: Option[Tree], annotations: List[Tree]): Tree =
+          def compile(params: TermName, idx: Int, default: Option[Tree], annotations: List[Tree], typeAnnotations: List[Tree]): Tree =
             q"""$params($idx) = $magnoliaPkg.$factoryObject.$factoryMethod[$typeConstructor, $genericType, $paramType](
               ${paramName.toString.trim},
               ${if (isValueClass) q"_.$paramName" else q"$idx"},
               $repeated,
               $magnoliaPkg.CallByNeed($ref),
               ..${default.toList.map(d => q"$magnoliaPkg.CallByNeed($d)")},
-              $scalaPkg.Array(..$annotations)
+              $scalaPkg.Array(..$annotations),
+              $scalaPkg.Array(..$typeAnnotations)
             )"""
         }
 
@@ -401,10 +427,11 @@ object Magnolia {
         val paramsWithIndex = caseParams.zipWithIndex
         val paramsVal = c.freshName(TermName("parameters"))
         val annotations = headParamList.getOrElse(Nil).map(annotationsOf(_))
+        val typeAnnotations = headParamList.getOrElse(Nil).map(typeAnnotationsOf(_, false))
 
         val assignments = if (isReadOnlyTypeclass) {
-          for (((param, idx), annList) <- paramsWithIndex zip annotations)
-            yield param.compile(paramsVal, idx, None, annList)
+          for ((((param, idx), annList), tpeAnnList) <- paramsWithIndex zip annotations zip typeAnnotations)
+            yield param.compile(paramsVal, idx, None, annList, tpeAnnList)
         } else {
           val defaults = headParamList.fold[List[Tree]](Nil) { params =>
             val none = reify(None).tree
@@ -423,9 +450,9 @@ object Magnolia {
               }
             }
           }
-
-          for ((((param, idx), default), annList) <- paramsWithIndex zip defaults zip annotations)
-            yield param.compile(paramsVal, idx, Some(default), annList)
+          
+          for (((((param, idx), default), annList), typeAnnList) <- paramsWithIndex zip defaults zip annotations zip typeAnnotations)
+            yield param.compile(paramsVal, idx, Some(default), annList, typeAnnList)
         }
 
         val caseClassBody = if (isReadOnlyTypeclass) List(EmptyTree) else {
@@ -523,7 +550,8 @@ object Magnolia {
               false,
               $isValueClass,
               $paramsVal,
-              $scalaPkg.Array(..$classAnnotationTrees)
+              $scalaPkg.Array(..$classAnnotationTrees),
+              $scalaPkg.Array(..$classTypeAnnotationTrees)
             ) {
                 ..$caseClassBody
             })
@@ -561,6 +589,7 @@ object Magnolia {
             ${typeNameRec(typ)},
             $idx,
             $scalaPkg.Array(..${annotationsOf(typ.typeSymbol)}),
+            $scalaPkg.Array(..${typ.baseClasses.flatMap(typeAnnotationsOf(_, true))}),
             _root_.magnolia.CallByNeed($typeclass),
             (t: $genericType) => t.isInstanceOf[$typ],
             (t: $genericType) => t.asInstanceOf[$typ]
@@ -578,7 +607,8 @@ object Magnolia {
             ${c.prefix}.dispatch(new $magnoliaPkg.SealedTrait(
               $typeName,
               $subtypesVal: $scalaPkg.Array[$magnoliaPkg.Subtype[$typeConstructor, $genericType]],
-              $scalaPkg.Array(..$classAnnotationTrees)
+              $scalaPkg.Array(..$classAnnotationTrees),
+              $scalaPkg.Array(..$classTypeAnnotationTrees)
             ))
           }""")
       } else if (!typeSymbol.isParameter) {
@@ -624,25 +654,28 @@ object Magnolia {
   private[Magnolia] def subtype[Tc[_], T, S <: T](name: TypeName,
                                 idx: Int,
                                 anns: Array[Any],
+                                tpeAnns: Array[Any],
                                 tc: CallByNeed[Tc[S]],
                                 isType: T => Boolean,
-                                asType: T => S): Subtype[Tc, T] = Subtype(name, idx, anns, tc, isType, asType)
+                                asType: T => S): Subtype[Tc, T] = Subtype(name, idx, anns, tpeAnns, tc, isType, asType)
 
   private[Magnolia] def readOnlyParam[Tc[_], T, P](
     name: String,
     idx: Int,
     isRepeated: Boolean,
     typeclassParam: CallByNeed[Tc[P]],
-    annotationsArrayParam: Array[Any]
-  ): ReadOnlyParam[Tc, T] = ReadOnlyParam(name, idx, isRepeated, typeclassParam, annotationsArrayParam)
+    annotationsArrayParam: Array[Any],
+    typeAnnotationsArrayParam: Array[Any]
+  ): ReadOnlyParam[Tc, T] = ReadOnlyParam(name, idx, isRepeated, typeclassParam, annotationsArrayParam, typeAnnotationsArrayParam)
 
   private[Magnolia] def readOnlyValueParam[Tc[_], T, P](
     name: String,
     deref: T => P,
     isRepeated: Boolean,
     typeclassParam: CallByNeed[Tc[P]],
-    annotationsArrayParam: Array[Any]
-  ): ReadOnlyParam[Tc, T] = ReadOnlyParam.valueParam(name, deref, isRepeated, typeclassParam, annotationsArrayParam)
+    annotationsArrayParam: Array[Any],
+    typeAnnotationsArrayParam: Array[Any]
+  ): ReadOnlyParam[Tc, T] = ReadOnlyParam.valueParam(name, deref, isRepeated, typeclassParam, annotationsArrayParam, typeAnnotationsArrayParam)
 
   /** constructs a new [[Param]] instance
     *
@@ -653,16 +686,18 @@ object Magnolia {
                          isRepeated: Boolean,
                          typeclassParam: CallByNeed[Tc[P]],
                          defaultVal: CallByNeed[Option[P]],
-                         annotationsArrayParam: Array[Any]
-                        ): Param[Tc, T] = Param.apply(name, idx, isRepeated, typeclassParam, defaultVal, annotationsArrayParam)
+                         annotationsArrayParam: Array[Any],
+                         typeAnnotationsArrayParam: Array[Any]
+                        ): Param[Tc, T] = Param.apply(name, idx, isRepeated, typeclassParam, defaultVal, annotationsArrayParam, typeAnnotationsArrayParam)
 
   private[Magnolia] def valueParam[Tc[_], T, P](name: String,
                          deref: T => P,
                          isRepeated: Boolean,
                          typeclassParam: CallByNeed[Tc[P]],
                          defaultVal: CallByNeed[Option[P]],
-                         annotationsArrayParam: Array[Any]
-                        ): Param[Tc, T] = Param.valueParam(name, deref, isRepeated, typeclassParam, defaultVal, annotationsArrayParam)
+                         annotationsArrayParam: Array[Any],
+                         typeAnnotationsArrayParam: Array[Any]
+                        ): Param[Tc, T] = Param.valueParam(name, deref, isRepeated, typeclassParam, defaultVal, annotationsArrayParam, typeAnnotationsArrayParam)
 
   private[Magnolia] final def checkParamLengths(fieldValues: Seq[Any], paramsLength: Int, typeName: String): Unit = MagnoliaUtil.checkParamLengths(fieldValues, paramsLength, typeName)
 
