@@ -44,18 +44,24 @@ trait GenericShow[Out] {
         val attribStr = if(param.annotations.isEmpty) "" else {
           param.annotations.mkString("{", ", ", "}")
         }
-        s"${param.label}$attribStr=${param.typeclass.show(param.dereference(value))}"
+        val tpeAttribStr = if (param.typeAnnotations.isEmpty) "" else {
+          param.typeAnnotations.mkString("{", ", ", "}")
+        }
+        s"${param.label}$attribStr$tpeAttribStr=${param.typeclass.show(param.dereference(value))}"
       }
 
       val anns = ctx.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
+
+      val tpeAnns = ctx.typeAnnotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
+      val typeAnnotationStr = if (tpeAnns.isEmpty) "" else tpeAnns.mkString("{", ",", "}")
 
 
       def typeArgsString(typeName: TypeName): String =
         if (typeName.typeArguments.isEmpty) ""
         else typeName.typeArguments.map(arg => s"${ arg.short}${ typeArgsString(arg)}").mkString("[", ",", "]")
 
-      join(ctx.typeName.short + typeArgsString(ctx.typeName) + annotationStr, paramStrings)
+      join(ctx.typeName.short + typeArgsString(ctx.typeName) + annotationStr + typeAnnotationStr, paramStrings)
     }
   }
 
@@ -65,6 +71,7 @@ trait GenericShow[Out] {
     ctx.dispatch(value) { sub =>
       val anns = sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
+
       prefix(annotationStr, sub.typeclass.show(sub.cast(value)))
     }
 
