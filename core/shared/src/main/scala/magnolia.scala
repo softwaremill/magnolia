@@ -305,7 +305,7 @@ object Magnolia {
         q"$magnoliaPkg.TypeName(${ts.owner.fullName}, ${ts.name.decodedName.toString}, $typeArgNames)"
       }
 
-      val typeNameDef = q"val $typeName = ${typeNameRec(genericType)}"
+      val typeNameDef = q"val $typeName = ${typeNameRec(genericType.dealias)}"
 
       val result = if (isRefinedType) {
         error(s"could not infer $prefixName.Typeclass for refined type $genericType")

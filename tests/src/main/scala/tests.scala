@@ -608,6 +608,12 @@ object Tests extends TestApp {
       Show.gen[Path[String]].show(OffRoad(Some(Crossroad(Destination("A"), Destination("B")))))
     }.assert(_ == "OffRoad[String](path=Crossroad[String](left=Destination[String](value=A),right=Destination[String](value=B)))")
 
+    test("resolve aliases for type names") {
+      type LO[X] = Leaf[Option[X]]
+
+      Show.gen[LO[String]].show(Leaf(None))
+    }.assert(_.contains("Leaf[Option[String]]"))
+
     test("capture attributes against params") {
       Show.gen[Attributed].show(Attributed("xyz", 100))
     }.assert(_ == "Attributed{MyAnnotation(0)}(p1{MyAnnotation(1)}=xyz,p2{MyAnnotation(2)}=100)")
