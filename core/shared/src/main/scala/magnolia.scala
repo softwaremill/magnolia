@@ -204,15 +204,13 @@ object Magnolia {
       classWithTerm.asType.toType.decl(term).asTerm.asMethod.paramLists.head
     }
 
-    val firstParameterTypeName: Option[String] = {
+    lazy val (isReadOnlyTypeclass, magCaseClassType, magParamType) = {
       val parametersForCombine = extractParameterBlockFor("combine", "case classes")
-      parametersForCombine.headOption.map(_.typeSignature.typeConstructor.typeSymbol.fullName)
-    }
-
-    val (isReadOnlyTypeclass, magCaseClassType, magParamType) = firstParameterTypeName match {
-      case Some("magnolia.ReadOnlyCaseClass") => (true, tq"$magnoliaPkg.ReadOnlyCaseClass", tq"$magnoliaPkg.ReadOnlyParam")
-      case Some("magnolia.CaseClass") => (false, tq"$magnoliaPkg.CaseClass", tq"$magnoliaPkg.Param")
-      case _ => error("Parameter for `combine` needs be either magnolia.CaseClass or magnolia.ReadOnlyCaseClass")
+      parametersForCombine.headOption.map(_.typeSignature.typeConstructor.typeSymbol.fullName) match {
+        case Some("magnolia.ReadOnlyCaseClass") => (true, tq"$magnoliaPkg.ReadOnlyCaseClass", tq"$magnoliaPkg.ReadOnlyParam")
+        case Some("magnolia.CaseClass") => (false, tq"$magnoliaPkg.CaseClass", tq"$magnoliaPkg.Param")
+        case _ => error("Parameter for `combine` needs be either magnolia.CaseClass or magnolia.ReadOnlyCaseClass")
+      }
     }
 
     // fullauto means we should directly infer everything, including external
