@@ -108,7 +108,15 @@ final case class ServiceName2(value: String)
 
 sealed abstract class Halfy
 final case class Lefty() extends Halfy
+object Lefty {
+  implicit val noCombine: NoCombine[Lefty] =
+    NoCombine.instance(_ => "Lefty")
+}
 final case class Righty() extends Halfy
+object Righty {
+  implicit val noCombine: NoCombine[Righty] =
+    NoCombine.instance(_ => "Righty")
+}
 
 @MyAnnotation(0)
 @SuppressWarnings(Array("deprecation"))
@@ -713,5 +721,9 @@ object Tests extends TestApp {
     }.assert {
       _ == TypecheckError("magnolia: child class Dewey of trait GoodChild is neither final nor a case class")
     }
+
+    test("support dispatch without combine") {
+      implicitly[NoCombine[Halfy]].nameOf(Righty())
+    }.assert(_ == "Righty")
   }
 }
