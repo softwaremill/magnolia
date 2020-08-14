@@ -16,7 +16,4 @@ object GenComplex {
   Eq.gen[adt.Country]
   Eq.gen[adt.Country]
   Eq.gen[adt.Country]
-  Eq.gen[adt.Country]
-  Eq.gen[adt.Country]
-  Eq.gen[adt.Country]
 }
