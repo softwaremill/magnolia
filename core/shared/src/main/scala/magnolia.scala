@@ -174,31 +174,33 @@ object Magnolia {
       }
     }
 
-    def annotationsOf(symbol: Symbol): List[Tree] = symbol.annotations.collect {
-      case annotation if !(annotation.tree.tpe <:< javaAnnotationType) =>
-        annotation.tree
-    }
+    def annotationTrees(annotations: List[Annotation]): List[Tree] =
+      annotations.collect {
+        case annotation if !(annotation.tree.tpe <:< javaAnnotationType) =>
+          annotation.tree
+      }
+
+    def annotationsOf(symbol: Symbol): List[Tree] =
+      annotationTrees(symbol.annotations)
 
     def typeAnnotationsOf(symbol: Symbol, fromParents: Boolean): List[Tree] = {
-      val tpeAnns = if (fromParents) {
-        val parents = symbol.typeSignature match {
-          case ClassInfoType(ps, _, _) => ps.filterNot(_ == symbol.typeSignature)
-          case _ => Nil
-        }
-
-        parents.flatMap {
-          case AnnotatedType(typeAnnotations, _) => typeAnnotations
+      val typeAnnotations = if (fromParents) {
+        symbol.typeSignature match {
+          case ClassInfoType(parents, _, _) =>
+            parents.flatMap {
+              case AnnotatedType(typeAnnotations, _) => typeAnnotations
+              case _ => Nil
+            }
           case _ => Nil
         }
       } else {
         symbol.typeSignature match {
           case AnnotatedType(typeAnnotations, _) => typeAnnotations
-          case _ =>
-            Nil
+          case _ => Nil
         }
       }
 
-      tpeAnns.map(_.tree).filterNot(_.tpe <:< javaAnnotationType)
+      annotationTrees(typeAnnotations)
     }
     
     val typeDefs = prefixType.baseClasses.flatMap { baseClass =>
@@ -305,7 +307,7 @@ object Magnolia {
 
       val isSealedTrait = classType.exists(ct => ct.isSealed && !ct.isJavaEnum)
       val classAnnotationTrees = annotationsOf(typeSymbol)
-      val classTypeAnnotationTrees = typeAnnotationsOf(typeSymbol, true)
+      val classTypeAnnotationTrees = typeAnnotationsOf(typeSymbol, fromParents = true)
 
       val primitives = Set(typeOf[Double],
                            typeOf[Float],
@@ -427,7 +429,7 @@ object Magnolia {
         val paramsWithIndex = caseParams.zipWithIndex
         val paramsVal = c.freshName(TermName("parameters"))
         val annotations = headParamList.getOrElse(Nil).map(annotationsOf(_))
-        val typeAnnotations = headParamList.getOrElse(Nil).map(typeAnnotationsOf(_, false))
+        val typeAnnotations = headParamList.getOrElse(Nil).map(typeAnnotationsOf(_, fromParents = false))
 
         val assignments = if (isReadOnlyTypeclass) {
           for ((((param, idx), annList), tpeAnnList) <- paramsWithIndex zip annotations zip typeAnnotations)
@@ -584,16 +586,17 @@ object Magnolia {
         }
 
         val assignments = typeclasses.zipWithIndex.map {
-          case ((typ, typeclass), idx) =>
-            q"""$subtypesVal($idx) = $magnoliaPkg.Subtype.apply[$typeConstructor, $genericType, $typ](
-            ${typeNameRec(typ)},
-            $idx,
-            $scalaPkg.Array(..${annotationsOf(typ.typeSymbol)}),
-            $scalaPkg.Array(..${typ.baseClasses.flatMap(typeAnnotationsOf(_, true))}),
-            _root_.magnolia.CallByNeed($typeclass),
-            (t: $genericType) => t.isInstanceOf[$typ],
-            (t: $genericType) => t.asInstanceOf[$typ]
-          )"""
+          case ((subType, typeclass), idx) =>
+            val symbol = subType.typeSymbol
+            q"""$subtypesVal($idx) = $magnoliaPkg.Subtype.apply[$typeConstructor, $genericType, $subType](
+              ${typeNameRec(subType)},
+              $idx,
+              $scalaPkg.Array(..${annotationsOf(symbol)}),
+              $scalaPkg.Array(..${typeAnnotationsOf(symbol, fromParents = true)}),
+              _root_.magnolia.CallByNeed($typeclass),
+              (t: $genericType) => t.isInstanceOf[$subType],
+              (t: $genericType) => t.asInstanceOf[$subType]
+            )"""
         }
 
         Some(q"""{
