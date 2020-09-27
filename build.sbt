@@ -1,7 +1,7 @@
 import com.softwaremill.PublishTravis.publishTravisSettings
 
-val v2_12 = "2.12.11"
-val v2_13 = "2.13.1"
+val v2_12 = "2.12.12"
+val v2_13 = "2.13.3"
 
 lazy val core = crossProject(JVMPlatform, JSPlatform)
   .in(file("core"))
@@ -42,7 +42,7 @@ lazy val tests = project
       // These two to allow compilation under Java 9...
       // Specifically to import XML stuff that got modularised
       "javax.xml.bind" % "jaxb-api" % "2.3.1" % "compile",
-      "com.sun.xml.bind" % "jaxb-impl" % "2.3.2" % "compile"
+      "com.sun.xml.bind" % "jaxb-impl" % "2.3.3" % "compile"
     )
   )
   // compiling and running the tests only for 2.12
