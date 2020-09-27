@@ -452,3 +452,11 @@ object MagnoliaUtil {
     values.toList.collect { case Left(v) => v }
 
 }
+
+/**
+ * Marker trait for annotations which when encountered on either a parameter or a constructor,
+ * the derivation will not look for a typeclass instance, instead bind the typeclass parameter
+ * on the interface to the 'bind[A]: Typeclass[A]' method of the enclosing class.
+ *
+ * */
+trait RuntimeBoundTypeclass

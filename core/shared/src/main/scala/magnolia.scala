@@ -261,6 +261,14 @@ object Magnolia {
       case _ => false
     }
 
+    def isRuntimeBoundTypeclassAnnotation(typ: Tree): Boolean = {
+      val e = c.Expr[Any](c.typecheck(q"new magnolia.TypeCheckHelper[$typ]"))
+      val t = e.actualType match {
+        case TypeRef(_, _, params) => params.head
+      }
+      t <:< typeOf[RuntimeBoundTypeclass]
+    }
+
     val expandDeferred = new Transformer {
       override def transform(tree: Tree): Tree = tree match {
         case DeferredRef(method) => q"${TermName(method)}"
@@ -420,8 +428,9 @@ object Magnolia {
             )"""
         }
 
-        val caseParamsReversed = caseClassParameters.foldLeft[List[CaseParam]](Nil) {
-          (acc, param) =>
+        val annotations = headParamList.getOrElse(Nil).map(annotationsOf(_))
+        val caseParamsReversed = (caseClassParameters zip annotations).foldLeft[List[CaseParam]](Nil) {
+          case (acc, (param, anns)) =>
             val paramName = param.name.decodedName.toTermName
             val (repeated, paramType) = param.typeSignatureIn(genericType).resultType match {
               case TypeRef(_, symbol, typeArgs) if symbol == RepeatedParamClass =>
@@ -439,8 +448,18 @@ object Magnolia {
                 val ref = c.freshName(TermName("paramTypeclass"))
                 val derivedImplicit = stack.recurse(frame, searchType, shouldCache) {
                   typeclassTree(paramType, typeConstructor, ref)
-                }.fold(error, identity)
-                val assigned = deferredVal(ref, searchType, derivedImplicit)
+                }
+
+                val isRuntimeBound = anns.exists {
+                  case Apply(Select(New(typeTree), _), _) if isRuntimeBoundTypeclassAnnotation(typeTree) => true
+                  case _ => false
+                }
+                val assigned =
+                  if (isRuntimeBound) {
+                    q"def $ref = ${c.prefix}.bind[$paramType]"
+                  } else {
+                    deferredVal(ref, searchType, derivedImplicit.fold(error, identity))
+                  }
                 CaseParam(paramName, repeated, assigned, paramType, ref) :: acc
               } { backRef =>
                 CaseParam(paramName, repeated, q"()", paramType, backRef.ref) :: acc
@@ -450,7 +469,6 @@ object Magnolia {
         val caseParams = caseParamsReversed.reverse
         val paramsWithIndex = caseParams.zipWithIndex
         val paramsVal = c.freshName(TermName("parameters"))
-        val annotations = headParamList.getOrElse(Nil).map(annotationsOf(_))
         val typeAnnotations = headParamList.getOrElse(Nil).map(typeAnnotationsOf(_, fromParents = false))
 
         val assignments = if (isReadOnly) {
@@ -577,11 +595,21 @@ object Magnolia {
 
         val subtypesVal = c.freshName(TermName("subtypes"))
         val typeclasses = for (subType <- subtypes) yield {
+          val anns = annotationsOf(subType.typeSymbol)
           val path = CoproductType(genericType.toString)
           val frame = stack.Frame(path, resultType, assignedName)
-          subType -> stack.recurse(frame, appliedType(typeConstructor, subType), shouldCache) {
-            typeclassTree(subType, typeConstructor, termNames.ERROR)
-          }.fold(error, identity)
+          val isRuntimeBound = anns.exists {
+            case Apply(Select(New(typeTree), _), _) if isRuntimeBoundTypeclassAnnotation(typeTree) => true
+            case _ => false
+          }
+
+          subType -> (if (isRuntimeBound) {
+            q"${c.prefix}.bind[$subType]"
+          } else {
+            stack.recurse(frame, appliedType(typeConstructor, subType), shouldCache) {
+              typeclassTree(subType, typeConstructor, termNames.ERROR)
+            }.fold(error, identity)
+          })
         }
 
         val assignments = typeclasses.zipWithIndex.map {
@@ -820,3 +848,5 @@ final class CallByNeed[+A](private[this] var eval: () => A) extends Serializable
     result
   }
 }
+
+class TypeCheckHelper[T]
