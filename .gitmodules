@@ -1,0 +1,3 @@
+[submodule ".admin"]
+	path = .admin
+	url = git@github.com:propensive/admin

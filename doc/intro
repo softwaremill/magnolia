@@ -1,0 +1,5 @@
+__Magnolia__ is a generic macro for automatic materialization of typeclasses for
+datatypes composed from *case classes* (products) and *sealed traits*
+(coproducts). It supports recursively-defined datatypes out-of-the-box, and
+incurs no significant time-penalty during compilation. If derivation fails,
+error messages are detailed and informative.

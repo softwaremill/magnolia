@@ -1,0 +1,53 @@
+#!/bin/bash
+#
+# This is the Fury launcher script, which will download and run Fury in "standalone" mode. You can
+# distribute this file in a Git repository to make it easier for users to run Fury.
+#
+# Copyright 2018-20 Jon Pretty, Propensive OÜ.
+#
+
+version="0.16.1"
+ipfsHash="QmUco35V6UCX3pMHtmFNTVB7jNj2nwmCPp3VVG6pN2vzFE"
+xdgUsrHome="${XDG_DATA_HOME:-"$HOME/.local/share"}"
+xdgSysHome="${XDG_DATA_HOME:-/usr/share}"
+xdgHome="$([ "$EUID" = "0" ] && echo "${xdgSysHome}" || echo "${xdgUsrHome}")"
+furyDir="${xdgHome}/fury"
+furyUsr="${furyDir}/usr"
+currentDir="${furyUsr}/current"
+currentVersion="$(head -n1 "${currentDir}/.version" 2> /dev/null || echo "")"
+downloadDir="${furyDir}/downloads"
+downloadFile="${downloadDir}/fury-${version}.tar.gz"
+ipfsGateway="https://gateway.pinata.cloud/ipfs"
+downloadUrl="${ipfsGateway}/${ipfsHash}"
+installDir="${furyUsr}/$([ "${currentVersion}" = "${version}" ] && echo "current" || echo "${version}")"
+args="$@"
+
+installFury() {
+  mkdir -p "${downloadDir}"
+  printf "Downloading Fury ${version}..."
+  command -v curl > /dev/null || fail curl
+  [ -f "${downloadFile}" ] || curl -Lso "${downloadFile}" "${downloadUrl}" || fail download
+  printf "done\n"
+  printf "Extracting Fury ${version} into ${installDir}..."
+  command -v tar > /dev/null || fail tar
+  mkdir -p "${installDir}" && tar xf "${downloadFile}" -C "${installDir}" || fail extract
+  printf "done\n"
+}
+
+runFury() {
+  printf "Launching Fury ${version} in standalone mode...\n"
+  FURY_HOME="${installDir}" "${installDir}/bin/fury" standalone ${args}
+}
+
+fail() {
+  printf "fail\n"
+  case "$1" in
+    curl)     printf "Could not find `curl` to download Fury\n" ;;
+    download) printf "Could not download Fury version ${version}\n" ;;
+    tar)      printf "Could not find `tar` to extract Fury\n" ;;
+    extract)  printf "Could not extract Fury\n" ;;
+  esac
+  exit 1
+}
+
+([ -d "${installDir}" ] || [ "${currentVersion}" = "${version}" ] || installFury) && runFury
