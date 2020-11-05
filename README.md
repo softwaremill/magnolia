@@ -1,5 +1,9 @@
-[![Latest version](https://index.scala-lang.org/propensive/magnolia/latest.svg)](https://index.scala-lang.org/propensive/magnolia)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.propensive/magnolia_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.propensive/magnolia_2.12)
+[<img src="https://img.shields.io/gitter/room/propensive/magnolia?color=f00762&style=for-the-badge" height="24">](https://gitter.im/propensive/magnolia)
+[<img src="https://img.shields.io/discord/633198088311537684?color=8899f7&label=DISCORD&style=for-the-badge" height="24">](https://discord.gg/CHCPjERybv)
+[<img src="https://img.shields.io/matrix/propensive.magnolia:matrix.org?label=MATRIX&color=0dbd8b&style=for-the-badge" height="24">](https://app.element.io/#/room/#propensive.magnolia:matrix.org)
+[<img src="https://img.shields.io/twitter/follow/propensive?color=%2300acee&label=TWITTER&style=for-the-badge" height="24">](https://twitter.com/propensive)
+[<img src="https://img.shields.io/maven-central/v/com.propensive/magnolia-core_2.12?color=2465cd&style=for-the-badge" height="24">](https://search.maven.org/artifact/com.propensive/magnolia-core_2.12)
+[<img src="https://img.shields.io/badge/Vent-propensive%2Fmagnolia-f05662?style=for-the-badge" height="24">](https://vent.dev)
 
 # Magnolia
 
