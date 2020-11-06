@@ -1,21 +1,23 @@
-/* Magnolia, version 0.7.1. Copyright 2018 Jon Pretty, Propensive Ltd.
- *
- * The primary distribution site is: http://co.ntextu.al/
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
- * either express or implied. See the License for the specific language governing permissions
- * and limitations under the License.
- */
+/*
+
+    Magnolia, version 0.17.0. Copyright 2018-20 Jon Pretty, Propensive OÜ.
+
+    The primary distribution site is: https://propensive.com/
+
+    Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
+    compliance with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software distributed under the License is
+    distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and limitations under the License.
+
+*/
 package magnolia.tests
 
 import language.experimental.macros
-import estrapade.{TestApp, test}
+import probably._
 import contextual.data.scalac._
 import contextual.data.fqt._
 import contextual.data.txt._
@@ -221,9 +223,9 @@ final case class Huey(height: Int) extends GoodChild
 class Dewey(val height: Int) extends GoodChild
 final case class Louie(height: Int) extends BadChild
 
-object Tests extends TestApp {
+object Tests extends Suite("Magnolia tests") {
 
-  def tests(): Unit = for (_ <- 1 to 1) {
+  def run(test: Runner): Unit = for (_ <- 1 to 1) {
     test("construct a Show product instance with alternative apply functions") {
       Show.gen[Test].show(Test("a", "b"))
     }.assert(_ == """Test(param=Param(a=a,b=b))""")
@@ -438,10 +440,10 @@ object Tests extends TestApp {
 
     val tupleDerivation = test("derive for a tuple") {
       implicitly[Show[String, (Int, String)]]
-    }.returns()
+    }.check { _ => true }
 
     test("serialize a tuple") {
-      tupleDerivation().show((42, "Hello World"))
+      tupleDerivation.show((42, "Hello World"))
     }.assert(_ == "Tuple2[Int,String](_1=42,_2=Hello World)")
 
     test("serialize a value class") {
