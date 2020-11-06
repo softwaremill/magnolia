@@ -46,7 +46,7 @@ lazy val examples = (project in file(".examples"))
     scalacOptions ++= Seq("-Xexperimental", "-Xfuture"),
     name := "magnolia-examples",
     Compile / scalaSource := baseDirectory.value / ".." / "src" / "examples",
-    libraryDependencies += "com.propensive" %% "magnolia" % "0.16.0",
+    libraryDependencies += "com.propensive" %% "magnolia" % "0.17.0",
   )
 
 lazy val test = (project in file(".test"))
@@ -54,6 +54,6 @@ lazy val test = (project in file(".test"))
   .settings(
     name := "magnolia-test",
     Compile / scalaSource := baseDirectory.value / ".." / "src" / "test",
-    libraryDependencies += "com.propensive" %% "probably-cli" % "0.4.0",
-    libraryDependencies += "com.propensive" %% "contextual-data" % "1.2.1"
+    libraryDependencies += "com.propensive" %% "probably-cli" % "0.5.0",
+    libraryDependencies += "com.propensive" %% "contextual-examples" % "1.5.0"
   )
