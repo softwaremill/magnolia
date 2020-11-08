@@ -732,5 +732,13 @@ object Tests extends TestApp {
     test("support dispatch without combine") {
       implicitly[NoCombine[Halfy]].nameOf(Righty())
     }.assert(_ == "Righty")
+
+    test("support forcing the fallback method to constructors via annotations") {
+      implicitly[PartialSemiDefault[PartialSemiDefaultExample.Data]].default
+    }.assert(_ == PartialSemiDefaultExample.Data1(10, ""))
+
+    test("support forcing the fallback method to parameters via annotations") {
+      implicitly[PartialSemiDefault[PartialSemiDefaultExample.Data2]].default
+    }.assert(_ == PartialSemiDefaultExample.Data2(PartialSemiDefaultExample.Data1(10, ""), 3.14, PartialSemiDefaultExample.fallbackUUID))
   }
 }

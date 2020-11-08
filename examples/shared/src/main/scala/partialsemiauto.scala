@@ -1,3 +1,5 @@
+package magnolia.examples
+
 import java.util.UUID
 import scala.language.experimental.macros
 import magnolia._
@@ -48,10 +50,12 @@ object PartialSemiDefault {
   implicit val string: PartialSemiDefault[String] = new PartialSemiDefault[String] { def default = "" }
   implicit val int: PartialSemiDefault[Int] = new PartialSemiDefault[Int] { def default = 0 }
 
-  @debug() def gen[T]: PartialSemiDefault[T] = macro Magnolia.gen[T]
+  def gen[T]: PartialSemiDefault[T] = macro Magnolia.gen[T]
 }
 
-object PartialSemiDefaultTest extends App {
+object PartialSemiDefaultExample extends App {
+  val fallbackUUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
+
   sealed trait Data
   object Data {
     implicit val d1: PartialSemiDefault[Data] = PartialSemiDefault.gen
@@ -65,7 +69,7 @@ object PartialSemiDefaultTest extends App {
 
   // Data2's Double and UUID does not have an implicit typeclass instance. Even though we provide a default value,
   // without the annotation Magnolia would fail on implicit not found
-  case class Data2(c: Data1, @ForceProvidedDefault d: Double = 3.14, @ForceProvidedDefault e: UUID = UUID.randomUUID()) extends Data
+  case class Data2(c: Data1, @ForceProvidedDefault d: Double = 3.14, @ForceProvidedDefault e: UUID = fallbackUUID) extends Data
   object Data2 {
     implicit val d: PartialSemiDefault[Data2] = PartialSemiDefault.gen
   }
@@ -73,8 +77,4 @@ object PartialSemiDefaultTest extends App {
   // Data3 is non derivable as it has no default for parameter f, and we don't have a default typeclass instance for UUID,
   // but by marking it with the annotation we can ignore it in dispatch
   @NoDefault case class Data3(f: UUID) extends Data
-
-  println(implicitly[PartialSemiDefault[Data]].default)
-  println(implicitly[PartialSemiDefault[Data1]].default)
-  println(implicitly[PartialSemiDefault[Data2]].default)
 }
