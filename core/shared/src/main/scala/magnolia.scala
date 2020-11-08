@@ -261,12 +261,12 @@ object Magnolia {
       case _ => false
     }
 
-    def isRuntimeBoundTypeclassAnnotation(typ: Tree): Boolean = {
-      val e = c.Expr[Any](c.typecheck(q"new magnolia.TypeCheckHelper[$typ]"))
+    def isForceFallbackDerivationAnnotation(typ: Tree): Boolean = {
+      val e = c.Expr[Any](c.typecheck(q"new _root_.magnolia.TypeCheckHelper[$typ]"))
       val t = e.actualType match {
         case TypeRef(_, _, params) => params.head
       }
-      t <:< typeOf[RuntimeBoundTypeclass]
+      t <:< typeOf[ForceFallbackDerivation]
     }
 
     val expandDeferred = new Transformer {
@@ -450,13 +450,13 @@ object Magnolia {
                   typeclassTree(paramType, typeConstructor, ref)
                 }
 
-                val isRuntimeBound = anns.exists {
-                  case Apply(Select(New(typeTree), _), _) if isRuntimeBoundTypeclassAnnotation(typeTree) => true
+                val isForcedFallback = anns.exists {
+                  case Apply(Select(New(typeTree), _), _) if isForceFallbackDerivationAnnotation(typeTree) => true
                   case _ => false
                 }
                 val assigned =
-                  if (isRuntimeBound) {
-                    q"def $ref = ${c.prefix}.bind[$paramType]"
+                  if (isForcedFallback) {
+                    q"def $ref = ${c.prefix}.fallback[$paramType]"
                   } else {
                     deferredVal(ref, searchType, derivedImplicit.fold(error, identity))
                   }
@@ -598,13 +598,13 @@ object Magnolia {
           val anns = annotationsOf(subType.typeSymbol)
           val path = CoproductType(genericType.toString)
           val frame = stack.Frame(path, resultType, assignedName)
-          val isRuntimeBound = anns.exists {
-            case Apply(Select(New(typeTree), _), _) if isRuntimeBoundTypeclassAnnotation(typeTree) => true
+          val isForcedFallback = anns.exists {
+            case Apply(Select(New(typeTree), _), _) if isForceFallbackDerivationAnnotation(typeTree) => true
             case _ => false
           }
 
-          subType -> (if (isRuntimeBound) {
-            q"${c.prefix}.bind[$subType]"
+          subType -> (if (isForcedFallback) {
+            q"${c.prefix}.fallback[$subType]"
           } else {
             stack.recurse(frame, appliedType(typeConstructor, subType), shouldCache) {
               typeclassTree(subType, typeConstructor, termNames.ERROR)

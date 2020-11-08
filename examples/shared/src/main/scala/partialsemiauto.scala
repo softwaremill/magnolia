@@ -1,5 +1,4 @@
 import java.util.UUID
-
 import scala.language.experimental.macros
 import magnolia._
 
@@ -9,15 +8,15 @@ trait PartialSemiDefault[A] {
   def default: A
 }
 
-case class ForceProvidedDefault() extends StaticAnnotation with RuntimeBoundTypeclass
-case class NoDefault() extends StaticAnnotation with RuntimeBoundTypeclass
+case class ForceProvidedDefault() extends StaticAnnotation with ForceFallbackDerivation
+case class NoDefault() extends StaticAnnotation with ForceFallbackDerivation
 
 object PartialSemiDefault {
   @inline def apply[A](implicit A: PartialSemiDefault[A]): PartialSemiDefault[A] = A
 
   type Typeclass[T] = PartialSemiDefault[T]
 
-  def bind[T]: PartialSemiDefault[T] = ??? // this will never be called because of how combine/dispatch is implemented
+  def fallback[T]: PartialSemiDefault[T] = ??? // this will never be called because of how combine/dispatch is implemented
 
   def combine[T](ctx: CaseClass[PartialSemiDefault, T]): PartialSemiDefault[T] = new PartialSemiDefault[T] {
     def default = ctx.construct { p =>

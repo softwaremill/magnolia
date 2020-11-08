@@ -15,7 +15,7 @@
 package magnolia
 
 import language.experimental.macros
-import scala.annotation.tailrec
+import scala.annotation.{StaticAnnotation, tailrec}
 import mercator._
 
 /** represents a subtype of a sealed trait
@@ -455,8 +455,7 @@ object MagnoliaUtil {
 
 /**
  * Marker trait for annotations which when encountered on either a parameter or a constructor,
- * the derivation will not look for a typeclass instance, instead bind the typeclass parameter
- * on the interface to the 'bind[A]: Typeclass[A]' method of the enclosing class.
- *
+ * the derivation will not look for a typeclass instance but use the 'fallback[T]: Typeclass[T]'
+ * method of the enclosing class instead.
  * */
-trait RuntimeBoundTypeclass
+trait ForceFallbackDerivation extends StaticAnnotation
