@@ -37,6 +37,7 @@ lazy val core = (project in file(".core"))
   .settings(
     name := "magnolia-core",
     Compile / scalaSource := baseDirectory.value / ".." / "src" / "core",
+    libraryDependencies += "com.propensive" %% "probably-cli" % "0.5.0",
     libraryDependencies += "com.propensive" %% "mercator" % "0.2.1"
   )
 

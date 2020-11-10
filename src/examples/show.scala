@@ -78,6 +78,7 @@ trait GenericShow[Out] {
     }
 
   /** bind the Magnolia macro to this derivation object */
+  @performance
   implicit def gen[T]: Show[Out, T] = macro Magnolia.gen[T]
 }
 

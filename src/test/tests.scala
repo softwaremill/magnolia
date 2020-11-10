@@ -30,10 +30,12 @@ import scala.annotation.StaticAnnotation
 import scala.util.control.NonFatal
 
 sealed trait Tree[+T]
+
 case class Leaf[+L](value: L) extends Tree[L]
 case class Branch[+B](left: Tree[B], right: Tree[B]) extends Tree[B]
 
 sealed trait Path[+A]
+
 case class Destination[+A](value: A) extends Path[A]
 case class Crossroad[+A](left: Path[A], right: Path[A]) extends Path[A]
 case class OffRoad[+A](path: Option[Path[A]]) extends Path[A]

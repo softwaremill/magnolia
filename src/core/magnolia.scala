@@ -16,6 +16,8 @@
 */
 package magnolia
 
+import probably._
+
 import scala.annotation.compileTimeOnly
 import scala.collection.mutable
 import scala.language.existentials
@@ -82,7 +84,7 @@ object Magnolia {
     *  will suffice, however the qualifications regarding additional type parameters and implicit
     *  parameters apply equally to `dispatch` as to `combine`.
     *  */
-  def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = Stack.withContext(c) { stack =>
+  def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = Stack.withContext[T](c) { stack =>
     import c.internal._
     import c.universe._
     import definitions._
@@ -127,7 +129,7 @@ object Magnolia {
       .flatMap(_.tree.children.tail.collectFirst {
         case Literal(Constant(arg: String)) => arg
         case tree if DebugTpe.companion.decls.exists(_ == tree.symbol) => "" // Default constructor, i.e. @debug or @debug()
-        case other => error(s"Invalid argument $other in @debug annotation. Only string literals or empty constructor supported")
+        case other => error(s"invalid argument $other in @debug annotation; only string literals or empty constructor supported")
       })
 
     object DeferredRef {
@@ -800,17 +802,18 @@ private[magnolia] object CompileTimeState {
     private val threadLocalStack = ThreadLocal.withInitial[Stack[dummyContext.type]](() => new Stack[dummyContext.type])
     private val threadLocalWorkSet = ThreadLocal.withInitial[mutable.Set[whitebox.Context#Symbol]](() => mutable.Set.empty)
 
-    def withContext(c: whitebox.Context)(fn: Stack[c.type] => c.Tree): c.Tree = {
-      val stack = threadLocalStack.get()
-      val workSet = threadLocalWorkSet.get()
-      workSet += c.macroApplication.symbol
-      val depth = c.enclosingMacros.count(m => workSet(m.macroApplication.symbol))
-      try fn(stack.asInstanceOf[Stack[c.type]])
-      finally if (depth <= 1) {
-        stack.clear()
-        workSet.clear()
-      }
-    }
+    def withContext[T: c.WeakTypeTag](c: whitebox.Context)(fn: Stack[c.type] => c.Tree): c.Tree =
+      Hook.test(c)(s"Deriving ${c.weakTypeOf[T]}") {
+        val stack = threadLocalStack.get()
+        val workSet = threadLocalWorkSet.get()
+        workSet += c.macroApplication.symbol
+        val depth = c.enclosingMacros.count(m => workSet(m.macroApplication.symbol))
+        try fn(stack.asInstanceOf[Stack[c.type]])
+        finally if (depth <= 1) {
+          stack.clear()
+          workSet.clear()
+        }
+      }.check(_ => true)
   }
 }
 
@@ -821,4 +824,34 @@ final class CallByNeed[+A](private[this] var eval: () => A) extends Serializable
     eval = null
     result
   }
+}
+
+object Hook {
+  private var postAction: () => Unit = null
+  private var runPerformance: Boolean = false
+
+  def test(c: blackbox.Context): Runner = {
+    import c.universe._
+    
+    runPerformance ||= c.macroApplication.symbol.annotations.exists(_.tree.tpe <:< typeOf[performance])
+
+    val toCheck: mutable.ListBuffer[() => Unit] =
+      c.enclosingUnit.asInstanceOf[scala.tools.nsc.Global#CompilationUnit].toCheck
+    
+    // Add an action to run once at the end, if it has not already been added
+    if(!toCheck.contains(postAction)) {
+      val action: () => Unit = { () => if(runPerformance) {
+        c.info(c.universe.NoPosition, "Performance report from Magnolia:", true)
+        c.info(c.universe.NoPosition, Suite.show(probably.global.test.report()), true)
+        probably.global.test.clear()
+        toCheck -= postAction
+        postAction = null
+      } }
+      toCheck += action
+      postAction = action
+    }
+ 
+    probably.global.test
+  }
+    
 }
