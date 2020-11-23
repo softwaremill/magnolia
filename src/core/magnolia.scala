@@ -803,7 +803,7 @@ private[magnolia] object CompileTimeState {
     private val threadLocalWorkSet = ThreadLocal.withInitial[mutable.Set[whitebox.Context#Symbol]](() => mutable.Set.empty)
 
     def withContext[T: c.WeakTypeTag](c: whitebox.Context)(fn: Stack[c.type] => c.Tree): c.Tree =
-      Hook.test(c)(s"Deriving ${c.weakTypeOf[T]}") {
+      c.test(s"Deriving ${c.weakTypeOf[T]}") {
         val stack = threadLocalStack.get()
         val workSet = threadLocalWorkSet.get()
         workSet += c.macroApplication.symbol
@@ -824,34 +824,4 @@ final class CallByNeed[+A](private[this] var eval: () => A) extends Serializable
     eval = null
     result
   }
-}
-
-object Hook {
-  private var postAction: () => Unit = null
-  private var runPerformance: Boolean = false
-
-  def test(c: blackbox.Context): Runner = {
-    import c.universe._
-    
-    runPerformance ||= c.macroApplication.symbol.annotations.exists(_.tree.tpe <:< typeOf[performance])
-
-    val toCheck: mutable.ListBuffer[() => Unit] =
-      c.enclosingUnit.asInstanceOf[scala.tools.nsc.Global#CompilationUnit].toCheck
-    
-    // Add an action to run once at the end, if it has not already been added
-    if(!toCheck.contains(postAction)) {
-      val action: () => Unit = { () => if(runPerformance) {
-        c.info(c.universe.NoPosition, "Performance report from Magnolia:", true)
-        c.info(c.universe.NoPosition, Suite.show(probably.global.test.report()), true)
-        probably.global.test.clear()
-        toCheck -= postAction
-        postAction = null
-      } }
-      toCheck += action
-      postAction = action
-    }
- 
-    probably.global.test
-  }
-    
 }
