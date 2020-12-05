@@ -10,15 +10,13 @@ trait PartialSemiDefault[A] {
   def default: A
 }
 
-case class ForceProvidedDefault() extends StaticAnnotation with ForceFallbackDerivation
-case class NoDefault() extends StaticAnnotation with ForceFallbackDerivation
+case class ForceProvidedDefault() extends StaticAnnotation with ExcludeFromDerivation
+case class NoDefault() extends StaticAnnotation with ExcludeFromDerivation
 
 object PartialSemiDefault {
   @inline def apply[A](implicit A: PartialSemiDefault[A]): PartialSemiDefault[A] = A
 
   type Typeclass[T] = PartialSemiDefault[T]
-
-  def fallback[T]: PartialSemiDefault[T] = ??? // this will never be called because of how combine/dispatch is implemented
 
   def combine[T](ctx: CaseClass[PartialSemiDefault, T]): PartialSemiDefault[T] = new PartialSemiDefault[T] {
     def default = ctx.construct { p =>

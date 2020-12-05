@@ -261,12 +261,12 @@ object Magnolia {
       case _ => false
     }
 
-    def isForceFallbackDerivationAnnotation(typ: Tree): Boolean = {
+    def isExcludeFromDerivationAnnotation(typ: Tree): Boolean = {
       val e = c.Expr[Any](c.typecheck(q"new _root_.magnolia.TypeCheckHelper[$typ]"))
       val t = e.actualType match {
         case TypeRef(_, _, params) => params.head
       }
-      t <:< typeOf[ForceFallbackDerivation]
+      t <:< typeOf[ExcludeFromDerivation]
     }
 
     val expandDeferred = new Transformer {
@@ -450,13 +450,13 @@ object Magnolia {
                   typeclassTree(paramType, typeConstructor, ref)
                 }
 
-                val isForcedFallback = anns.exists {
-                  case Apply(Select(New(typeTree), _), _) if isForceFallbackDerivationAnnotation(typeTree) => true
+                val isExcluded = anns.exists {
+                  case Apply(Select(New(typeTree), _), _) if isExcludeFromDerivationAnnotation(typeTree) => true
                   case _ => false
                 }
                 val assigned =
-                  if (isForcedFallback) {
-                    q"def $ref = ${c.prefix}.fallback[$paramType]"
+                  if (isExcluded) {
+                    q"def $ref = ???"
                   } else {
                     deferredVal(ref, searchType, derivedImplicit.fold(error, identity))
                   }
@@ -598,18 +598,21 @@ object Magnolia {
           val anns = annotationsOf(subType.typeSymbol)
           val path = CoproductType(genericType.toString)
           val frame = stack.Frame(path, resultType, assignedName)
-          val isForcedFallback = anns.exists {
-            case Apply(Select(New(typeTree), _), _) if isForceFallbackDerivationAnnotation(typeTree) => true
+          val isExcluded = anns.exists {
+            case Apply(Select(New(typeTree), _), _) if isExcludeFromDerivationAnnotation(typeTree) => true
             case _ => false
           }
 
-          subType -> (if (isForcedFallback) {
-            q"${c.prefix}.fallback[$subType]"
-          } else {
-            stack.recurse(frame, appliedType(typeConstructor, subType), shouldCache) {
-              typeclassTree(subType, typeConstructor, termNames.ERROR)
-            }.fold(error, identity)
-          })
+          subType -> {
+            if (isExcluded) {
+              q"CallByNeed.excluded[${appliedType(typeConstructor, subType)}]"
+            } else {
+              val typeclass = stack.recurse(frame, appliedType(typeConstructor, subType), shouldCache) {
+                typeclassTree(subType, typeConstructor, termNames.ERROR)
+              }.fold(error, identity)
+              q"$CallByNeedObj($typeclass)"
+            }
+          }
         }
 
         val assignments = typeclasses.zipWithIndex.map {
@@ -620,7 +623,7 @@ object Magnolia {
               $idx,
               $ArrayObj(..${annotationsOf(symbol)}),
               $ArrayObj(..${typeAnnotationsOf(symbol, fromParents = true)}),
-              $CallByNeedObj($typeclass),
+              $typeclass,
               (t: $genericType) => t.isInstanceOf[$subType],
               (t: $genericType) => t.asInstanceOf[$subType]
             )"""
@@ -840,7 +843,11 @@ private[magnolia] object CompileTimeState {
   }
 }
 
-object CallByNeed { def apply[A](a: => A): CallByNeed[A] = new CallByNeed(() => a) }
+object CallByNeed {
+  def apply[A](a: => A): CallByNeed[A] = new CallByNeed(() => a)
+
+  def excluded[A]: CallByNeed[A] = new CallByNeed[A](() => ???)
+}
 final class CallByNeed[+A](private[this] var eval: () => A) extends Serializable {
   lazy val value: A = {
     val result = eval()

@@ -458,4 +458,4 @@ object MagnoliaUtil {
  * the derivation will not look for a typeclass instance but use the 'fallback[T]: Typeclass[T]'
  * method of the enclosing class instead.
  * */
-trait ForceFallbackDerivation extends StaticAnnotation
+trait ExcludeFromDerivation extends StaticAnnotation
