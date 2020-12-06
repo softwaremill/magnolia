@@ -9,7 +9,6 @@
 **/#*
 **/.#*
 tmp/
-project
 target
 .bsp
 .metals/
