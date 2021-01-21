@@ -297,6 +297,35 @@ abstract class ReadOnlyCaseClass[Typeclass[_], Type](
   final def typeAnnotations: Seq[Any] = typeAnnotationsArray
 }
 
+abstract class UnaryReadOnlyCaseClass[Typeclass[_], Type](
+  val typeName: TypeName,
+  val isObject: Boolean,
+  val isValueClass: Boolean,
+  /** a [[ReadOnlyParam]] representing the parameter in the case class */
+  parametersArray: Array[ReadOnlyParam[Typeclass, Type]],
+  annotationsArray: Array[Any],
+  typeAnnotationsArray: Array[Any]
+) extends Serializable {
+
+
+  /** A [[ReadOnlyParam]] object representing the parameter in the case class */
+  def parameter: ReadOnlyParam[Typeclass, Type] = parametersArray.head
+
+  override def toString: String = s"UnaryReadOnlyCaseClass(${typeName.full}, $parameter)"
+
+  /** a sequence of objects representing all of the annotations on the case class
+    *
+    *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
+    *  [[scala.collection.Seq]] to hide the mutable collection API. */
+  final def annotations: Seq[Any] = annotationsArray
+
+  /** a sequence of objects representing all of the type annotations on the case class
+    *
+    *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
+    *  [[scala.collection.Seq]] to hide the mutable collection API. */
+  final def typeAnnotations: Seq[Any] = typeAnnotationsArray
+}
+
 /** [[CaseClass]] contains all information that exists in a [[ReadOnlyCaseClass]], as well as methods and context
  *  required for construct an instance of this case class/object (e.g. default values for constructor parameters)
  *
@@ -365,6 +394,70 @@ abstract class CaseClass[Typeclass[_], Type] (
   def rawConstruct(fieldValues: Seq[Any]): Type
 }
 
+/** [[CaseClass]] contains all information that exists in a [[ReadOnlyCaseClass]], as well as methods and context
+  *  required for construct an instance of this case class/object (e.g. default values for constructor parameters)
+  *
+  *  @param typeName         the name of the case class
+  *  @param isObject         true only if this represents a case object rather than a case class
+  *  @param parameter        the [[Param]] value for this case class
+  *  @param annotationsArray  an array of instantiated annotations applied to this case class
+  *  @param typeAnnotationsArray  an array of instantiated type annotations applied to this case class
+  *  @tparam Typeclass  type constructor for the typeclass being derived
+  *  @tparam Type       generic type of this parameter */
+abstract class UnaryCaseClass[Typeclass[_], Type] (
+  override val typeName: TypeName,
+  override val isObject: Boolean,
+  override val isValueClass: Boolean,
+  parametersArray: Array[Param[Typeclass, Type]],
+  annotationsArray: Array[Any],
+  typeAnnotationsArray: Array[Any]
+) extends UnaryReadOnlyCaseClass[Typeclass, Type](
+  typeName,
+  isObject,
+  isValueClass,
+  // Safe to cast as we're never mutating the array
+  parametersArray.asInstanceOf[Array[ReadOnlyParam[Typeclass, Type]]],
+  annotationsArray,
+  typeAnnotationsArray
+) {
+
+  /** A [[Param]] object representing the parameter in the case class */
+  override def parameter: Param[Typeclass, Type] = parametersArray.head
+
+  override def toString: String = s"UnaryCaseClass(${typeName.full}, $parameter)"
+  /** constructs a new instance of the case class type
+    *
+    *  This method will be implemented by the Magnolia macro to make it possible to construct
+    *  instances of case classes generically in user code, that is, without knowing their type
+    *  concretely.
+    *
+    *  To construct a new case class instance, the method takes a lambda which defines how each
+    *  parameter in the new case class should be constructed. See the [[Param]] class for more
+    *  information on constructing parameter values from a [[Param]] instance.
+    *
+    *  @param makeParam  lambda for converting a generic [[Param]] into the value to be used for
+    *                    this parameter in the construction of a new instance of the case class
+    *  @return  a new instance of the case class */
+  def construct[Return](makeParam: Param[Typeclass, Type] => Return): Type
+
+  def constructMonadic[Monad[_], PType](makeParam: Param[Typeclass, Type] => Monad[PType])(implicit monadic: Monadic[Monad]): Monad[Type]
+
+  def constructEither[Err, PType](makeParam: Param[Typeclass, Type] => Either[Err, PType]): Either[List[Err], Type]
+
+  /** constructs a new instance of the case class type
+    *
+    *  Like [[construct]] this method is implemented by Magnolia and lets you construct case class
+    *  instances generically in user code, without knowing their type concretely.
+    *
+    *  `rawConstruct`, however, is more low-level in that it expects you to provide a [[Seq]]
+    *  containing all the field values for the case class type, in order and with the correct types.
+    *
+    * @param fieldValues contains the field values for the case class instance to be constructed,
+    *                    in order and with the correct types.
+    *  @return  a new instance of the case class
+    *  @throws  IllegalArgumentException if the size of `paramValues` differs from the size of [[parameters]] */
+  def rawConstruct(fieldValues: Seq[Any]): Type
+}
 /** represents a sealed trait and the context required to construct a new typeclass instance
   *  corresponding to it
   *

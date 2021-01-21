@@ -117,6 +117,8 @@ object Magnolia {
     val SubtypeTpe = typeOf[Subtype[Any, Any]].typeConstructor
     val TypeClassNme = TypeName("Typeclass")
     val TypeNameObj = reify(magnolia.TypeName).tree
+    val UnaryCaseClassSym = symbolOf[UnaryCaseClass[Any, Any]]
+    val UnaryReadOnlyCaseClassSym = symbolOf[UnaryReadOnlyCaseClass[Any, Any]]
 
     val prefixType = c.prefix.tree.tpe
     val prefixObject = prefixType.typeSymbol
@@ -241,10 +243,16 @@ object Magnolia {
       classWithTerm.asType.toType.decl(term).asTerm.asMethod.paramLists.head
     }
 
-    lazy val (isReadOnly, caseClassSymbol, paramSymbol) =
+    lazy val (isReadOnly, isUnary, caseClassSymbol, paramSymbol) =
       extractParameterBlockFor("combine", "case classes").headOption.map(_.typeSignature.typeSymbol) match {
-        case Some(ReadOnlyCaseClassSym) => (true, ReadOnlyCaseClassSym, ReadOnlyParamSym)
-        case Some(CaseClassSym) => (false, CaseClassSym, ParamSym)
+        case Some(ReadOnlyCaseClassSym) =>
+          (true, false, ReadOnlyCaseClassSym, ReadOnlyParamSym)
+        case Some(UnaryReadOnlyCaseClassSym) =>
+          (true, true, UnaryReadOnlyCaseClassSym, ReadOnlyParamSym)
+        case Some(CaseClassSym) =>
+          (false, false, CaseClassSym, ParamSym)
+        case Some(UnaryCaseClassSym) =>
+          (false, true, UnaryCaseClassSym, ParamSym)
         case _ => error("Parameter for `combine` needs be either magnolia.CaseClass or magnolia.ReadOnlyCaseClass")
       }
 
@@ -368,6 +376,8 @@ object Magnolia {
       val result = if (isRefinedType) {
         error(s"could not infer $prefixName.Typeclass for refined type $genericType")
       } else if (isCaseObject) {
+        if (isUnary) error(s"You can only derive instances for $prefixName.Typeclass for (case) classes with one member")
+
         val classBody = if (isReadOnly) List(EmptyTree) else {
           val module = Ident(genericType.typeSymbol.asClass.module)
           List(
@@ -402,6 +412,9 @@ object Magnolia {
           else { case p: TermSymbol if p.isCaseAccessor && !p.isMethod => p }
         )
 
+        if (caseClassParameters.length != 1 && isUnary) {
+          if (isUnary) error(s"You can only derive instances for $prefixName.Typeclass for (case) classes with one member")
+        }
         val (factoryObject, factoryMethod) = {
           if (isReadOnly && isValueClass) ReadOnlyParamObj -> TermName("valueParam")
           else if (isReadOnly) ReadOnlyParamObj -> TermName("apply")

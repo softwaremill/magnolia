@@ -223,6 +223,13 @@ final case class Huey(height: Int) extends GoodChild
 class Dewey(val height: Int) extends GoodChild
 final case class Louie(height: Int) extends BadChild
 
+case class StringWrapper(str: String)
+case class StringWrapWrapper(w: StringWrapper)
+case class StringWrapAnyVal(w: StringWrapper) extends AnyVal
+class StringWrapNotCaseClass(val w: Int) extends AnyVal
+case class StringWrapperComposite(str: String, int: Int)
+case object A
+
 object Tests extends Suite("Magnolia tests") {
 
   def run(test: Runner): Unit = for (_ <- 1 to 1) {
@@ -734,5 +741,53 @@ object Tests extends Suite("Magnolia tests") {
     test("support dispatch without combine") {
       implicitly[NoCombine[Halfy]].nameOf(Righty())
     }.assert(_ == "Righty")
+
+    test("readonly unary product types: support wrapper case class") {
+      ToString[StringWrapper].str(StringWrapper("a"))
+    }.assert(_ == "a")
+
+    test("readonly unary product types: support nested wrapper case class") {
+      ToString[StringWrapWrapper].str(StringWrapWrapper(StringWrapper("a")))
+    }.assert(_ == "a")
+
+    test("readonly unary product types: support wrapper case class extending AnyVal") {
+      ToString[StringWrapAnyVal].str(StringWrapAnyVal(StringWrapper("a")))
+    }.assert(_ == "a")
+
+    test("readonly unary product types: support non-case wrapper class") {
+      ToString[StringWrapNotCaseClass].str(new StringWrapNotCaseClass(1))
+    }.assert(_ == "1")
+
+    test("readonly unary product types: not support case object unary product type") {
+      scalac"ToString.derive[A.type]"
+      }.assert(_ == TypecheckError(txt"magnolia: You can only derive instances for ToString.Typeclass for (case) classes with one member"))
+
+    test("readonly unary product types: not support case class with two members") {
+      scalac"ToString.derive[StringWrapperComposite.type]"
+      }.assert(_ == TypecheckError(txt"magnolia: You can only derive instances for ToString.Typeclass for (case) classes with one member"))
+
+    test("unary product types: support wrapper case class") {
+      FromString[StringWrapper].fromStr("a")
+    }.assert(_ == StringWrapper("a"))
+
+    test("unary product types: support nested wrapper case class") {
+      FromString[StringWrapWrapper].fromStr("a")
+    }.assert(_ == StringWrapWrapper(StringWrapper("a")))
+
+    test("unary product types: support wrapper case class extending AnyVal") {
+      FromString[StringWrapAnyVal].fromStr("a")
+    }.assert(_ == StringWrapAnyVal(StringWrapper("a")))
+
+    test("unary product types: support non-case wrapper class") {
+      FromString[StringWrapNotCaseClass].fromStr("1")
+    }.assert(_ == new StringWrapNotCaseClass(1))
+
+    test("unary product types: not support case object unary product type") {
+      scalac"FromString.derive[A.type]"
+    }.assert(_ == TypecheckError(txt"magnolia: You can only derive instances for FromString.Typeclass for (case) classes with one member"))
+
+    test("unary product types: not support case class with two members") {
+      scalac"FromString.derive[StringWrapperComposite.type]"
+    }.assert(_ == TypecheckError(txt"magnolia: You can only derive instances for FromString.Typeclass for (case) classes with one member"))
   }
 }
