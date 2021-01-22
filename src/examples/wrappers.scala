@@ -28,8 +28,13 @@ object ToString {
 
   type Typeclass[A] = ToString[A]
 
-  def combine[A](ctx: UnaryReadOnlyCaseClass[ToString, A]): ToString[A] =
-    (a: A) => ctx.parameter.typeclass.str(ctx.parameter.dereference(a))
+  @typeValidation.minMembers(1)
+  @typeValidation.maxMembers(1)
+  def combine[A](ctx: ReadOnlyCaseClass[ToString, A]): ToString[A] =
+    (a: A) => {
+      val param = ctx.parameters.head
+      param.typeclass.str(param.dereference(a))
+    }
 
   implicit def derive[A]: ToString[A] = macro Magnolia.gen[A]
 
@@ -47,7 +52,9 @@ object FromString {
 
   type Typeclass[A] = FromString[A]
 
-  def combine[A](ctx: UnaryCaseClass[FromString, A]): FromString[A] =
+  @typeValidation.minMembers(1)
+  @typeValidation.maxMembers(1)
+  def combine[A](ctx: CaseClass[FromString, A]): FromString[A] =
     (str: String) => ctx.construct(p => p.typeclass.fromStr(str))
 
   implicit def derive[A]: FromString[A] = macro Magnolia.gen[A]

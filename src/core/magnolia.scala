@@ -117,12 +117,56 @@ object Magnolia {
     val SubtypeTpe = typeOf[Subtype[Any, Any]].typeConstructor
     val TypeClassNme = TypeName("Typeclass")
     val TypeNameObj = reify(magnolia.TypeName).tree
-    val UnaryCaseClassSym = symbolOf[UnaryCaseClass[Any, Any]]
-    val UnaryReadOnlyCaseClassSym = symbolOf[UnaryReadOnlyCaseClass[Any, Any]]
 
     val prefixType = c.prefix.tree.tpe
     val prefixObject = prefixType.typeSymbol
     val prefixName = prefixObject.name.decodedName
+    val prefixBaseClasses = c.prefix.tree.tpe.baseClasses
+
+    def extractMethod(termName: String): Option[MethodSymbol] = {
+      val term = TermName(termName)
+      prefixBaseClasses
+        .find(cls => cls.asType.toType.decl(term) != NoSymbol)
+        .map(cls => cls.asType.toType.decl(term).asTerm.asMethod)
+    }
+
+    val combineMethodOpt = extractMethod("combine")
+
+    object validate {
+      val MinMembersTpe = typeOf[typeValidation.minMembers]
+      val MaxMembersTpe = typeOf[typeValidation.maxMembers]
+
+      val annotations = combineMethodOpt match {
+        case Some(combineMethod) => combineMethod.annotations
+        case None => Nil
+      }
+
+      val minMembersOpt: Option[Int] =
+        annotations
+          .collectFirst { case a if a.tree.tpe <:< MinMembersTpe => a.tree.children(1) }
+          .collectFirst { case Literal(Constant(arg: Int)) => arg }
+
+      val maxMembersOpt: Option[Int] =
+        annotations
+          .collectFirst { case a if a.tree.tpe <:< MaxMembersTpe => a.tree.children(1) }
+          .collectFirst { case Literal(Constant(arg: Int)) => arg }
+
+      def apply(members: List[TermSymbol]): Unit = {
+        val numMembers = members.length
+
+        minMembersOpt match {
+          case Some(min) if numMembers < min =>
+            error(s"$genericType is not a valid type for $prefixName.Typeclass because at least $min members are required (it has $numMembers)")
+          case _ => ()
+        }
+
+        maxMembersOpt match {
+          case Some(max) if numMembers > max =>
+            error(s"$genericType is not a valid type for $prefixName.Typeclass because at no more than $max members are required (it has $numMembers)")
+          case _ => ()
+        }
+      }
+    }
 
     val debug = c.macroApplication.symbol.annotations
       .find(_.tree.tpe <:< DebugTpe)
@@ -228,33 +272,17 @@ object Magnolia {
       annotationTrees(typeAnnotations)
     }
 
-    def checkMethod(termName: String, category: String, expected: String): Unit = {
-      val firstParamBlock = extractParameterBlockFor(termName, category)
-      if (firstParamBlock.lengthCompare(1) != 0)
-        error(s"the method `$termName` should take a single parameter of type $expected")
-    }
+    lazy val (isReadOnly, caseClassSymbol, paramSymbol) = {
+      val combine = combineMethodOpt getOrElse  {
+        error(s"the method `combine` must be defined on the derivation $prefixObject to derive typeclasses for case classes")
+      }
 
-    def extractParameterBlockFor(termName: String, category: String): List[Symbol] = {
-      val term = TermName(termName)
-      val classWithTerm = c.prefix.tree.tpe.baseClasses
-        .find(cls => cls.asType.toType.decl(term) != NoSymbol)
-        .getOrElse(error(s"the method `$termName` must be defined on the derivation $prefixObject to derive typeclasses for $category"))
-
-      classWithTerm.asType.toType.decl(term).asTerm.asMethod.paramLists.head
-    }
-
-    lazy val (isReadOnly, isUnary, caseClassSymbol, paramSymbol) =
-      extractParameterBlockFor("combine", "case classes").headOption.map(_.typeSignature.typeSymbol) match {
-        case Some(ReadOnlyCaseClassSym) =>
-          (true, false, ReadOnlyCaseClassSym, ReadOnlyParamSym)
-        case Some(UnaryReadOnlyCaseClassSym) =>
-          (true, true, UnaryReadOnlyCaseClassSym, ReadOnlyParamSym)
-        case Some(CaseClassSym) =>
-          (false, false, CaseClassSym, ParamSym)
-        case Some(UnaryCaseClassSym) =>
-          (false, true, UnaryCaseClassSym, ParamSym)
+      combine.paramLists.head.headOption.map(_.typeSignature.typeSymbol) match {
+        case Some(ReadOnlyCaseClassSym) => (true, ReadOnlyCaseClassSym, ReadOnlyParamSym)
+        case Some(CaseClassSym)         => (false, CaseClassSym, ParamSym)
         case _ => error("Parameter for `combine` needs be either magnolia.CaseClass or magnolia.ReadOnlyCaseClass")
       }
+    }
 
     // fullAuto means we should directly infer everything, including external
     // members of the ADT, that isn't inferred by the compiler.
@@ -376,7 +404,7 @@ object Magnolia {
       val result = if (isRefinedType) {
         error(s"could not infer $prefixName.Typeclass for refined type $genericType")
       } else if (isCaseObject) {
-        if (isUnary) error(s"You can only derive instances for $prefixName.Typeclass for (case) classes with one member")
+        validate(members = Nil)
 
         val classBody = if (isReadOnly) List(EmptyTree) else {
           val module = Ident(genericType.typeSymbol.asClass.module)
@@ -412,9 +440,8 @@ object Magnolia {
           else { case p: TermSymbol if p.isCaseAccessor && !p.isMethod => p }
         )
 
-        if (caseClassParameters.length != 1 && isUnary) {
-          if (isUnary) error(s"You can only derive instances for $prefixName.Typeclass for (case) classes with one member")
-        }
+        validate(caseClassParameters)
+
         val (factoryObject, factoryMethod) = {
           if (isReadOnly && isValueClass) ReadOnlyParamObj -> TermName("valueParam")
           else if (isReadOnly) ReadOnlyParamObj -> TermName("apply")
@@ -574,7 +601,14 @@ object Magnolia {
             })
           }""")
       } else if (isSealedTrait) {
-        checkMethod("dispatch", "sealed traits", "SealedTrait[Typeclass, _]")
+        val firstParamBlock = extractMethod("dispatch") match {
+          case Some(dispatch) => dispatch.paramLists.head
+          case None => error(s"the method `dispatch` must be defined on the derivation $prefixObject to derive typeclasses for sealed traits")
+        }
+
+        if (firstParamBlock.lengthCompare(1) != 0)
+          error("the method `dispatch` should take a single parameter of type SealedTrait[Typeclass, _]")
+
         val genericSubtypes = knownSubclassesOf(classType.get).toList.sortBy(_.fullName)
         val subtypes = genericSubtypes.flatMap { sub =>
           val subType = sub.asType.toType // FIXME: Broken for path dependent types
@@ -626,7 +660,7 @@ object Magnolia {
           ))
         }""")
       } else if (!typeSymbol.isParameter) {
-        c.prefix.tree.tpe.baseClasses
+        prefixBaseClasses
           .find { cls =>
             cls.asType.toType.decl(TermName("fallback")) != NoSymbol
           }.map { _ =>
@@ -641,7 +675,7 @@ object Magnolia {
       }"""
     }
 
-    val typeDefs = prefixType.baseClasses.flatMap { baseClass =>
+    val typeDefs = prefixBaseClasses.flatMap { baseClass =>
       baseClass.asType.toType.decls.collectFirst {
         case tpe: TypeSymbol if tpe.name == TypeClassNme =>
           tpe.toType.asSeenFrom(prefixType, baseClass)

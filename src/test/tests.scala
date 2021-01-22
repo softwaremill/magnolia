@@ -739,6 +739,7 @@ object Tests extends Suite("Magnolia tests") {
     }
 
     test("support dispatch without combine") {
+      NoCombine.gen[Halfy]
       implicitly[NoCombine[Halfy]].nameOf(Righty())
     }.assert(_ == "Righty")
 
@@ -760,11 +761,11 @@ object Tests extends Suite("Magnolia tests") {
 
     test("readonly unary product types: not support case object unary product type") {
       scalac"ToString.derive[A.type]"
-      }.assert(_ == TypecheckError(txt"magnolia: You can only derive instances for ToString.Typeclass for (case) classes with one member"))
+      }.assert(_ == TypecheckError(txt"magnolia: magnolia.tests.A.type is not a valid type for ToString.Typeclass because at least 1 members are required (it has 0)"))
 
     test("readonly unary product types: not support case class with two members") {
       scalac"ToString.derive[StringWrapperComposite.type]"
-      }.assert(_ == TypecheckError(txt"magnolia: You can only derive instances for ToString.Typeclass for (case) classes with one member"))
+    }.assert(_ == TypecheckError(txt"magnolia: magnolia.tests.StringWrapperComposite.type is not a valid type for ToString.Typeclass because at least 1 members are required (it has 0)"))
 
     test("unary product types: support wrapper case class") {
       FromString[StringWrapper].fromStr("a")
@@ -784,10 +785,10 @@ object Tests extends Suite("Magnolia tests") {
 
     test("unary product types: not support case object unary product type") {
       scalac"FromString.derive[A.type]"
-    }.assert(_ == TypecheckError(txt"magnolia: You can only derive instances for FromString.Typeclass for (case) classes with one member"))
+    }.assert(_ == TypecheckError(txt"magnolia: magnolia.tests.A.type is not a valid type for FromString.Typeclass because at least 1 members are required (it has 0)"))
 
     test("unary product types: not support case class with two members") {
-      scalac"FromString.derive[StringWrapperComposite.type]"
-    }.assert(_ == TypecheckError(txt"magnolia: You can only derive instances for FromString.Typeclass for (case) classes with one member"))
+      scalac"FromString.derive[StringWrapperComposite]"
+    }.assert(_ == TypecheckError(txt"magnolia: magnolia.tests.StringWrapperComposite is not a valid type for FromString.Typeclass because at no more than 1 members are required (it has 2)"))
   }
 }
