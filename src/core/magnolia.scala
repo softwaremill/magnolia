@@ -106,6 +106,7 @@ object Magnolia {
     val NoneObj = reify(None).tree
     val ParamObj = reify(Param).tree
     val ParamSym = symbolOf[Param[Any, Any]]
+    val ProxyTpe = typeOf[proxy]
     val ReadOnlyCaseClassSym = symbolOf[ReadOnlyCaseClass[Any, Any]]
     val ReadOnlyParamObj = reify(ReadOnlyParam).tree
     val ReadOnlyParamSym = symbolOf[ReadOnlyParam[Any, Any]]
@@ -118,7 +119,13 @@ object Magnolia {
     val TypeClassNme = TypeName("Typeclass")
     val TypeNameObj = reify(magnolia.TypeName).tree
 
-    val prefixType = c.prefix.tree.tpe
+    val proxy: Option[c.Expr[_]] =
+      c.macroApplication.symbol.annotations.collectFirst {
+        case a if a.tree.tpe <:< ProxyTpe => c.Expr(a.tree.children(1))
+      }
+
+    val prefix: Expr[_] = proxy.getOrElse(c.prefix)
+    val prefixType = prefix.tree.tpe
     val prefixObject = prefixType.typeSymbol
     val prefixName = prefixObject.name.decodedName
 
@@ -234,7 +241,7 @@ object Magnolia {
 
     def extractParameterBlockFor(termName: String, category: String): List[Symbol] = {
       val term = TermName(termName)
-      val classWithTerm = c.prefix.tree.tpe.baseClasses
+      val classWithTerm = prefix.tree.tpe.baseClasses
         .find(cls => cls.asType.toType.decl(term) != NoSymbol)
         .getOrElse(error(s"the method `$termName` must be defined on the derivation $prefixObject to derive typeclasses for $category"))
 
@@ -380,7 +387,7 @@ object Magnolia {
 
         val impl = q"""
           $typeNameDef
-          ${c.prefix}.combine(new $caseClassType(
+          $prefix.combine(new $caseClassType(
             $typeName,
             true,
             false,
@@ -549,7 +556,7 @@ object Magnolia {
             val $paramsVal = new $ArrayClass[$paramType](${assignments.length})
             ..$assignments
             $typeNameDef
-            ${c.prefix}.combine(new $caseClassType(
+            $prefix.combine(new $caseClassType(
               $typeName,
               false,
               $isValueClass,
@@ -605,7 +612,7 @@ object Magnolia {
           val $subtypesVal = new $ArrayClass[$subType](${assignments.size})
           ..$assignments
           $typeNameDef
-          ${c.prefix}.dispatch(new $SealedTraitSym(
+          $prefix.dispatch(new $SealedTraitSym(
             $typeName,
             $subtypesVal: $ArrayClass[$subType],
             $ArrayObj(..$classAnnotationTrees),
@@ -613,12 +620,12 @@ object Magnolia {
           ))
         }""")
       } else if (!typeSymbol.isParameter) {
-        c.prefix.tree.tpe.baseClasses
+        prefix.tree.tpe.baseClasses
           .find { cls =>
             cls.asType.toType.decl(TermName("fallback")) != NoSymbol
           }.map { _ =>
             warning(s"using fallback derivation for $genericType")
-            q"""${c.prefix}.fallback[$genericType]"""
+            q"""$prefix.fallback[$genericType]"""
           }
       } else None
 

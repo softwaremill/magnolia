@@ -440,6 +440,13 @@ final case class TypeName(owner: String, short: String, typeArguments: Seq[TypeN
   */
 final class debug(typeNamePart: String = "") extends scala.annotation.StaticAnnotation
 
+/**
+  * Allows `combine`, `dispatch` and `fallback` to be implemented in another object.
+  * This makes it possible to export more than one derivation in an object
+  * @param companion the object where the methods are defined
+  */
+final class proxy(companion: Any) extends scala.annotation.StaticAnnotation
+
 private[magnolia] final case class EarlyExit[E](e: E) extends Exception with util.control.NoStackTrace
 
 object MagnoliaUtil {

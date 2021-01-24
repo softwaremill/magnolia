@@ -734,5 +734,41 @@ object Tests extends Suite("Magnolia tests") {
     test("support dispatch without combine") {
       implicitly[NoCombine[Halfy]].nameOf(Righty())
     }.assert(_ == "Righty")
+
+    test("proxies: semiauto ToString1") {
+      import proxies._, semiauto._
+      implicit val x: ToString1[Param] = deriveToString1[Param]
+      Param("a", "b").str1
+    }.assert(_ == "a, b")
+
+    test("proxies: semiauto ToString1 is not auto") {
+      import proxies._, semiauto._
+      scalac"""Param("a", "b").str1"""
+    }.assert(_ == TypecheckError(txt"could not find implicit value for parameter ev: magnolia.examples.proxies.ToString1[magnolia.tests.Param]"))
+
+    test("proxies: semiauto ToString1 (nested)") {
+      import proxies._, semiauto._
+      implicit val x: ToString1[Param] = deriveToString1[Param]
+      implicit val y: ToString1[Test] = deriveToString1[Test]
+      Test(Param("a", "b")).str1
+    }.assert(_ == "a, b")
+
+    test("proxies: semiauto ToString1 is not auto (nested)") {
+      import proxies._, semiauto._
+      // skip `deriveToString1[Param]`
+      scalac"deriveToString1[Test]"
+    }.assert(_ == TypecheckError(txt"""magnolia: could not find ToString1.Typeclass for type magnolia.tests.Param
+    in parameter 'param' of product type magnolia.tests.Test
+"""))
+
+    test("proxies: auto ToString1 (nested)") {
+      import proxies._, auto._
+      Test(Param("a", "b")).str1
+    }.assert(_ == "a, b")
+
+    test("proxies: auto ToString2 (nested)") {
+      import proxies._, auto._
+      Test(Param("a", "b")).str2
+    }.assert(_ == "a; b")
   }
 }
