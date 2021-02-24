@@ -1,4 +1,4 @@
-ThisBuild / scalaVersion := "3.0.0-M2"
+ThisBuild / scalaVersion := "3.0.0-RC1"
 ThisBuild / organization := "com.propensive"
 ThisBuild / organizationName := "Propensive OÜ"
 ThisBuild / organizationHomepage := Some(url("https://propensive.com/"))
@@ -37,19 +37,15 @@ lazy val core = (project in file(".core"))
   .settings(
     name := "magnolia-core",
     Compile / scalaSource := baseDirectory.value / ".." / "src" / "core",
-    libraryDependencies += ("com.propensive" %% "mercator" % "0.2.1").withDottyCompat(scalaVersion.value),
-    //scalacOptions += "-Xprint:typer"
   )
-/*
+
 lazy val examples = (project in file(".examples"))
   .dependsOn(core)
   .settings(
-    scalacOptions ++= Seq("-Xexperimental", "-Xfuture"),
     name := "magnolia-examples",
     Compile / scalaSource := baseDirectory.value / ".." / "src" / "examples",
-    libraryDependencies += "com.propensive" %% "magnolia" % "0.18.0",
   )
-*/
+
 // lazy val test = (project in file(".test"))
 //   .dependsOn(examples)
 //   .settings(

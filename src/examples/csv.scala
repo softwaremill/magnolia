@@ -17,14 +17,12 @@
 package magnolia.examples
 
 import magnolia._
-import scala.language.experimental.macros
 
 trait Csv[A] {
   def apply(a: A): List[String]
 }
 
-object Csv {
-  type Typeclass[A] = Csv[A]
+object Csv extends MagnoliaDerivation[Csv] {
 
   def combine[A](ctx: CaseClass[Csv, A]): Csv[A] = new Csv[A] {
     def apply(a: A): List[String] =
@@ -33,13 +31,11 @@ object Csv {
       }
   }
 
-  def dispatch[A](ctx: SealedTrait[Csv, A]): Csv[A] = new Csv[A] {
-    def apply(a: A): List[String] = ctx.dispatch(a)(sub => sub.typeclass(sub.cast(a)))
+  override def dispatch[A](ctx: SealedTrait[Csv, A]): Csv[A] = new Csv[A] {
+    def apply(a: A): List[String] = ctx.dispatch(a)(sub => sub.typeclass(a))
   }
 
-  implicit def deriveCsv[A]: Csv[A] = macro Magnolia.gen[A]
-
-  implicit val csvStr: Csv[String] = new Csv[String] {
+  given csvStr: Csv[String] with {
     def apply(a: String): List[String] = List(a)
   }
 }

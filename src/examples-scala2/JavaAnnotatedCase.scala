@@ -16,16 +16,5 @@
 */
 package magnolia.examples
 
-import magnolia._
-
-class ExportedTypeclass[T]()
-
-object ExportedTypeclass extends MagnoliaDerivation[ExportedTypeclass] {
-  case class Exported[T]() extends ExportedTypeclass[T]
-  def combine[T](ctx: CaseClass[Typeclass, T]): Exported[T] = Exported()
-  override def dispatch[T](ctx: SealedTrait[Typeclass, T]): Exported[T] = Exported()
-
-  implicit val intInstance: Typeclass[Int] = new ExportedTypeclass()
-  implicit val stringInstance: Typeclass[String] = new ExportedTypeclass()
-  implicit def seqInstance[T: Typeclass]: Typeclass[Seq[T]] = new ExportedTypeclass()
-}
+@Deprecated
+case class JavaAnnotatedCase(v: Int)

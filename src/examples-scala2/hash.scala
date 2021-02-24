@@ -17,32 +17,23 @@
 package magnolia.examples
 
 import magnolia._
+import scala.language.experimental.macros
 
-trait TypeNameInfo[T] {
-  def name: TypeInfo
+trait WeakHash[T] { def hash(value: T): Int }
 
-  def subtypeNames: Seq[TypeInfo]
-}
+object WeakHash {
 
-object TypeNameInfo extends MagnoliaDerivation[TypeNameInfo] {
-  def combine[T](ctx: CaseClass[TypeNameInfo, T]): TypeNameInfo[T] =
-    new TypeNameInfo[T] {
-      def name: TypeInfo = ctx.typeInfo
+  type Typeclass[T] = WeakHash[T]
 
-      def subtypeNames: Seq[TypeInfo] = Nil
-    }
+  def combine[T](ctx: CaseClass[WeakHash, T]): WeakHash[T] = new WeakHash[T] {
+    def hash(value: T): Int = ctx.parameters.map { param =>
+      param.typeclass.hash(param.dereference(value))
+    }.foldLeft(0)(_ ^ _)
+  }
 
-  override def dispatch[T](ctx: SealedTrait[TypeNameInfo, T]): TypeNameInfo[T] =
-    new TypeNameInfo[T] {
-      def name: TypeInfo = ctx.typeInfo
+  implicit val string: WeakHash[String] = _.map(_.toInt).sum
+  implicit val int: WeakHash[Int] = identity
+  implicit val double: WeakHash[Double] = _.toInt
 
-      def subtypeNames: Seq[TypeInfo] = ctx.subtypes.map(_.typeInfo)
-    }
-
-  def fallback[T]: TypeNameInfo[T] =
-    new TypeNameInfo[T] {
-      def name: TypeInfo = TypeInfo("", "Unknown Type", Seq.empty)
-
-      def subtypeNames: Seq[TypeInfo] = Nil
-    }
+  implicit def gen[T]: WeakHash[T] = macro Magnolia.gen[T]
 }

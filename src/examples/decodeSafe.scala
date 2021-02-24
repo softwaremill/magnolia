@@ -15,28 +15,21 @@
 
 */
 import magnolia._
-import scala.language.experimental.macros
 
 /** decoder for converting strings to other types providing good error messages */
 trait DecoderSafe[T] { def decode(str: String): Either[String, T] }
 
 /** derivation object (and companion object) for [[DecoderSafe]] instances */
-object DecoderSafe {
+object DecoderSafe extends MagnoliaDerivation[DecoderSafe] {
 
   /** decodes strings */
-  implicit val string: DecoderSafe[String] = (s: String) => Right(s)
+  given string: DecoderSafe[String] = (s: String) => Right(s)
 
   /** decodes ints */
-  implicit val int: DecoderSafe[Int] = { k =>
+  given int: DecoderSafe[Int] = { k =>
     try Right(k.toInt)
     catch { case _: NumberFormatException => Left(s"illegal number: $k") }
   }
-
-  /** binds the Magnolia macro to this derivation object */
-  implicit def gen[T]: DecoderSafe[T] = macro Magnolia.gen[T]
-
-  /** type constructor for new instances of the typeclass */
-  type Typeclass[T] = DecoderSafe[T]
 
   /** defines how new [[DecoderSafe]]s for case classes should be constructed */
   def combine[T](ctx: CaseClass[DecoderSafe, T]): DecoderSafe[T] = value => {
@@ -47,9 +40,9 @@ object DecoderSafe {
   }
 
   /** defines how to choose which subtype of the sealed trait to use for decoding */
-  def dispatch[T](ctx: SealedTrait[DecoderSafe, T]): DecoderSafe[T] = param => {
+  override def dispatch[T](ctx: SealedTrait[DecoderSafe, T]): DecoderSafe[T] = param => {
     val (name, _) = parse(param)
-    val subtype = ctx.subtypes.find(_.typeName.full == name).get
+    val subtype = ctx.subtypes.find(_.typeInfo.full == name).get
     subtype.typeclass.decode(param)
   }
 
@@ -58,10 +51,12 @@ object DecoderSafe {
     val end = value.indexOf('(')
     val name = value.substring(0, end)
 
-    def parts(value: String,
-              idx: Int = 0,
-              depth: Int = 0,
-              collected: List[String] = List("")): List[String] = {
+    def parts(
+      value: String,
+      idx: Int = 0,
+      depth: Int = 0,
+      collected: List[String] = List("")
+    ): List[String] = {
       def plus(char: Char): List[String] = collected.head + char :: collected.tail
 
       if (idx == value.length) collected

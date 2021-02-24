@@ -14,38 +14,42 @@
     See the License for the specific language governing permissions and limitations under the License.
 
 */
-package magnolia.examples
-
 import magnolia._
+import scala.language.experimental.macros
 
-/** very basic decoder for converting strings to other types */
-trait Decoder[T] { def decode(str: String): T }
+/** decoder for converting strings to other types providing good error messages */
+trait DecoderSafe[T] { def decode(str: String): Either[String, T] }
 
-/** derivation object (and companion object) for [[Decoder]] instances */
-object Decoder extends MagnoliaDerivation[Decoder] {
+/** derivation object (and companion object) for [[DecoderSafe]] instances */
+object DecoderSafe {
 
   /** decodes strings */
-  implicit val string: Decoder[String] = (s: String) => s
+  implicit val string: DecoderSafe[String] = (s: String) => Right(s)
 
   /** decodes ints */
-  implicit val int: Decoder[Int] = _.toInt
+  implicit val int: DecoderSafe[Int] = { k =>
+    try Right(k.toInt)
+    catch { case _: NumberFormatException => Left(s"illegal number: $k") }
+  }
 
-  /** defines how new [[Decoder]]s for case classes should be constructed */
-  def combine[T](ctx: CaseClass[Decoder, T]): Decoder[T] = value => {
+  /** binds the Magnolia macro to this derivation object */
+  implicit def gen[T]: DecoderSafe[T] = macro Magnolia.gen[T]
+
+  /** type constructor for new instances of the typeclass */
+  type Typeclass[T] = DecoderSafe[T]
+
+  /** defines how new [[DecoderSafe]]s for case classes should be constructed */
+  def combine[T](ctx: CaseClass[DecoderSafe, T]): DecoderSafe[T] = value => {
     val (_, values) = parse(value)
-    ctx.construct { param =>
-      param
-        .typeclass
-        .decode(
-          values(param.label)
-        )
-    }
+    ctx.constructEither { param =>
+      param.typeclass.decode(values(param.label))
+    }.left.map(_.reduce(_ + "\n" + _))
   }
 
   /** defines how to choose which subtype of the sealed trait to use for decoding */
-  override def dispatch[T](ctx: SealedTrait[Decoder, T]): Decoder[T] = param => {
+  def dispatch[T](ctx: SealedTrait[DecoderSafe, T]): DecoderSafe[T] = param => {
     val (name, _) = parse(param)
-    val subtype = ctx.subtypes.find(_.typeInfo.full == name).get
+    val subtype = ctx.subtypes.find(_.typeName.full == name).get
     subtype.typeclass.decode(param)
   }
 
@@ -54,12 +58,10 @@ object Decoder extends MagnoliaDerivation[Decoder] {
     val end = value.indexOf('(')
     val name = value.substring(0, end)
 
-    def parts(
-      value: String,
-      idx: Int = 0,
-      depth: Int = 0,
-      collected: List[String] = List("")
-    ): List[String] = {
+    def parts(value: String,
+              idx: Int = 0,
+              depth: Int = 0,
+              collected: List[String] = List("")): List[String] = {
       def plus(char: Char): List[String] = collected.head + char :: collected.tail
 
       if (idx == value.length) collected
@@ -83,6 +85,6 @@ object Decoder extends MagnoliaDerivation[Decoder] {
       (label, value)
     }
 
-    (name, parts(value.substring(end + 1, value.length - 1)).filter(_.nonEmpty).map(keyValue).toMap)
+    (name, parts(value.substring(end + 1, value.length - 1)).map(keyValue).toMap)
   }
 }

@@ -17,13 +17,10 @@
 package magnolia.examples
 
 import magnolia._
-import scala.language.experimental.macros
 
 trait WeakHash[T] { def hash(value: T): Int }
 
-object WeakHash {
-
-  type Typeclass[T] = WeakHash[T]
+object WeakHash extends MagnoliaDerivation[WeakHash] {
 
   def combine[T](ctx: CaseClass[WeakHash, T]): WeakHash[T] = new WeakHash[T] {
     def hash(value: T): Int = ctx.parameters.map { param =>
@@ -31,9 +28,15 @@ object WeakHash {
     }.foldLeft(0)(_ ^ _)
   }
 
-  implicit val string: WeakHash[String] = _.map(_.toInt).sum
-  implicit val int: WeakHash[Int] = identity
-  implicit val double: WeakHash[Double] = _.toInt
+  override def dispatch[T](ctx: SealedTrait[WeakHash, T]): WeakHash[T] = {
+    new WeakHash[T] {
+      def hash(value: T): Int = ctx.dispatch(value) { sub =>
+        sub.typeclass.hash(value)
+      }
+    }
+  }
 
-  implicit def gen[T]: WeakHash[T] = macro Magnolia.gen[T]
+  given string: WeakHash[String] = _.map(_.toInt).sum
+  given int: WeakHash[Int] = identity
+  given double: WeakHash[Double] = _.toInt
 }

@@ -12,7 +12,7 @@ object TypeAnnotations {
       TypeRepr
         .of[T]
         .typeSymbol
-        .annots
+        .annotations
         .filter(a =>
           a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
             a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"

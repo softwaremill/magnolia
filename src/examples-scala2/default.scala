@@ -16,14 +16,16 @@
 */
 package magnolia.examples
 
-import magnolia._
+import magnolia._, mercator._
+import scala.language.experimental.macros
 
 /** typeclass for providing a default value for a particular type */
 trait HasDefault[T] { def defaultValue: Either[String, T] }
 
 /** companion object and derivation object for [[HasDefault]] */
-object HasDefault extends MagnoliaDerivation[HasDefault] {
-  import magnolia.Monadic._
+object HasDefault {
+
+  type Typeclass[T] = HasDefault[T]
 
   /** constructs a default for each parameter, using the constructor default (if provided),
     *  otherwise using a typeclass-provided default */
@@ -37,7 +39,7 @@ object HasDefault extends MagnoliaDerivation[HasDefault] {
   }
 
   /** chooses which subtype to delegate to */
-  override def dispatch[T](ctx: SealedTrait[HasDefault, T]): HasDefault[T] = new HasDefault[T] {
+  def dispatch[T](ctx: SealedTrait[HasDefault, T])(): HasDefault[T] = new HasDefault[T] {
     def defaultValue = ctx.subtypes.headOption match {
       case Some(sub) => sub.typeclass.defaultValue
       case None => Left("no subtypes")
@@ -45,14 +47,17 @@ object HasDefault extends MagnoliaDerivation[HasDefault] {
   }
 
   /** default value for a string; the empty string */
-  given string: HasDefault[String] with { def defaultValue = Right("") }
+  implicit val string: HasDefault[String] = new HasDefault[String] { def defaultValue = Right("") }
 
   /** default value for ints; 0 */
-  given int: HasDefault[Int] with { def defaultValue = Right(0) }
+  implicit val int: HasDefault[Int] = new HasDefault[Int] { def defaultValue = Right(0) }
 
   /** oh, no, there is no default Boolean... whatever will we do? */
-  given boolean: HasDefault[Boolean] with { def defaultValue = Left("truth is a lie") }
+  implicit val boolean: HasDefault[Boolean] = new HasDefault[Boolean] { def defaultValue = Left("truth is a lie") }
 
   /** default value for sequences; the empty sequence */
-  given seq[A]: HasDefault[Seq[A]] with { def defaultValue = Right(Seq.empty) }
+  implicit def seq[A]: HasDefault[Seq[A]] = new Typeclass[Seq[A]] { def defaultValue = Right(Seq.empty) }
+
+  /** generates default instances of [[HasDefault]] for case classes and sealed traits */
+  implicit def gen[T]: HasDefault[T] = macro Magnolia.gen[T]
 }

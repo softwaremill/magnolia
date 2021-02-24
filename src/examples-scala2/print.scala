@@ -16,44 +16,46 @@
 */
 package magnolia.examples
 
-import magnolia.{ReadOnlyCaseClass, SealedTrait, MagnoliaDerivation, CaseClass}
+import magnolia.{Magnolia, ReadOnlyCaseClass, SealedTrait}
+
+import scala.language.experimental.macros
 
 // Prints a type, only requires read access to fields
 trait Print[T] {
   def print(t: T): String
 }
 
-trait GenericPrint extends MagnoliaDerivation[Print] {
+trait GenericPrint {
+  type Typeclass[T] = Print[T]
 
-  override def combine[T](ctx: CaseClass[Typeclass, T]): Print[T] = { value =>
-    if (ctx.isValueClass) {
-      val param = ctx.parameters.head
+  def combine[T](ctx: ReadOnlyCaseClass[Typeclass, T]): Print[T] = { value =>
+  if (ctx.isValueClass) {
+    val param = ctx.parameters.head
+    param.typeclass.print(param.dereference(value))
+  }
+  else {
+    ctx.parameters.map { param =>
       param.typeclass.print(param.dereference(value))
-    }
-    else {
-      ctx.parameters.map { param =>
-        param.typeclass.print(param.dereference(value))
-      }.mkString(s"${ctx.typeInfo.short}(", ",", ")")
+    }.mkString(s"${ctx.typeName.short}(", ",", ")")
+  }
+  }
+
+
+  def dispatch[T](ctx: SealedTrait[Print, T])(): Print[T] = { value =>
+    ctx.dispatch(value) { sub =>
+      sub.typeclass.print(sub.cast(value))
     }
   }
 
-  override def dispatch[T](ctx: SealedTrait[Print, T]): Print[T] = { value =>
-    ctx.dispatch(value) { sub =>
-      sub.typeclass.print(value)
-    }
-  }
+  implicit def gen[T]: Print[T] = macro Magnolia.gen[T]
+
 }
 
 object Print extends GenericPrint {
+  implicit val string: Print[String] = identity
+  implicit val int: Print[Int] = _.toString
 
-  given string: Print[String] with {
-    def print(t: String): String = t
-  }
-  given int: Print[Int] with {
-    def print(t: Int): String = t.toString
-  }
-
-  given seq[T](using printT: Print[T]): Print[Seq[T]] = { values =>
+  implicit def seq[T](implicit printT: Print[T]): Print[Seq[T]] = { values =>
     values.map(printT.print).mkString("[", ",", "]")
   }
 }

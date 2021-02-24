@@ -14,3 +14,5 @@ target
 .metals/
 .*.bak
 .vscode/
+project/project/
+project/metals.sbt

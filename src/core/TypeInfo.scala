@@ -2,18 +2,8 @@ package magnolia
 
 import scala.quoted._
 
-sealed trait TypeInfo {
-  def full: String
-}
-
-case class BaseTypeInfo(owner: String, name: String, typeParams: List[TypeInfo]) extends TypeInfo {
-  override def full: String = "" // TODO
-}
-case class OrTypeInfo(subtypes: List[TypeInfo]) extends TypeInfo {
-  override def full: String = "" // TODO
-}
-case class AndTypeInfo(subtypes: List[TypeInfo]) extends TypeInfo {
-  override def full: String = "" // TODO
+case class TypeInfo(owner: String, short: String, typeParams: Iterable[TypeInfo]) {
+  def full: String = s"$owner.$short"
 }
 
 object TypeInfo {
@@ -27,21 +17,16 @@ object TypeInfo {
 
     def owner(tpe: TypeRepr): Expr[String] =
       if (tpe.typeSymbol.maybeOwner.isNoSymbol) {
-        println("Debug: No owner - " + tpe) // TODO - remove
-        Expr("<no owner>") // TODO: can this happen any more? are all cases catched? how to deal with unhandled cases?
+        Expr("<no owner>")
       } else if (tpe.typeSymbol.owner == defn.EmptyPackageClass) Expr("")
-      else Expr(tpe.typeSymbol.owner.fullName)
+      else Expr(tpe.typeSymbol.owner.name)
 
     def typeInfo(tpe: TypeRepr): Expr[TypeInfo] =
       tpe match {
-        case OrType(subtypes) =>
-        '{OrTypeInfo(${Expr.ofList(subtypes.toList.map(typeInfo))})}
-        case AndType(subtypes) =>
-        '{AndTypeInfo(${Expr.ofList(subtypes.toList.map(typeInfo))})}
         case AppliedType(tpe, args) =>
-        '{BaseTypeInfo(${owner(tpe)}, ${name(tpe)}, ${Expr.ofList(args.map(typeInfo))})}
+        '{TypeInfo(${owner(tpe)}, ${name(tpe)}, ${Expr.ofList(args.map(typeInfo))})}
         case _ =>
-        '{BaseTypeInfo(${owner(tpe)}, ${name(tpe)}, List.empty)}
+        '{TypeInfo(${owner(tpe)}, ${name(tpe)}, List.empty)}
       }
 
     typeInfo(TypeRepr.of[T])

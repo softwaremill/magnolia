@@ -15,7 +15,7 @@ object ParamAnnotations {
       .typeSymbol
       .caseFields
       .map(field =>
-        Expr(field.name) -> field.annots.filter(a =>
+        Expr(field.name) -> field.annotations.filter(a =>
           a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
             a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
         ).map(_.asExpr.asInstanceOf[Expr[Any]])
