@@ -69,7 +69,7 @@ trait GenericShow[Out] extends MagnoliaDerivation[[X] =>> Show[Out, X]] {
       val anns = sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
-      prefix(annotationStr, sub.typeclass.show(value))
+      prefix(annotationStr, sub.typeclass.show(sub.cast(value)))
     }
 }
 

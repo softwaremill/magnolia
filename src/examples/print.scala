@@ -39,7 +39,7 @@ trait GenericPrint extends MagnoliaDerivation[Print] {
 
   override def dispatch[T](ctx: SealedTrait[Print, T]): Print[T] = { value =>
     ctx.dispatch(value) { sub =>
-      sub.typeclass.print(value)
+      sub.typeclass.print(sub.cast(value))
     }
   }
 }

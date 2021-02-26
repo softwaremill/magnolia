@@ -46,11 +46,9 @@ lazy val examples = (project in file(".examples"))
     Compile / scalaSource := baseDirectory.value / ".." / "src" / "examples",
   )
 
-// lazy val test = (project in file(".test"))
-//   .dependsOn(examples)
-//   .settings(
-//     name := "magnolia-test",
-//     Compile / scalaSource := baseDirectory.value / ".." / "src" / "test",
-//     libraryDependencies += "com.propensive" %% "probably-cli" % "0.5.0",
-//     libraryDependencies += "com.propensive" %% "contextual-examples" % "1.5.0"
-//   )
+lazy val test = (project in file(".test"))
+  .dependsOn(examples)
+  .settings(
+    name := "magnolia-test",
+    Compile / scalaSource := baseDirectory.value / ".." / "src" / "test",
+  )

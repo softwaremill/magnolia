@@ -56,7 +56,7 @@ object Patcher extends LowerPriorityPatcher with MagnoliaDerivation[Patcher] {
   def dispatch[T](ctx: SealedTrait[Patcher, T]): Patcher[T] =
     new Patcher[T] {
       def patch(value: T, fieldValues: Seq[Any]): T  =
-        ctx.dispatch(value)(sub => sub.typeclass.patch(value, fieldValues))
+        ctx.dispatch(value)(sub => sub.typeclass.patch(sub.cast(value), fieldValues))
     }
 }
 

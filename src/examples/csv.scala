@@ -32,7 +32,7 @@ object Csv extends MagnoliaDerivation[Csv] {
   }
 
   override def dispatch[A](ctx: SealedTrait[Csv, A]): Csv[A] = new Csv[A] {
-    def apply(a: A): List[String] = ctx.dispatch(a)(sub => sub.typeclass(a))
+    def apply(a: A): List[String] = ctx.dispatch(a)(sub => sub.typeclass(sub.cast(a)))
   }
 
   given csvStr: Csv[String] with {

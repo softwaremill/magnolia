@@ -40,11 +40,11 @@ trait Subtype[Typeclass[_], Type] extends Serializable {
     *
     *  This is the instance of the type `Typeclass[Type]` which will have been discovered by
     *  implicit search, or derived by Magnolia. */
-  def typeclass: Typeclass[Type] = typeclassUnbound.asInstanceOf[Typeclass[Type]]
+  def typeclass: Typeclass[Type & SType] = typeclassUnbound.asInstanceOf[Typeclass[Type & SType]]
   def typeclassUnbound: Typeclass[SType]
 
   /** partial function defined the subset of values of `Type` which have the type of this subtype */
-  def cast: PartialFunction[Type, SType]
+  def cast: PartialFunction[Type, SType & Type]
 
   /** all of the annotations on the sub type */
   final def annotations: Seq[Any] = annotationsArray.toSeq
@@ -69,16 +69,16 @@ object Subtype {
     tpeAnns: Array[Any],
     tc: CallByNeed[Tc[S]],
     isType: T => Boolean,
-    asType: T => S
+    asType: T => S & T
   ): Subtype[Tc, T] =
-    new Subtype[Tc, T] with PartialFunction[T, S] {
+    new Subtype[Tc, T] with PartialFunction[T, S & T] {
       type SType = S
       def typeInfo: TypeInfo = info
       def index: Int = idx
       def typeclassUnbound: Tc[SType] = tc.value
-      def cast: PartialFunction[T, SType] = this
+      def cast: PartialFunction[T, SType & T] = this
       def isDefinedAt(t: T) = isType(t)
-      def apply(t: T): SType = asType(t)
+      def apply(t: T): SType & T = asType(t)
       def annotationsArray: Array[Any] = anns
       def typeAnnotationsArray: Array[Any] = tpeAnns
       override def toString: String = s"Subtype(${typeInfo.full})"

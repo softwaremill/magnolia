@@ -42,7 +42,7 @@ object Eq extends MagnoliaDerivation[Eq] {
   override def dispatch[T](ctx: SealedTrait[Eq, T]): Eq[T] = new Eq[T] {
     def equal(value1: T, value2: T): Boolean = ctx.dispatch(value1) {
       case sub =>
-        sub.cast.isDefinedAt(value2) && sub.typeclass.equal(value1, value2)
+        sub.cast.isDefinedAt(value2) && sub.typeclass.equal(sub.cast(value1), sub.cast(value2))
     }
   }
 

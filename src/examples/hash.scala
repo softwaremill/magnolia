@@ -31,7 +31,7 @@ object WeakHash extends MagnoliaDerivation[WeakHash] {
   override def dispatch[T](ctx: SealedTrait[WeakHash, T]): WeakHash[T] = {
     new WeakHash[T] {
       def hash(value: T): Int = ctx.dispatch(value) { sub =>
-        sub.typeclass.hash(value)
+        sub.typeclass.hash(sub.cast(value))
       }
     }
   }

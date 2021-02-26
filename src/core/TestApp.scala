@@ -1,43 +1,81 @@
 package magnolia
 
-object TestApp {
-  case class MyAnnotation(a: Int) extends scala.annotation.Annotation
+case class MyAnnotation(a: Int) extends scala.annotation.Annotation
 
-  @MyAnnotation(1) case class MyCaseClass[A](@MyAnnotation(2) @MyAnnotation(10) i: A @MyAnnotation(3) ,@MyAnnotation(4) s: String @MyAnnotation(5))
+@MyAnnotation(1) case class MyCaseClass[A](@MyAnnotation(2) @MyAnnotation(10) i: A @MyAnnotation(3) ,@MyAnnotation(4) s: String @MyAnnotation(5))
 
-  trait Show[T] {
-    def show(t: T): String
+trait Show[T] {
+  def show(t: T): String
+}
+
+object Show extends MagnoliaDerivation[Show] {
+  def combine[T](ctx: CaseClass[Show, T]): Show[T] = new Show[T] {
+    def show(value: T): String = ctx.typeInfo.short + ctx.parameters.map { p =>
+      s"${p.label}=${p.typeclass.show(p.dereference(value))}"
+    }.mkString("{", ",", "}")
   }
 
-  object Show extends MagnoliaDerivation[Show] {
-    def combine[T](ctx: CaseClass[Show, T]): Show[T] = new Show[T] {
-      def show(value: T): String = ctx.typeInfo.short + ctx.parameters.map { p =>
-        s"${p.label}=${p.typeclass.show(p.dereference(value))}"
-      }.mkString("{", ",", "}")
-    }
-
-    override def dispatch[T](ctx: SealedTrait[Show, T]): Show[T] = {
-      new Show[T] {
-        def show(value: T): String = ctx.dispatch(value) { sub =>
-          sub.typeclass.show(value)
-        }
+  override def dispatch[T](ctx: SealedTrait[Show, T]): Show[T] = {
+    new Show[T] {
+      def show(value: T): String = ctx.dispatch(value) { sub =>
+        sub.typeclass.show(sub.cast(value))
       }
     }
+  }
 
-    given IntShow: Show[Int] with {
-      def show(t: Int): String = t.toString
+  given IntShow: Show[Int] with {
+    def show(t: Int): String = t.toString
+  }
+
+  given StringShow: Show[String] with {
+    def show(t: String): String = t
+  }
+}
+
+trait Identity[T] {
+  def id(t: T): T
+}
+
+object Identity extends MagnoliaDerivation[Identity] {
+  def combine[T](ctx: CaseClass[Identity, T]): Identity[T] = new Identity {
+    def id(t: T): T = t
+  }
+
+  def dispatch[T](ctx: SealedTrait[Identity, T]): Identity[T] = new Identity {
+    def id(t: T): T = t
+  }
+
+  given intIdentity: Identity[Int] with {
+    def id(i: Int): Int = i
+  }
+  given stringIdentity: Identity[String] with {
+    def id(i: String): String = i
+  }
+}
+
+object NumInst {
+  opaque type Num = Int
+
+  object Num {
+    def apply(i: Int): Num = i
+
+    given numShow: Show[Num] with {
+      def show(n: Num): String = n.toString
     }
 
-    given StringShow: Show[String] with {
-      def show(t: String): String = t
+    given numIdentity: Identity[Num] with {
+      def id(n: Num): Num = n
     }
   }
 }
 
 object Main extends App {
-  import TestApp._
+  import Show._
+  import Identity._
+  import NumInst._
+  import NumInst.Num._
 
-  enum Tree[T] derives Show:
+  enum Tree[T] derives Show, Identity:
    case Branch(left: Tree[T], right: Tree[T])
    case Leaf(elem: T)
 
@@ -47,16 +85,11 @@ object Main extends App {
 
   case class Number(value: Int) extends AnyVal
 
-  opaque type Num = Int
-
-  object Num {
-    def apply(i: Int): Num = i
-  }
-
   List(
     MyCaseClass[Int](1, "a")
   ).map(Show.derived[MyCaseClass[Int]].show).foreach(println)
 
+  //shouldn't compile if not in the same scope as opaque type declaration
   List(
     Num(1)
   ).map(summon[Show[Num]].show).foreach(println)
@@ -74,15 +107,23 @@ object Main extends App {
     SBranch(SBranch(SLeaf(1),  SLeaf(2)),  SLeaf(3))
   ).map(summon[Show[STree[Int]]].show).foreach(println)
 
-  sealed trait A derives Show
+  sealed trait A derives Show, Identity
   case class AB(b: B) extends A
   case class AEnd(n: Num) extends A
 
-  sealed trait B derives Show
+  sealed trait B derives Show, Identity
   case class BA(a: A) extends B
 
   List( 
     AB(BA(AB(BA(AEnd(Num(2))))))
   ).map(summon[Show[A]].show).foreach(println)
+
+  println(summon[Identity[Tree[Int]]].id(
+    Branch(Leaf(1),  Leaf(2))
+  ))
+
+  println(summon[Identity[A]].id(
+    AB(BA(AB(BA(AEnd(Num(2))))))
+  ))
 
 }

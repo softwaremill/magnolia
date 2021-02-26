@@ -23,7 +23,7 @@ trait MagnoliaDerivation[TypeClass[_]] {
         TypeAnnotations[T].toArray,
         CallByNeed(summonInline[Typeclass[s]]),
         x => m.ordinal(x) == idx,
-        _.asInstanceOf[s]
+        _.asInstanceOf[s & T]
       ) :: getSubtypes[T, tail](m, idx + 1)
   }
 
