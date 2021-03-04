@@ -16,8 +16,7 @@
 */
 package magnolia.examples
 
-import magnolia._
-import scala.language.experimental.macros
+import magnolia.{ MagnoliaDerivation, CaseClass, SealedTrait, TypeInfo }
 
 /** shows one type as another, often as a string
   *

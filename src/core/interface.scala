@@ -40,7 +40,7 @@ trait Subtype[Typeclass[_], Type] extends Serializable {
     *
     *  This is the instance of the type `Typeclass[Type]` which will have been discovered by
     *  implicit search, or derived by Magnolia. */
-  def typeclass: Typeclass[Type & SType] = typeclassUnbound.asInstanceOf[Typeclass[Type & SType]]
+  def typeclass: Typeclass[SType & Type] = typeclassUnbound.asInstanceOf[Typeclass[SType & Type]]
   def typeclassUnbound: Typeclass[SType]
 
   /** partial function defined the subset of values of `Type` which have the type of this subtype */

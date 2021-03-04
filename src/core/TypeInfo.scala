@@ -12,8 +12,12 @@ object TypeInfo {
   def typeInfoImpl[T](using qctx: Quotes, tpe: Type[T]): Expr[TypeInfo] = {
     import qctx.reflect._
 
+    def normalizedName(s: Symbol): String = {
+      if s.flags.is(Flags.Module) then s.name.stripSuffix("$") else s.name
+    }
+
     def name(tpe: TypeRepr) : Expr[String] =
-      Expr(tpe.typeSymbol.name)
+      Expr(normalizedName(tpe.typeSymbol))
 
     def owner(tpe: TypeRepr): Expr[String] =
       if (tpe.typeSymbol.maybeOwner.isNoSymbol) {

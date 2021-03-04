@@ -39,7 +39,7 @@ object TypeNameInfo extends MagnoliaDerivation[TypeNameInfo] {
       def subtypeNames: Seq[TypeInfo] = ctx.subtypes.map(_.typeInfo)
     }
 
-  def fallback[T]: TypeNameInfo[T] =
+  given fallback[T]: TypeNameInfo[T] =
     new TypeNameInfo[T] {
       def name: TypeInfo = TypeInfo("", "Unknown Type", Seq.empty)
 

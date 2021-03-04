@@ -20,7 +20,7 @@ trait MagnoliaDerivation[TypeClass[_]] {
         TypeInfo[s],
         idx,
         Array.empty,
-        TypeAnnotations[T].toArray,
+        ParamTypeAnnotations[T].toArray,
         CallByNeed(summonInline[Typeclass[s]]),
         x => m.ordinal(x) == idx,
         _.asInstanceOf[s & T]
@@ -29,6 +29,7 @@ trait MagnoliaDerivation[TypeClass[_]] {
 
   inline def getParams[T, Labels <: Tuple, Params <: Tuple](
     paramAnnotations: Map[String, List[Any]],
+    paramTypeAnnotations: Map[String, List[Any]],
     paramRepeated: Map[String, Boolean],
     idx: Int = 0
   ): List[Param[Typeclass, T]] = inline erasedValue[(Labels, Params)] match {
@@ -39,10 +40,10 @@ trait MagnoliaDerivation[TypeClass[_]] {
         idx,
         paramRepeated.getOrElse(constValue[l].asInstanceOf[String], false),
         CallByNeed(summonInline[Typeclass[p]]),
-        CallByNeed(None), //TODO TASTY? There is a Flag HasDefault
+        CallByNeed(None),
         paramAnnotations.getOrElse(constValue[l].asInstanceOf[String], List.empty).toArray,
-        TypeAnnotations[T].toArray
-      ) :: getParams[T, ltail, ptail](paramAnnotations, paramRepeated, idx + 1)
+        paramTypeAnnotations.getOrElse(constValue[l].asInstanceOf[String], List.empty).toArray
+      ) :: getParams[T, ltail, ptail](paramAnnotations, paramTypeAnnotations, paramRepeated, idx + 1)
   }
 
   inline def derivedMirrorSum[A](s: Mirror.SumOf[A]): Typeclass[A] = {
@@ -50,7 +51,7 @@ trait MagnoliaDerivation[TypeClass[_]] {
       typeInfo = TypeInfo[A],
       subtypesArray = getSubtypes[A, s.MirroredElemTypes](s).toArray,
       annotationsArray = Array.empty,
-      typeAnnotationsArray = TypeAnnotations[A].toArray
+      typeAnnotationsArray = ParamTypeAnnotations[A].toArray
     )
     dispatch(st)
   }
@@ -126,9 +127,9 @@ trait MagnoliaDerivation[TypeClass[_]] {
       /* typeInfo */ TypeInfo[A],
       /* isObject */ IsObject[A],
       /* isValueClass */ IsValueClass[A],
-      /* parametersArray */ getParams[A, p.MirroredElemLabels, p.MirroredElemTypes](ParamAnnotations[A].toMap, AreRepeatedParams[A].toMap).toArray,
-      /* annotationsArray */ Array.empty[Any],
-      /* typeAnnotationsArray */ TypeAnnotations[A].toArray
+      /* parametersArray */ getParams[A, p.MirroredElemLabels, p.MirroredElemTypes](ParamAnnotations[A].toMap, ParamTypeAnnotations[A].toMap, AreRepeatedParams[A].toMap).toArray,
+      /* annotationsArray */ Annotations[A].toArray,
+      /* typeAnnotationsArray */ Array.empty[Any]
     )
 
     combine(cc.tupled(ccparams))
