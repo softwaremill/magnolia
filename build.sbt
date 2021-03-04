@@ -50,7 +50,11 @@ lazy val test = (project in file(".test"))
   .dependsOn(examples)
   .settings(
     name := "magnolia-test",
-    Compile / scalaSource := baseDirectory.value / ".." / "src" / "test",
+    projectDependencies ++= Seq(
+      "org.scalameta" %% "munit" % "0.7.22"
+    ),
+    testFrameworks += new TestFramework("munit.Framework"),
+    Test / scalaSource := baseDirectory.value / ".." / "src" / "test",
   )
 
 lazy val scala2Version = "2.12.13"
