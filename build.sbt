@@ -56,32 +56,3 @@ lazy val test = (project in file(".test"))
     testFrameworks += new TestFramework("munit.Framework"),
     Test / scalaSource := baseDirectory.value / ".." / "src" / "test",
   )
-
-lazy val scala2Version = "2.12.13"
-
-lazy val coreScala2 = (project in file(".core-scala2"))
-  .settings(
-    name := "magnolia-core-scala2",
-    scalaVersion := scala2Version,
-    Compile / scalaSource := baseDirectory.value / ".." / "src" / "core-scala2",
-    libraryDependencies += "com.propensive" %% "mercator" % "0.2.1"
-  )
-
-lazy val examplesScala2 = (project in file(".examples-scala2"))
-  .dependsOn(coreScala2)
-  .settings(
-    scalacOptions ++= Seq("-Xexperimental", "-Xfuture"),
-    name := "magnolia-examples",
-    scalaVersion := scala2Version,
-    Compile / scalaSource := baseDirectory.value / ".." / "src" / "examples-scala2",
-  )
-
-lazy val testScala2 = (project in file(".test-scala2"))
-  .dependsOn(examplesScala2)
-  .settings(
-    name := "magnolia-test",
-    scalaVersion := scala2Version,
-    Compile / scalaSource := baseDirectory.value / ".." / "src" / "test-scala2",
-    libraryDependencies += "com.propensive" %% "probably-cli" % "0.5.0",
-    libraryDependencies += "com.propensive" %% "contextual-examples" % "1.5.0"
-  )
