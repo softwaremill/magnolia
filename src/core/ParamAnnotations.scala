@@ -18,7 +18,7 @@ package magnolia
 
 import scala.quoted._
 
-object ParamAnnotations { // TODO possibly dotty 3.0.0-RC1 regression https://github.com/lampepfl/dotty/issues/11665
+object ParamAnnotations {
   inline def apply[T]: List[(String, List[Any])] = ${ paramAnnotationsImpl[T] }
 
   def paramAnnotationsImpl[T](using qctx: Quotes, tpe: Type[T]): Expr[List[(String, List[Any])]] = {
@@ -29,7 +29,9 @@ object ParamAnnotations { // TODO possibly dotty 3.0.0-RC1 regression https://gi
     Expr.ofList(
       tpe
       .typeSymbol
-      .caseFields
+      .primaryConstructor
+      .paramSymss
+      .flatten
       .map { field =>
         Expr(field.name) -> field.annotations.filter { a =>
           a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
