@@ -14,18 +14,27 @@
     See the License for the specific language governing permissions and limitations under the License.
 
 */
-package magnolia.examples
+package magnolia
 
-import magnolia._
+import scala.quoted.*
+import scala.compiletime.erasedValue
 
-class ExportedTypeclass[T]()
+object DefaultValues {
+  inline def apply[T]: List[(String, Option[Any])] = ${ defaultValuesImpl[T] }
 
-object ExportedTypeclass extends MagnoliaDerivation[ExportedTypeclass] {
-  case class Exported[T]() extends ExportedTypeclass[T]
-  def combine[T](ctx: CaseClass[Typeclass, T]): Exported[T] = Exported()
-  override def dispatch[T](ctx: SealedTrait[Typeclass, T]): Exported[T] = Exported()
-
-  implicit val intInstance: Typeclass[Int] = new ExportedTypeclass()
-  implicit val stringInstance: Typeclass[String] = new ExportedTypeclass()
-  implicit def seqInstance[T: Typeclass]: Typeclass[Seq[T]] = new ExportedTypeclass()
+  def defaultValuesImpl[T](using qctx: Quotes, tpe: Type[T]): Expr[List[(String, Option[Any])]] = {
+    import qctx.reflect._
+    val tpe = TypeRepr.of[T]
+    val symbol = tpe.typeSymbol
+    println(tpe.typeSymbol.caseFields.map)
+    val constr = symbol.primaryConstructor.tree.asInstanceOf[DefDef]
+    Expr.ofList(
+      tpe
+        .typeSymbol
+        .caseFields
+        .map {
+          case ValDef(name, _, rhs) => Expr(name -> None/*TODO rhs*/)
+        }
+    )
+  }
 }

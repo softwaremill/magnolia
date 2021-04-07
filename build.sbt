@@ -1,8 +1,8 @@
-ThisBuild / scalaVersion := "2.12.12"
+ThisBuild / scalaVersion := "3.0.0-RC1"
 ThisBuild / organization := "com.propensive"
 ThisBuild / organizationName := "Propensive OÜ"
 ThisBuild / organizationHomepage := Some(url("https://propensive.com/"))
-ThisBuild / version := "0.18.0"
+ThisBuild / version := "0.17.0"
 
 ThisBuild / scmInfo := Some(
   ScmInfo(
@@ -37,23 +37,22 @@ lazy val core = (project in file(".core"))
   .settings(
     name := "magnolia-core",
     Compile / scalaSource := baseDirectory.value / ".." / "src" / "core",
-    libraryDependencies += "com.propensive" %% "mercator" % "0.2.1"
   )
 
 lazy val examples = (project in file(".examples"))
   .dependsOn(core)
   .settings(
-    scalacOptions ++= Seq("-Xexperimental", "-Xfuture"),
     name := "magnolia-examples",
     Compile / scalaSource := baseDirectory.value / ".." / "src" / "examples",
-    libraryDependencies += "com.propensive" %% "magnolia" % "0.17.0",
   )
 
 lazy val test = (project in file(".test"))
   .dependsOn(examples)
   .settings(
     name := "magnolia-test",
-    Compile / scalaSource := baseDirectory.value / ".." / "src" / "test",
-    libraryDependencies += "com.propensive" %% "probably-cli" % "0.5.0",
-    libraryDependencies += "com.propensive" %% "contextual-examples" % "1.5.0"
+    projectDependencies ++= Seq(
+      "org.scalameta" %% "munit" % "0.7.22"
+    ),
+    testFrameworks += new TestFramework("munit.Framework"),
+    Test / scalaSource := baseDirectory.value / ".." / "src" / "test",
   )

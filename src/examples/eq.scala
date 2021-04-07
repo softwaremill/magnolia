@@ -23,7 +23,7 @@ import scala.language.experimental.macros
 trait Eq[T] { def equal(value: T, value2: T): Boolean }
 
 /** companion object to [[Eq]] */
-object Eq {
+object Eq extends MagnoliaDerivation[Eq] {
 
   /** type constructor for the equality typeclass */
   type Typeclass[T] = Eq[T]
@@ -39,7 +39,7 @@ object Eq {
     *
     *  Note that in addition to dispatching based on the type of the first parameter to the `equal`
     *  method, we check that the second parameter is the same type. */
-  def dispatch[T](ctx: SealedTrait[Eq, T]): Eq[T] = new Eq[T] {
+  override def dispatch[T](ctx: SealedTrait[Eq, T]): Eq[T] = new Eq[T] {
     def equal(value1: T, value2: T): Boolean = ctx.dispatch(value1) {
       case sub =>
         sub.cast.isDefinedAt(value2) && sub.typeclass.equal(sub.cast(value1), sub.cast(value2))
@@ -61,7 +61,4 @@ object Eq {
   implicit def eqIterable[T, C[x] <: Iterable[x]](implicit T: Eq[T]): Eq[C[T]] = { (v1, v2) =>
     v1.size == v2.size && (v1.iterator zip v2.iterator).forall((T.equal _).tupled)
   }
-
-  /** binds the Magnolia macro to the `gen` method */
-  implicit def gen[T]: Eq[T] = macro Magnolia.gen[T]
 }

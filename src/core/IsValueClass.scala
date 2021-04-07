@@ -14,18 +14,18 @@
     See the License for the specific language governing permissions and limitations under the License.
 
 */
-package magnolia.examples
+package magnolia
 
-import magnolia._
+import scala.quoted.*
+import scala.compiletime.erasedValue
 
-class ExportedTypeclass[T]()
+object IsValueClass { // TODO value classes can't work with mirrors yet https://github.com/lampepfl/dotty/pull/7023
+  inline def apply[T]: Boolean = ${ isValueClassImpl[T] }
 
-object ExportedTypeclass extends MagnoliaDerivation[ExportedTypeclass] {
-  case class Exported[T]() extends ExportedTypeclass[T]
-  def combine[T](ctx: CaseClass[Typeclass, T]): Exported[T] = Exported()
-  override def dispatch[T](ctx: SealedTrait[Typeclass, T]): Exported[T] = Exported()
-
-  implicit val intInstance: Typeclass[Int] = new ExportedTypeclass()
-  implicit val stringInstance: Typeclass[String] = new ExportedTypeclass()
-  implicit def seqInstance[T: Typeclass]: Typeclass[Seq[T]] = new ExportedTypeclass()
+  def isValueClassImpl[T](using qctx: Quotes, tpe: Type[T]): Expr[Boolean] = {
+    import qctx.reflect.*
+    val anyVal: Symbol = Symbol.classSymbol("scala.AnyVal")
+    val baseClasses = TypeRepr.of[T].baseClasses
+    Expr(baseClasses.contains(anyVal))
+  }
 }

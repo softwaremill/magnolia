@@ -16,8 +16,7 @@
 */
 package magnolia.examples
 
-import magnolia._
-import scala.language.experimental.macros
+import magnolia.{ MagnoliaDerivation, CaseClass, SealedTrait, TypeInfo }
 
 /** shows one type as another, often as a string
   *
@@ -25,12 +24,7 @@ import scala.language.experimental.macros
   *  be something other than a string. */
 trait Show[Out, T] { def show(value: T): Out }
 
-trait GenericShow[Out] {
-
-  /** the type constructor for new [[Show]] instances
-    *
-    *  The first parameter is fixed as `String`, and the second parameter varies generically. */
-  type Typeclass[T] = Show[Out, T]
+trait GenericShow[Out] extends MagnoliaDerivation[[X] =>> Show[Out, X]] {
 
   def join(typeName: String, strings: Seq[String]): Out
   def prefix(s: String, out: Out): Out
@@ -59,26 +53,23 @@ trait GenericShow[Out] {
       val typeAnnotationStr = if (tpeAnns.isEmpty) "" else tpeAnns.mkString("{", ",", "}")
 
 
-      def typeArgsString(typeName: TypeName): String =
-        if (typeName.typeArguments.isEmpty) ""
-        else typeName.typeArguments.map(arg => s"${ arg.short}${ typeArgsString(arg)}").mkString("[", ",", "]")
+      def typeArgsString(typeInfo: TypeInfo): String =
+        if (typeInfo.typeParams.isEmpty) ""
+        else typeInfo.typeParams.map(arg => s"${ arg.short}${ typeArgsString(arg)}").mkString("[", ",", "]")
 
-      join(ctx.typeName.short + typeArgsString(ctx.typeName) + annotationStr + typeAnnotationStr, paramStrings)
+      join(ctx.typeInfo.short + typeArgsString(ctx.typeInfo) + annotationStr + typeAnnotationStr, paramStrings)
     }
   }
 
   /** choose which typeclass to use based on the subtype of the sealed trait
     * and prefix with the annotations as discovered on the subtype. */
-  def dispatch[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
+  override def dispatch[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
     ctx.dispatch(value) { sub =>
       val anns = sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
       prefix(annotationStr, sub.typeclass.show(sub.cast(value)))
     }
-
-  /** bind the Magnolia macro to this derivation object */
-  implicit def gen[T]: Show[Out, T] = macro Magnolia.gen[T]
 }
 
 /** companion object to [[Show]] */
@@ -88,11 +79,11 @@ object Show extends GenericShow[String] {
   def join(typeName: String, params: Seq[String]): String =
     params.mkString(s"$typeName(", ",", ")")
 
-  implicit val string: Show[String, String] = identity
-  implicit val int: Show[String, Int] = _.toString
-  implicit val long: Show[String, Long] = _.toString + "L"
+  given string: Show[String, String] = identity(_)
+  given int: Show[String, Int] = _.toString
+  given long: Show[String, Long] = _.toString + "L"
 
   /** show typeclass for sequences */
-  implicit def seq[A](implicit A: Show[String, A]): Show[String, Seq[A]] =
+  given seq[A](using A: Show[String, A]): Show[String, Seq[A]] =
     _.iterator.map(A.show).mkString("[", ",", "]")
 }

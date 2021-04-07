@@ -14,25 +14,15 @@
     See the License for the specific language governing permissions and limitations under the License.
 
 */
-package magnolia.tests
+package magnolia
 
-import magnolia.{Magnolia, SealedTrait}
+import scala.quoted.*
 
-import scala.language.experimental.macros
+object IsObject {
+  inline def apply[T]: Boolean = ${ isObjectImpl[T] }
 
-trait NoCombine[A] {
-  def nameOf(value: A): String
-}
-
-object NoCombine {
-  type Typeclass[T] = NoCombine[T]
-  implicit def gen[T]: NoCombine[T] = macro Magnolia.gen[T]
-
-  def dispatch[T](ctx: SealedTrait[NoCombine, T]): NoCombine[T] = instance { value =>
-    ctx.dispatch(value)(sub => sub.typeclass.nameOf(sub.cast(value)))
-  }
-
-  def instance[T](name: T => String): NoCombine[T] = new Typeclass[T] {
-    def nameOf(value: T): String = name(value)
+  def isObjectImpl[T](using qctx: Quotes, tpe: Type[T]): Expr[Boolean] = {
+    import qctx.reflect.*
+    Expr(TypeRepr.of[T].typeSymbol.flags.is(Flags.Module))
   }
 }

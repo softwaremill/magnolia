@@ -16,38 +16,33 @@
 */
 package magnolia.examples
 
-import language.experimental.macros
-
 import magnolia._
 
 trait TypeNameInfo[T] {
-  def name: TypeName
+  def name: TypeInfo
 
-  def subtypeNames: Seq[TypeName]
+  def subtypeNames: Seq[TypeInfo]
 }
 
-object TypeNameInfo {
-  type Typeclass[T] = TypeNameInfo[T]
+object TypeNameInfo extends MagnoliaDerivation[TypeNameInfo] {
   def combine[T](ctx: CaseClass[TypeNameInfo, T]): TypeNameInfo[T] =
     new TypeNameInfo[T] {
-      def name: TypeName = ctx.typeName
+      def name: TypeInfo = ctx.typeInfo
 
-      def subtypeNames: Seq[TypeName] = Nil
+      def subtypeNames: Seq[TypeInfo] = Nil
     }
 
-  def dispatch[T](ctx: SealedTrait[TypeNameInfo, T]): TypeNameInfo[T] =
+  override def dispatch[T](ctx: SealedTrait[TypeNameInfo, T]): TypeNameInfo[T] =
     new TypeNameInfo[T] {
-      def name: TypeName = ctx.typeName
+      def name: TypeInfo = ctx.typeInfo
 
-      def subtypeNames: Seq[TypeName] = ctx.subtypes.map(_.typeName)
+      def subtypeNames: Seq[TypeInfo] = ctx.subtypes.map(_.typeInfo)
     }
 
-  def fallback[T]: TypeNameInfo[T] =
+  given fallback[T]: TypeNameInfo[T] =
     new TypeNameInfo[T] {
-      def name: TypeName = TypeName("", "Unknown Type", Seq.empty)
+      def name: TypeInfo = TypeInfo("", "Unknown Type", Seq.empty)
 
-      def subtypeNames: Seq[TypeName] = Nil
+      def subtypeNames: Seq[TypeInfo] = Nil
     }
-
-  implicit def gen[T]: TypeNameInfo[T] = macro Magnolia.gen[T]
 }

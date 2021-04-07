@@ -14,18 +14,28 @@
     See the License for the specific language governing permissions and limitations under the License.
 
 */
-package magnolia.examples
+package magnolia
 
-import magnolia._
+import scala.quoted.*
+import scala.compiletime.erasedValue
 
-class ExportedTypeclass[T]()
+object Annotations {
+  inline def apply[T]: List[Any] = ${ annotationsImpl[T] }
 
-object ExportedTypeclass extends MagnoliaDerivation[ExportedTypeclass] {
-  case class Exported[T]() extends ExportedTypeclass[T]
-  def combine[T](ctx: CaseClass[Typeclass, T]): Exported[T] = Exported()
-  override def dispatch[T](ctx: SealedTrait[Typeclass, T]): Exported[T] = Exported()
+  def annotationsImpl[T](using qctx: Quotes, tpe: Type[T]): Expr[List[Any]] = {
+    import qctx.reflect.*
 
-  implicit val intInstance: Typeclass[Int] = new ExportedTypeclass()
-  implicit val stringInstance: Typeclass[String] = new ExportedTypeclass()
-  implicit def seqInstance[T: Typeclass]: Typeclass[Seq[T]] = new ExportedTypeclass()
+    val tpe = TypeRepr.of[T]
+    
+    Expr.ofList(
+      tpe
+        .typeSymbol
+        .annotations
+        .filter { a =>
+          a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
+            a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
+        }
+        .map(_.asExpr.asInstanceOf[Expr[Any]])
+    )
+  }
 }
