@@ -16,7 +16,7 @@
 */
 package magnolia.examples
 
-import magnolia.{ MagnoliaDerivation, CaseClass, SealedTrait, TypeInfo }
+import magnolia._
 
 /** shows one type as another, often as a string
   *
@@ -24,19 +24,19 @@ import magnolia.{ MagnoliaDerivation, CaseClass, SealedTrait, TypeInfo }
   *  be something other than a string. */
 trait Show[Out, T] { def show(value: T): Out }
 
-trait GenericShow[Out] extends MagnoliaDerivation[[X] =>> Show[Out, X]] {
+trait GenericShow[Out] extends Derivation[[X] =>> Show[Out, X]] {
 
-  def join(typeName: String, strings: Seq[String]): Out
+  def joinElems(typeName: String, strings: Seq[String]): Out
   def prefix(s: String, out: Out): Out
 
   /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of
     *  showing each parameter, and prefixing it with the class name */
-  def combine[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = { value =>
-    if (ctx.isValueClass) {
-      val param = ctx.parameters.head
+  def join[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = { value =>
+    if ctx.isValueClass then
+      val param = ctx.params.head
       param.typeclass.show(param.dereference(value))
-    } else {
-      val paramStrings = ctx.parameters.map { param =>
+    else
+      val paramStrings = ctx.params.map { param =>
         val attribStr = if(param.annotations.isEmpty) "" else {
           param.annotations.mkString("{", ", ", "}")
         }
@@ -54,17 +54,16 @@ trait GenericShow[Out] extends MagnoliaDerivation[[X] =>> Show[Out, X]] {
 
 
       def typeArgsString(typeInfo: TypeInfo): String =
-        if (typeInfo.typeParams.isEmpty) ""
+        if typeInfo.typeParams.isEmpty then ""
         else typeInfo.typeParams.map(arg => s"${ arg.short}${ typeArgsString(arg)}").mkString("[", ",", "]")
 
-      join(ctx.typeInfo.short + typeArgsString(ctx.typeInfo) + annotationStr + typeAnnotationStr, paramStrings)
-    }
+      joinElems(ctx.typeInfo.short + typeArgsString(ctx.typeInfo) + annotationStr + typeAnnotationStr, paramStrings)
   }
 
   /** choose which typeclass to use based on the subtype of the sealed trait
     * and prefix with the annotations as discovered on the subtype. */
-  override def dispatch[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
-    ctx.dispatch(value) { sub =>
+  override def split[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
+    ctx.split(value) { sub =>
       val anns = sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
@@ -73,17 +72,12 @@ trait GenericShow[Out] extends MagnoliaDerivation[[X] =>> Show[Out, X]] {
 }
 
 /** companion object to [[Show]] */
-object Show extends GenericShow[String] {
+object Show extends GenericShow[String]:
 
   def prefix(s: String, out: String): String = s + out
-  def join(typeName: String, params: Seq[String]): String =
-    params.mkString(s"$typeName(", ",", ")")
+  def joinElems(typeName: String, params: Seq[String]): String = params.mkString(s"$typeName(", ",", ")")
 
-  given string: Show[String, String] = identity(_)
-  given int: Show[String, Int] = _.toString
-  given long: Show[String, Long] = _.toString + "L"
-
-  /** show typeclass for sequences */
-  given seq[A](using A: Show[String, A]): Show[String, Seq[A]] =
-    _.iterator.map(A.show).mkString("[", ",", "]")
-}
+  given Show[String, String] = identity(_)
+  given Show[String, Int] = _.toString
+  given Show[String, Long] = _.toString + "L"
+  given[A](using A: Show[String, A]): Show[String, Seq[A]] = _.iterator.map(A.show).mkString("[", ",", "]")

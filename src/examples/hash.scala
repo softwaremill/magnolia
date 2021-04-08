@@ -18,25 +18,18 @@ package magnolia.examples
 
 import magnolia._
 
-trait WeakHash[T] { def hash(value: T): Int }
+trait WeakHash[T]:
+  def hash(value: T): Int
 
-object WeakHash extends MagnoliaDerivation[WeakHash] {
-
-  def combine[T](ctx: CaseClass[WeakHash, T]): WeakHash[T] = new WeakHash[T] {
-    def hash(value: T): Int = ctx.parameters.map { param =>
+object WeakHash extends Derivation[WeakHash]:
+  def join[T](ctx: CaseClass[WeakHash, T]): WeakHash[T] = new WeakHash[T]:
+    def hash(value: T): Int = ctx.params.map { param =>
       param.typeclass.hash(param.dereference(value))
     }.foldLeft(0)(_ ^ _)
-  }
 
-  override def dispatch[T](ctx: SealedTrait[WeakHash, T]): WeakHash[T] = {
-    new WeakHash[T] {
-      def hash(value: T): Int = ctx.dispatch(value) { sub =>
-        sub.typeclass.hash(sub.cast(value))
-      }
-    }
-  }
+  override def split[T](ctx: SealedTrait[WeakHash, T]): WeakHash[T] = new WeakHash[T]:
+    def hash(value: T): Int = ctx.split(value) { sub => sub.typeclass.hash(sub.cast(value)) }
 
-  given string: WeakHash[String] = _.map(_.toInt).sum
-  given int: WeakHash[Int] = identity
-  given double: WeakHash[Double] = _.toInt
-}
+  given WeakHash[String] = _.map(_.toInt).sum
+  given WeakHash[Int] = identity(_)
+  given WeakHash[Double] = _.toInt

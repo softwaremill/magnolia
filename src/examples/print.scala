@@ -16,44 +16,26 @@
 */
 package magnolia.examples
 
-import magnolia.{ReadOnlyCaseClass, SealedTrait, MagnoliaDerivation, CaseClass}
+import magnolia._
 
 // Prints a type, only requires read access to fields
 trait Print[T] {
   def print(t: T): String
 }
 
-trait GenericPrint extends MagnoliaDerivation[Print] {
-
-  override def combine[T](ctx: CaseClass[Typeclass, T]): Print[T] = { value =>
-    if (ctx.isValueClass) {
-      val param = ctx.parameters.head
+trait GenericPrint extends Derivation[Print]:
+  def join[T](ctx: CaseClass[Typeclass, T]): Print[T] = value =>
+    if ctx.isValueClass then
+      val param = ctx.params.head
       param.typeclass.print(param.dereference(value))
-    }
-    else {
-      ctx.parameters.map { param =>
-        param.typeclass.print(param.dereference(value))
-      }.mkString(s"${ctx.typeInfo.short}(", ",", ")")
-    }
-  }
+    else ctx.params.map { param =>
+      param.typeclass.print(param.dereference(value))
+    }.mkString(s"${ctx.typeInfo.short}(", ",", ")")
 
-  override def dispatch[T](ctx: SealedTrait[Print, T]): Print[T] = { value =>
-    ctx.dispatch(value) { sub =>
-      sub.typeclass.print(sub.cast(value))
-    }
-  }
-}
+  override def split[T](ctx: SealedTrait[Print, T]): Print[T] = value =>
+    ctx.split(value) { sub => sub.typeclass.print(sub.cast(value)) }
 
-object Print extends GenericPrint {
-
-  given string: Print[String] with {
-    def print(t: String): String = t
-  }
-  given int: Print[Int] with {
-    def print(t: Int): String = t.toString
-  }
-
-  given seq[T](using printT: Print[T]): Print[Seq[T]] = { values =>
-    values.map(printT.print).mkString("[", ",", "]")
-  }
-}
+object Print extends GenericPrint:
+  given Print[String] = identity(_)
+  given Print[Int] = _.toString
+  given seq[T](using printT: Print[T]): Print[Seq[T]] = _.map(printT.print).mkString("[", ",", "]")

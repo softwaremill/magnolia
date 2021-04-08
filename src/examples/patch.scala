@@ -22,7 +22,7 @@ import magnolia._
   * Type class for copying an instance of some type `T`,
   * thereby replacing certain fields with other values.
   */
-sealed abstract class Patcher[T] {
+sealed abstract class Patcher[T]:
 
   /**
     * Returns a copy of `value` whereby all non-null elements of `fieldValues`
@@ -34,36 +34,29 @@ sealed abstract class Patcher[T] {
     * number of fields of `value` an [[IllegalArgumentException]] is thrown.
     */
   def patch(value: T, fieldValues: Seq[Any]): T
-}
 
-object Patcher extends LowerPriorityPatcher with MagnoliaDerivation[Patcher] {
-
-  def combine[T](ctx: CaseClass[Patcher, T]): Patcher[T] =
-    new Patcher[T] {
-      def patch(value: T, fieldValues: Seq[Any]): T = {
-        if (fieldValues.lengthCompare(ctx.parameters.size) != 0) {
+object Patcher extends LowerPriorityPatcher with Derivation[Patcher]:
+  def join[T](ctx: CaseClass[Patcher, T]): Patcher[T] =
+    new Patcher[T]:
+      def patch(value: T, fieldValues: Seq[Any]): T =
+        if fieldValues.lengthCompare(ctx.params.size) != 0 then
           throw new IllegalArgumentException(
-            s"Cannot patch value `$value`, expected ${ctx.parameters.size} fields but got ${fieldValues.size}"
+            s"Cannot patch value `$value`, expected ${ctx.params.size} fields but got ${fieldValues.size}"
           )
+        
+        val effectiveFields = ctx.params.zip(fieldValues).map {
+          (param, x) => if (x.asInstanceOf[AnyRef] ne null) x else param dereference value
         }
-        val effectiveFields = ctx.parameters.zip(fieldValues).map {
-          case (param, x) => if (x.asInstanceOf[AnyRef] ne null) x else param dereference value
-        }
+
         ctx.rawConstruct(effectiveFields)
-      }
-    }
 
-  def dispatch[T](ctx: SealedTrait[Patcher, T]): Patcher[T] =
-    new Patcher[T] {
-      def patch(value: T, fieldValues: Seq[Any]): T  =
-        ctx.dispatch(value)(sub => sub.typeclass.patch(sub.cast(value), fieldValues))
-    }
-}
+  def split[T](ctx: SealedTrait[Patcher, T]): Patcher[T] = new Patcher[T]:
+    def patch(value: T, fieldValues: Seq[Any]): T  =
+      ctx.split(value)(sub => sub.typeclass.patch(sub.cast(value), fieldValues))
 
-sealed abstract class LowerPriorityPatcher {
-
+sealed abstract class LowerPriorityPatcher:
   private[this] val _forSingleValue =
-    new Patcher[Any] {
+    new Patcher[Any]:
       def patch(value: Any, fieldValues: Seq[Any]): Any = {
         if (fieldValues.lengthCompare(1) != 0)
           throw new IllegalArgumentException(
@@ -76,8 +69,5 @@ sealed abstract class LowerPriorityPatcher {
           )
         head
       }
-    }
 
-  // once https://github.com/propensive/magnolia/issues/58 is fixed this can be marked `implicit`
-  def forSingleValue[T]: Patcher[T] = _forSingleValue.asInstanceOf[Patcher[T]]
-}
+  given forSingleValue[T]: Patcher[T] = _forSingleValue.asInstanceOf[Patcher[T]]

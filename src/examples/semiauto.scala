@@ -19,18 +19,20 @@ package magnolia.examples
 import scala.language.experimental.macros
 import magnolia._
 
-trait SemiDefault[A] {
+trait SemiDefault[A]:
   def default: A
-}
-object SemiDefault extends MagnoliaDerivation[SemiDefault] {
+
+object SemiDefault extends Derivation[SemiDefault]:
   inline def apply[A](using A: SemiDefault[A]): SemiDefault[A] = A
 
-  def combine[T](ctx: CaseClass[SemiDefault, T]): SemiDefault[T] = new SemiDefault[T] {
+  def join[T](ctx: CaseClass[SemiDefault, T]): SemiDefault[T] = new SemiDefault[T]:
     def default = ctx.construct(p => p.default.getOrElse(p.typeclass.default))
-  }
-  override def dispatch[T](ctx: SealedTrait[SemiDefault, T]): SemiDefault[T] = new SemiDefault[T] {
+
+  override def split[T](ctx: SealedTrait[SemiDefault, T]): SemiDefault[T] = new SemiDefault[T]:
     def default = ctx.subtypes.head.typeclass.default
-  }
-  given string: SemiDefault[String] = new SemiDefault[String] { def default = "" }
-  given int: SemiDefault[Int] = new SemiDefault[Int] { def default = 0 }
-}
+  
+  given SemiDefault[String] with
+    def default = ""
+  
+  given SemiDefault[Int] with
+    def default = 0

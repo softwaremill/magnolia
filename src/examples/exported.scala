@@ -20,12 +20,11 @@ import magnolia._
 
 class ExportedTypeclass[T]()
 
-object ExportedTypeclass extends MagnoliaDerivation[ExportedTypeclass] {
+object ExportedTypeclass extends Derivation[ExportedTypeclass]:
   case class Exported[T]() extends ExportedTypeclass[T]
-  def combine[T](ctx: CaseClass[Typeclass, T]): Exported[T] = Exported()
-  override def dispatch[T](ctx: SealedTrait[Typeclass, T]): Exported[T] = Exported()
+  def join[T](ctx: CaseClass[Typeclass, T]): Exported[T] = Exported()
+  override def split[T](ctx: SealedTrait[Typeclass, T]): Exported[T] = Exported()
 
-  implicit val intInstance: Typeclass[Int] = new ExportedTypeclass()
-  implicit val stringInstance: Typeclass[String] = new ExportedTypeclass()
-  implicit def seqInstance[T: Typeclass]: Typeclass[Seq[T]] = new ExportedTypeclass()
-}
+  given Typeclass[Int] = new ExportedTypeclass()
+  given Typeclass[String] = new ExportedTypeclass()
+  given seqInstance[T: Typeclass]: Typeclass[Seq[T]] = new ExportedTypeclass()

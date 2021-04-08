@@ -18,24 +18,17 @@ package magnolia.examples
 
 import magnolia._
 
-trait Csv[A] {
+trait Csv[A]:
   def apply(a: A): List[String]
-}
 
-object Csv extends MagnoliaDerivation[Csv] {
-
-  def combine[A](ctx: CaseClass[Csv, A]): Csv[A] = new Csv[A] {
+object Csv extends Derivation[Csv]:
+  
+  def join[A](ctx: CaseClass[Csv, A]): Csv[A] = new Csv[A]:
     def apply(a: A): List[String] =
-      ctx.parameters.foldLeft(List[String]()) {
-        (acc, p) => acc ++ p.typeclass(p.dereference(a))
-      }
-  }
+      ctx.params.foldLeft(List[String]()) { (acc, p) => acc ++ p.typeclass(p.dereference(a)) }
 
-  override def dispatch[A](ctx: SealedTrait[Csv, A]): Csv[A] = new Csv[A] {
-    def apply(a: A): List[String] = ctx.dispatch(a)(sub => sub.typeclass(sub.cast(a)))
-  }
+  override def split[A](ctx: SealedTrait[Csv, A]): Csv[A] = new Csv[A]:
+    def apply(a: A): List[String] = ctx.split(a)(sub => sub.typeclass(sub.cast(a)))
 
-  given csvStr: Csv[String] with {
+  given csvStr: Csv[String] with
     def apply(a: String): List[String] = List(a)
-  }
-}
