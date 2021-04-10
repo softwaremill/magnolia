@@ -1,11 +1,6 @@
  - derives typeclasses for case classes, case objects and sealed traits
- - offers a lightweight, non-macro syntax for writing derivations
+ - offers a lightweight syntax for writing derivations without needing to understand complex parts of Scala
+ - builds upon Scala 3's built-in generic derivation
  - works with recursive and mutually-recursive definitions
- - supports parameterized ADTs (GADTs), including in recursive types
- - supports typeclasses whose generic type parameter is used in either
-   covariant and contravariant positions
- - caches implicit searches for compile-time efficiency
- - prints an error stack to help debugging when derivation fails
- - provides access to case class default parameter values
- - offers predictable resolution of prioritized implicits
- - does not require additional type annotations, like `Lazy[T]`
+ - supports parameterized ADTs (GADTs), including those in recursive types
+ - supports typeclasses whose generic type parameter is used in either covariant and contravariant positions

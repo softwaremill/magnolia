@@ -10,115 +10,63 @@
 
 # Magnolia
 
-__Magnolia__ is a generic macro for automatic materialization of typeclasses for datatypes composed from *case classes* (products) and *sealed traits* (coproducts). It supports recursively-defined datatypes out-of-the-box, and incurs no significant time-penalty during compilation. If derivation fails, error messages are detailed and informative.
+__Magnolia__ is a generic macro for automatic materialization of typeclasses for datatypes composed from product types (e.g. case classes) and coproduct types (e.g. enums). It supports recursively-defined datatypes out-of-the-box, and incurs no significant time-penalty during compilation.
 
 ## Features
 
  - derives typeclasses for case classes, case objects and sealed traits
- - offers a lightweight, non-macro syntax for writing derivations
+ - offers a lightweight syntax for writing derivations without needing to understand complex parts of Scala
+ - builds upon Scala 3's built-in generic derivation
  - works with recursive and mutually-recursive definitions
- - supports parameterized ADTs (GADTs), including in recursive types
- - supports typeclasses whose generic type parameter is used in either
-   covariant and contravariant positions
- - caches implicit searches for compile-time efficiency
- - prints an error stack to help debugging when derivation fails
- - provides access to case class default parameter values
- - offers predictable resolution of prioritized implicits
- - does not require additional type annotations, like `Lazy[T]`
+ - supports parameterized ADTs (GADTs), including those in recursive types
+ - supports typeclasses whose generic type parameter is used in either covariant and contravariant positions
 
 
 ## Getting Started
 
 Given an ADT such as,
 ```scala
-sealed trait Tree[+T]
-case class Branch[+T](left: Tree[T], right: Tree[T]) extends Tree[T]
-case class Leaf[+T](value: T) extends Tree[T]
+enum Tree[+T]:
+  case class Branch(left: Tree[T], right: Tree[T])
+  case class Leaf(value: T)
 ```
-and provided an implicit instance of `Show[Int]` is in scope, and a Magnolia
-derivation for the `Show` typeclass has been provided, we can
-automatically derive an implicit typeclass instance of `Show[Tree[Int]]`
-on-demand, like so,
+and provided an given instance of `Show[Int]` is in scope, and a Magnolia derivation for the `Show` typeclass
+has been provided, we can automatically derive given typeclass instances of `Show[Tree[Int]]` on-demand, like
+so,
 ```scala
 Branch(Branch(Leaf(1), Leaf(2)), Leaf(3)).show
 ```
-Typeclass authors may provide Magnolia derivations in the Typeclass's companion
-object, but it is easy to create your own.
+Typeclass authors may provide Magnolia derivations in the typeclass's companion object, but it is easy to create
+your own.
 
-The derivation typeclass for a `Show` typeclass might look like this:
+The definition of a `Show` typeclass with generic derivation defined with Magnolia might look like this:
 ```scala
-import language.experimental.macros, magnolia._
+import magnolia.*
 
-object ShowDerivation {
-  type Typeclass[T] = Show[T]
-  
-  def combine[T](ctx: CaseClass[Show, T]): Show[T] = new Show[T] {
-    def show(value: T): String = ctx.parameters.map { p =>
+trait Show[T]:
+  def show(value: T): String
+
+object Show extends Derivation[Show]:
+  def join[T](ctx: CaseClass[Show, T]): Show[T] =
+    ctx.params.map { p =>
       s"${p.label}=${p.typeclass.show(p.dereference(value))}"
     }.mkString("{", ",", "}")
-  }
 
-  def dispatch[T](ctx: SealedTrait[Show, T]): Show[T] =
-    new Show[T] {
-      def show(value: T): String = ctx.dispatch(value) { sub =>
-        sub.typeclass.show(sub.cast(value))
-      }
-    }
-
-  implicit def gen[T]: Show[T] = macro Magnolia.gen[T]
-}
+  override def split[T](ctx: SealedTrait[Show, T]): Show[T] = value =>
+    ctx.dispatch(value) { sub => sub.typeclass.show(sub.cast(value))
 ```
 
-The `gen` method will attempt to construct a typeclass for the type passed to
-it. Importing `ShowDerivation.gen` from the example above will make generic
-derivation for `Show` typeclasses available in the scope of the import. The
-`macro Magnolia.gen[T]` binding must be made in a static object, and the type
-constructor, `Typeclass`, and the methods `combine` and `dispatch` must be
-defined in the same object.
+The `Derivation` trait provides a `derived` method which will attempt to construct a corresponding typeclass
+instance for the type passed to it. Importing `Show.derived` as defined in the example above will make generic
+derivation for `Show` typeclasses available in the scope of the import.
 
-If you control the typeclass you are deriving for, the companion object of the
-typeclass makes a good choice for providing the implicit derivation methods
-described above.
+While any object may be used to define a derivation, if you control the typeclass you are deriving for, the
+companion object of the typeclass is the obvious choice since it generic derivations for that typeclass will
+be automatically available for consideration during contextual search.
 
-## Debugging
+## Limitations
 
-Deriving typeclasses is not always guaranteed to succeed, though. Many
-datatypes are complex and deeply-nested, and failure to derive a typeclass for
-a single parameter in one of the leaf nodes will cause the entire tree to fail.
-
-Magnolia tries to be informative about why failures occur, by providing a
-"stack trace" showing the path to the type which could not be derived.
-
-For example, when attempting to derive a `Show` instance for `Entity`, given
-the following hypothetical datatypes,
-
-```scala
-sealed trait Entity
-case class Person(name: String, address: Address) extends Entity
-case class Organization(name: String, contacts: Set[Person]) extends Entity
-case class Address(lines: List[String], country: Country)
-case class Country(name: String, code: String, salesTax: Boolean)
-```
-the absence, for example, of a `Show[Boolean]` typeclass instance would cause
-derivation to fail, but the reason might not be obvious, so instead, Magnolia
-will report the following compile error:
-
-```scala
-could not derive Show instance for type Boolean
-    in parameter 'salesTax' of product type Country
-    in parameter 'country' of product type Address
-    in parameter 'address' of product type Person
-    in chained implicit of type Set[Person]
-    in parameter 'contacts' of product type Organization
-    in coproduct type Entity
-```
-
-This "derivation stack trace" will only be displayed when invoking a derivation
-method, e.g. `Show.gen[Entity]`, directly. When the method is invoked through
-implicit search, to reduce spurious error messages (when Magnolia's derivation
-fails, but implicit search still finds a valid implicit) the errors are not
-shown.
-
+Magnolia is not currently able to access default values for case class parameters.
 
 ## Status
 
@@ -141,10 +89,10 @@ or imported into an existing layer with,
 ```
 fury layer import -i propensive/magnolia
 ```
-A binary is available on Maven Central as `com.propensive:magnolia_<scala-version>:0.17.0`. This may be added
+A binary is available on Maven Central as `com.propensive:magnolia_<scala-version>:2.0.0`. This may be added
 to an [sbt](https://www.scala-sbt.org/) build with:
 ```
-libraryDependencies += "com.propensive" %% "magnolia" % "0.17.0"
+libraryDependencies += "com.propensive" %% "magnolia" % "2.0.0"
 ```
 
 ## Contributing
@@ -168,5 +116,5 @@ training is available from [Propensive O&Uuml;](https://propensive.com/).
 
 ## License
 
-Magnolia is copyright &copy; 2018-20 Jon Pretty & Propensive O&Uuml;, and is made available under the
+Magnolia is copyright &copy; 2018-21 Jon Pretty & Propensive O&Uuml;, and is made available under the
 [Apache 2.0 License](/license.md).
