@@ -45,14 +45,14 @@ object Patcher extends LowerPriorityPatcher with Derivation[Patcher]:
           )
         
         val effectiveFields = ctx.params.zip(fieldValues).map {
-          (param, x) => if (x.asInstanceOf[AnyRef] ne null) x else param dereference value
+          (param, x) => if (x.asInstanceOf[AnyRef] ne null) x else param.deref(value)
         }
 
         ctx.rawConstruct(effectiveFields)
 
   def split[T](ctx: SealedTrait[Patcher, T]): Patcher[T] = new Patcher[T]:
     def patch(value: T, fieldValues: Seq[Any]): T  =
-      ctx.split(value)(sub => sub.typeclass.patch(sub.cast(value), fieldValues))
+      ctx.choose(value)(sub => sub.typeclass.patch(sub.value, fieldValues))
 
 sealed abstract class LowerPriorityPatcher:
   private[this] val _forSingleValue =

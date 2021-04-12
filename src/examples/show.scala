@@ -34,7 +34,7 @@ trait GenericShow[Out] extends Derivation[[X] =>> Show[Out, X]] {
   def join[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = { value =>
     if ctx.isValueClass then
       val param = ctx.params.head
-      param.typeclass.show(param.dereference(value))
+      param.typeclass.show(param.deref(value))
     else
       val paramStrings = ctx.params.map { param =>
         val attribStr = if(param.annotations.isEmpty) "" else {
@@ -43,7 +43,7 @@ trait GenericShow[Out] extends Derivation[[X] =>> Show[Out, X]] {
         val tpeAttribStr = if (param.typeAnnotations.isEmpty) "" else {
           param.typeAnnotations.mkString("{", ", ", "}")
         }
-        s"${param.label}$attribStr$tpeAttribStr=${param.typeclass.show(param.dereference(value))}"
+        s"${param.label}$attribStr$tpeAttribStr=${param.typeclass.show(param.deref(value))}"
       }
 
       val anns = ctx.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
@@ -63,11 +63,11 @@ trait GenericShow[Out] extends Derivation[[X] =>> Show[Out, X]] {
   /** choose which typeclass to use based on the subtype of the sealed trait
     * and prefix with the annotations as discovered on the subtype. */
   override def split[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
-    ctx.split(value) { sub =>
+    ctx.choose(value) { sub =>
       val anns = sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
-      prefix(annotationStr, sub.typeclass.show(sub.cast(value)))
+      prefix(annotationStr, sub.typeclass.show(sub.value))
     }
 }
 

@@ -16,19 +16,17 @@
 */
 package magnolia.examples
 
-import magnolia._
+import magnolia.*
 
 trait WeakHash[T]:
   def hash(value: T): Int
 
 object WeakHash extends Derivation[WeakHash]:
-  def join[T](ctx: CaseClass[WeakHash, T]): WeakHash[T] = new WeakHash[T]:
-    def hash(value: T): Int = ctx.params.map { param =>
-      param.typeclass.hash(param.dereference(value))
-    }.foldLeft(0)(_ ^ _)
+  def join[T](ctx: CaseClass[WeakHash, T]): WeakHash[T] = value =>
+    ctx.params.map { param => param.typeclass.hash(param.deref(value)) }.foldLeft(0)(_ ^ _)
 
   override def split[T](ctx: SealedTrait[WeakHash, T]): WeakHash[T] = new WeakHash[T]:
-    def hash(value: T): Int = ctx.split(value) { sub => sub.typeclass.hash(sub.cast(value)) }
+    def hash(value: T): Int = ctx.choose(value) { sub => sub.typeclass.hash(sub.value) }
 
   given WeakHash[String] = _.map(_.toInt).sum
   given WeakHash[Int] = identity(_)

@@ -35,7 +35,7 @@ trait Derivation[TypeClass[_]]:
       case _: (s *: tail) =>
         type subType = s
         
-        Subtype[Typeclass, T, s](Macro.typeInfo[s], idx, Array(), Macro.paramTypeAnns[T].to(Array),
+        Subtype[Typeclass, T, s](Macro.typeInfo[s], idx, IArray[Any](), IArray(Macro.paramTypeAnns[T].to(Array)*),
             CallByNeed(summonInline[Typeclass[s]]), x => m.ordinal(x) == idx, _.asInstanceOf[s & T]) ::
             getSubtypes[T, tail](m, idx + 1)
 
@@ -53,18 +53,18 @@ trait Derivation[TypeClass[_]]:
         val typeclass = CallByNeed(summonInline[Typeclass[p]])
 
         Param[Typeclass, T, p](label, idx, repeated.getOrElse(label, false), typeclass, CallByNeed(None),
-            anns.getOrElse(label, List()).to(Array), typeAnns.getOrElse(label, List()).to(Array)) ::
+            IArray(anns.getOrElse(label, List()).to(Array)*), IArray(typeAnns.getOrElse(label, List()).to(Array)*)) ::
             getParams[T, ltail, ptail](anns, typeAnns, repeated, idx + 1)
 
   inline def derivedMirrorSum[A](sum: Mirror.SumOf[A]): Typeclass[A] =
-    val sealedTrait = SealedTrait(Macro.typeInfo[A], getSubtypes[A, sum.MirroredElemTypes](sum).to(Array),
-        Array(), Macro.paramTypeAnns[A].to(Array))
+    val sealedTrait = SealedTrait(Macro.typeInfo[A], IArray(getSubtypes[A, sum.MirroredElemTypes](sum).to(Array)*),
+        IArray[Any](), IArray(Macro.paramTypeAnns[A].to(Array)*))
     
     split(sealedTrait)
 
   inline def derivedMirrorProduct[A](product: Mirror.ProductOf[A]): Typeclass[A] =
     val caseClass = new CaseClass[Typeclass, A](_: TypeInfo, _: Boolean, _: Boolean,
-        _: Array[Param[Typeclass, A]], _: Array[Any], _: Array[Any]):
+        _: IArray[Param[Typeclass, A]], _: IArray[Any], _: IArray[Any]):
       
       def construct[PType](makeParam: Param[Typeclass, A] => PType)(using ClassTag[PType]): A =
         product.fromProduct(Tuple.fromArray(this.params.map(makeParam(_)).to(Array)))
@@ -90,10 +90,10 @@ trait Derivation[TypeClass[_]]:
         
         summon[Monadic[M]].map(paramsM) { params => product.fromProduct(Tuple.fromArray(params)) }
 
-    val ccParams = (Macro.typeInfo[A], Macro.isObject[A], Macro.isValueClass[A], getParams[A,
+    val ccParams = (Macro.typeInfo[A], Macro.isObject[A], Macro.isValueClass[A], IArray(getParams[A,
         product.MirroredElemLabels, product.MirroredElemTypes](Macro.paramAnns[A].to(Map),
-        Macro.paramTypeAnns[A].to(Map), Macro.repeated[A].to(Map)).to(Array), Macro.anns[A].to(Array),
-        Array[Any]())
+        Macro.paramTypeAnns[A].to(Map), Macro.repeated[A].to(Map)).to(Array)*), IArray(Macro.anns[A].to(Array)*),
+        IArray[Any]())
 
     join(caseClass.tupled(ccParams))
 
