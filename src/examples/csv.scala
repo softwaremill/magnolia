@@ -36,5 +36,3 @@ object Csv extends Derivation[Csv]:
 
 case class Foo(x: Int, y: String) derives Csv
 case class Bar(c: Char, fs: Foo*) derives Csv
-
-@main def run(): Unit = println(Bar('1', Foo(2, "three"), Foo(4, "five")).csv)

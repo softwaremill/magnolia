@@ -7,9 +7,9 @@
 #
 # For more information, please visit https://propensive.com/fury/
 #
-layerRef	QmU64FMTdSc3X11qsgi1VUkadGh8kivTBJYfz8ft2ACaHE
+layerRef	QmYjHzjbsZPzvXX8BT1yV23SyQk8qMQF3BUFmsZe8zv482
 published	Some	url	fury://vent.dev/propensive/magnolia
-		version	5
-		layerRef	QmW2ZNdWMhnJiU8SUWdtKMtfrY2D1Y5DhuGQDsVZjtePBL
-		expiry	Some	1620549090796
+		version	6
+		layerRef	QmPBeffmZ7apta6YgxgEGkuYtXoVsqBxhBPeJAmdJVNTg6
+		expiry	Some	1620640033546
 # vim: set noai ts=12 sw=12:
