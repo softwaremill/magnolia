@@ -338,14 +338,10 @@ object Tests extends Suite("Magnolia tests"):
       Show.derived[Politician[String]].show(Corrupt("wall", Seq(Company("Alice Inc"))))
     }.assert(_ == "Corrupt[String,Seq[Company]](slogan=wall,lobby=[Company(name=Alice Inc)])")
 
-    test("patch a Person via a Patcher[Entity]") {
-      // these two implicits can be removed once https://github.com/propensive/magnolia/issues/58 is closed
-      implicit val stringPatcher = Patcher.forSingleValue[String]
-      implicit val intPatcher = Patcher.forSingleValue[Int]
-
-      val person = Person("Bob", 42)
-      summon[Patcher[Entity]].patch(person, Seq(null, 21))
-    }.assert(_ == Person("Bob", 21))
+    //test("patch a Person via a Patcher[Entity]") {
+    //  val person = Person("Bob", 42)
+    //  summon[Patcher[Entity]].patch(person, Seq(null, 21))
+    //}.assert(_ == Person("Bob", 21))
 
     test("show an Account") {
       Show.derived[Account].show(Account("john_doe", "john.doe@yahoo.com", "john.doe@gmail.com"))
