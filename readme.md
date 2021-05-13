@@ -69,7 +69,7 @@ For Scala 3:
 val quicklens = "com.softwaremill.quicklens" %% "quicklens" % "1.7.1"
 ```
 
-For Scala 2, see the [legacy branch](https://github.com/softwaremill/magnolia/tree/legacy)/
+For Scala 2, see the [legacy branch](https://github.com/softwaremill/magnolia/tree/legacy).
 
 ## Contributing
 
@@ -80,7 +80,7 @@ src="https://img.shields.io/badge/-good%20first%20issue-67b6d0.svg" valign="midd
 ## Author
 
 Magnolia was originally designed and developed by [Jon Pretty](https://github.com/propensive), and is currently
-maintained by [SoftwareMill](https://softwaremill.com).)
+maintained by [SoftwareMill](https://softwaremill.com).
 
 ## License
 
