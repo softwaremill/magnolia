@@ -77,7 +77,7 @@ Contributors to Magnolia are welcome and encouraged. New contributors may like t
 <a href="https://github.com/softwaremill/magnolia/labels/good%20first%20issue"><img alt="label: good first issue"
 src="https://img.shields.io/badge/-good%20first%20issue-67b6d0.svg" valign="middle"></a>.
 
-## Author
+## Credits
 
 Magnolia was originally designed and developed by [Jon Pretty](https://github.com/propensive), and is currently
 maintained by [SoftwareMill](https://softwaremill.com).
