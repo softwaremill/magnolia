@@ -1,6 +1,0 @@
- - derives typeclasses for case classes, case objects and sealed traits
- - offers a lightweight syntax for writing derivations without needing to understand complex parts of Scala
- - builds upon Scala 3's built-in generic derivation
- - works with recursive and mutually-recursive definitions
- - supports parameterized ADTs (GADTs), including those in recursive types
- - supports typeclasses whose generic type parameter is used in either covariant and contravariant positions

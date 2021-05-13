@@ -1,58 +1,45 @@
-ThisBuild / scalaVersion := "3.0.0-RC1"
-ThisBuild / organization := "com.propensive"
-ThisBuild / organizationName := "Propensive OÜ"
-ThisBuild / organizationHomepage := Some(url("https://propensive.com/"))
-ThisBuild / version := "0.17.0"
+import com.softwaremill.UpdateVersionInDocs
 
-ThisBuild / scmInfo := Some(
-  ScmInfo(
-    url("https://github.com/propensive/magnolia"),
-    "scm:git@github.com:propensive/magnolia.git"
-  )
-)
-ThisBuild / developers := List(
-  Developer(
-    id    = "propensive",
-    name  = "Jon Pretty",
-    email = "jon.pretty@propensive.com",
-    url   = url("https://twitter.com/propensive")
-  )
+val scala3 = "3.0.0-RC3"
+
+val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
+  scalaVersion := scala3,
+  organization := "com.softwaremill.magnolia",
+  description := "Fast, easy and transparent typeclass derivation for Scala 3",
+  updateDocs := UpdateVersionInDocs(sLog.value, organization.value, version.value, List(file("readme.md")))
 )
 
-ThisBuild / description := "Fast, easy and transparent typeclass derivation for Scala 2"
-ThisBuild / licenses := List("Apache 2" -> new URL("http://www.apache.org/licenses/LICENSE-2.0.txt"))
-ThisBuild / homepage := Some(url("https://github.com/propensive/magnolia"))
+lazy val root =
+  project
+    .in(file("."))
+    .settings(commonSettings)
+    .settings(publishArtifact := false)
+    .aggregate((core.projectRefs ++ examples.projectRefs ++ test.projectRefs): _*)
 
-ThisBuild / pomIncludeRepository := { _ => false }
-
-ThisBuild / publishTo := {
-  val nexus = "https://oss.sonatype.org/"
-  if (isSnapshot.value) Some("snapshots" at nexus + "content/repositories/snapshots")
-  else Some("releases" at nexus + "service/local/staging/deploy/maven2")
-}
-
-ThisBuild / publishMavenStyle := true
-
-lazy val core = (project in file(".core"))
+lazy val core = (projectMatrix in file(".core"))
   .settings(
     name := "magnolia-core",
-    Compile / scalaSource := baseDirectory.value / ".." / "src" / "core",
+    Compile / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "core",
   )
+  .jvmPlatform(scalaVersions = List(scala3))
 
-lazy val examples = (project in file(".examples"))
+lazy val examples = (projectMatrix in file(".examples"))
   .dependsOn(core)
   .settings(
     name := "magnolia-examples",
-    Compile / scalaSource := baseDirectory.value / ".." / "src" / "examples",
+    Compile / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "examples",
   )
+  .jvmPlatform(scalaVersions = List(scala3))
 
-lazy val test = (project in file(".test"))
+lazy val test = (projectMatrix in file(".test"))
   .dependsOn(examples)
   .settings(
     name := "magnolia-test",
     projectDependencies ++= Seq(
-      "org.scalameta" %% "munit" % "0.7.22"
+      "org.scalameta" %% "munit" % "0.7.26"
     ),
     testFrameworks += new TestFramework("munit.Framework"),
-    Test / scalaSource := baseDirectory.value / ".." / "src" / "test",
+    Test / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "test",
+    publishArtifact := false,
   )
+  .jvmPlatform(scalaVersions = List(scala3))
