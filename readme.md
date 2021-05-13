@@ -66,7 +66,7 @@ Magnolia is not currently able to access default values for case class parameter
 For Scala 3:
 
 ```scala
-val quicklens = "com.softwaremill.quicklens" %% "quicklens" % "1.7.1"
+val magnolia = "com.softwaremill.magnolia" %% "magnolia" % "2.0.0"
 ```
 
 For Scala 2, see the [legacy branch](https://github.com/softwaremill/magnolia/tree/legacy).
