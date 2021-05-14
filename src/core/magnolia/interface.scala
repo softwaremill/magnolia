@@ -16,9 +16,10 @@
 */
 package magnolia
 
-import language.experimental.macros
-import scala.annotation.tailrec
 import mercator._
+
+import scala.annotation.tailrec
+import scala.language.higherKinds
 
 /** represents a subtype of a sealed trait
   *
@@ -48,11 +49,11 @@ trait Subtype[Typeclass[_], Type] extends Serializable {
   /** all of the annotations on the sub type */
   final def annotations: Seq[Any] = annotationsArray
   def annotationsArray: Array[Any]
-  
+
   /** all of the type annotations on the sub type */
   final def typeAnnotations: Seq[Any] = typeAnnotationsArray
   def typeAnnotationsArray: Array[Any]
-  
+
   override def toString: String = s"Subtype(${typeName.full})"
 }
 
@@ -74,7 +75,7 @@ object Subtype {
       def index: Int = idx
       def typeclass: Tc[SType] = tc.value
       def cast: PartialFunction[T, SType] = this
-      def isDefinedAt(t: T) = isType(t)
+      def isDefinedAt(t: T): Boolean = isType(t)
       def apply(t: T): SType = asType(t)
       def annotationsArray: Array[Any] = anns
       def typeAnnotationsArray: Array[Any] = tpeAnns
@@ -102,9 +103,9 @@ trait ReadOnlyParam[Typeclass[_], Type] extends Serializable {
 
   /** the [[TypeName]] of the parameter
     *
-    *  This is the full name information for the type of the parameter. */  
+    *  This is the full name information for the type of the parameter. */
   def typeName: TypeName
-  
+
   /** flag indicating a repeated (aka. vararg) parameter
     *
     * For example, for a case class,
@@ -154,7 +155,7 @@ trait ReadOnlyParam[Typeclass[_], Type] extends Serializable {
     *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
     *  [[scala.collection.Seq]] to hide the mutable collection API. */
   final def annotations: Seq[Any] = annotationsArray
-  
+
   /** a sequence of objects representing all of the type annotations on the case class
    *
    *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
@@ -427,13 +428,13 @@ final class SealedTrait[Typeclass[_], Type](
     *
     *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
     *  [[scala.collection.Seq]] to hide the mutable collection API. */
-  final def annotations: Seq[Any] = annotationsArray
+  def annotations: Seq[Any] = annotationsArray
 
   /** a sequence of objects representing all of the type annotations on the topmost trait
    *
    *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
    *  [[scala.collection.Seq]] to hide the mutable collection API. */
-  final def typeAnnotations: Seq[Any] = typeAnnotationsArray
+  def typeAnnotations: Seq[Any] = typeAnnotationsArray
 }
 
 /**
