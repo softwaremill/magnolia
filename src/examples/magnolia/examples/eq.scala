@@ -17,6 +17,7 @@
 package magnolia.examples
 
 import magnolia._
+
 import scala.language.experimental.macros
 
 /** typeclass for testing the equality of two values of the same type */

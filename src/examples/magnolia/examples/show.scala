@@ -17,6 +17,7 @@
 package magnolia.examples
 
 import magnolia._
+
 import scala.language.experimental.macros
 
 /** shows one type as another, often as a string

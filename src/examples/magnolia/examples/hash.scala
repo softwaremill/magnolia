@@ -17,29 +17,24 @@
 package magnolia.examples
 
 import magnolia._
+
 import scala.language.experimental.macros
 
-trait Csv[A] {
-  def apply(a: A): List[String]
-}
+trait WeakHash[T] { def hash(value: T): Int }
 
-object Csv {
-  type Typeclass[A] = Csv[A]
+object WeakHash {
 
-  def combine[A](ctx: CaseClass[Csv, A]): Csv[A] = new Csv[A] {
-    def apply(a: A): List[String] =
-      ctx.parameters.foldLeft(List[String]()) {
-        (acc, p) => acc ++ p.typeclass(p.dereference(a))
-      }
+  type Typeclass[T] = WeakHash[T]
+
+  def combine[T](ctx: CaseClass[WeakHash, T]): WeakHash[T] = new WeakHash[T] {
+    def hash(value: T): Int = ctx.parameters.map { param =>
+      param.typeclass.hash(param.dereference(value))
+    }.foldLeft(0)(_ ^ _)
   }
 
-  def dispatch[A](ctx: SealedTrait[Csv, A]): Csv[A] = new Csv[A] {
-    def apply(a: A): List[String] = ctx.dispatch(a)(sub => sub.typeclass(sub.cast(a)))
-  }
+  implicit val string: WeakHash[String] = _.map(_.toInt).sum
+  implicit val int: WeakHash[Int] = identity
+  implicit val double: WeakHash[Double] = _.toInt
 
-  implicit def deriveCsv[A]: Csv[A] = macro Magnolia.gen[A]
-
-  implicit val csvStr: Csv[String] = new Csv[String] {
-    def apply(a: String): List[String] = List(a)
-  }
+  implicit def gen[T]: WeakHash[T] = macro Magnolia.gen[T]
 }

@@ -16,8 +16,9 @@
 */
 package magnolia.examples
 
-import scala.language.experimental.macros
 import magnolia._
+
+import scala.language.experimental.macros
 
 /**
   * Type class for copying an instance of some type `T`,

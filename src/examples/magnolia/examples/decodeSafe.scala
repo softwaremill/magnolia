@@ -1,3 +1,5 @@
+package magnolia.examples
+
 /*
 
     Magnolia, version 0.17.0. Copyright 2018-20 Jon Pretty, Propensive OÜ.
@@ -15,6 +17,7 @@
 
 */
 import magnolia._
+
 import scala.language.experimental.macros
 
 /** decoder for converting strings to other types providing good error messages */
