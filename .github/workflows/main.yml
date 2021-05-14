@@ -1,18 +1,27 @@
 name: Build
 
-on: [push]
+on:
+  pull_request:
+  push:
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
+  test:
     strategy:
-      matrix:
-        os: [ubuntu-latest]
       fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            java: 8
+          - os: ubuntu-latest
+            java: 11
+    runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2.0.0
-    - run: git fetch --prune --unshallow
-    - name: Run Fury
-      run: |
-        ./fury build run --output linear --https
-      timeout-minutes: 5
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Setup
+        uses: olafurpg/setup-scala@v10
+        with:
+          java-version: "adopt@1.${{ matrix.java }}"
+      - name: Build and test
+        run: sbt -v -Dfile.encoding=UTF8 +test
+        shell: bash
