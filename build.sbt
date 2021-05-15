@@ -11,6 +11,8 @@ lazy val core = (project in file(".core"))
     Compile / scalaSource := baseDirectory.value / ".." / "src" / "core",
     Compile / scalacOptions ++= Seq("-Ywarn-macros:after"),
     Compile / scalacOptions --= Seq("-Ywarn-unused:params"),
+    Compile / doc / scalacOptions ~= (_.filterNot(Set("-Xfatal-warnings"))),
+    Compile / doc / scalacOptions --= Seq("-Xlint:doc-detached"),
     libraryDependencies += "com.propensive" %% "mercator" % "0.2.1"
   )
 
@@ -22,8 +24,8 @@ lazy val examples = (project in file(".examples"))
     Compile / scalaSource := baseDirectory.value / ".." / "src" / "examples",
     Compile / scalacOptions ++= Seq("-Ywarn-macros:after"),
     Compile / scalacOptions --= Seq("-Ywarn-unused:params"),
-    libraryDependencies += "com.propensive" %% "magnolia" % "0.17.0",
   )
+  .dependsOn(core)
 
 lazy val test = (project in file(".test"))
   .dependsOn(examples)
