@@ -18,7 +18,7 @@ package magnolia
 
 import scala.annotation.compileTimeOnly
 import scala.collection.mutable
-import scala.language.existentials
+import scala.language.higherKinds
 import scala.reflect.macros._
 
 /** the object which defines the Magnolia macro */
@@ -433,7 +433,7 @@ object Magnolia {
                 false -> tpe
             }
             val paramTypeName = q"${typeNameOf(paramType)}"
-            
+
             acc
               .find(_.paramType =:= paramType)
               .fold {
@@ -477,7 +477,7 @@ object Magnolia {
               }
             }
           }
-          
+
           for (((((param, idx), default), annList), typeAnnList) <- paramsWithIndex zip defaults zip annotations zip typeAnnotations)
             yield param.compile(paramsVal, idx, Some(default), annList, typeAnnList)
         }

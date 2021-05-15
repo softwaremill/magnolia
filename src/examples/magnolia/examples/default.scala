@@ -16,7 +16,9 @@
 */
 package magnolia.examples
 
-import magnolia._, mercator._
+import magnolia._
+import mercator._
+
 import scala.language.experimental.macros
 
 /** typeclass for providing a default value for a particular type */

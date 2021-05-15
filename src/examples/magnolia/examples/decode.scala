@@ -17,6 +17,7 @@
 package magnolia.examples
 
 import magnolia._
+
 import scala.language.experimental.macros
 
 /** very basic decoder for converting strings to other types */

@@ -16,9 +16,9 @@
 */
 package magnolia.examples
 
-import language.experimental.macros
-
 import magnolia._
+
+import scala.language.experimental.macros
 
 trait TypeNameInfo[T] {
   def name: TypeName
