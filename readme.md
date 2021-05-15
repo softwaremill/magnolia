@@ -1,5 +1,5 @@
 [<img alt="GitHub Workflow" src="https://img.shields.io/github/workflow/status/softwaremill/magnolia/Build/main?style=for-the-badge" height="24">](https://github.com/softwaremill/magnolia/actions)
-[<img src="https://img.shields.io/maven-central/v/com.softwaremill/magnolia_2.12?color=2465cd&style=for-the-badge" height="24">](https://search.maven.org/artifact/com.softwaremill/magnolia_2.12)
+[<img src="https://img.shields.io/maven-central/v/com.softwaremill.magnolia/magnolia-core_2.12?color=2465cd&style=for-the-badge" height="24">](https://search.maven.org/artifact/com.softwaremill.magnolia/magnolia-core_2.12)
 
 <img src="/doc/images/github.png" valign="middle">
 
@@ -118,10 +118,10 @@ shown.
 
 ## Availability
 
-A binary is available on Maven Central as `com.softwaremill:magnolia_<scala-version>:0.18.0`. This may be added
+A binary is available on Maven Central as `com.softwaremill.magnolia:magnolia-core_<scala-version>:0.18.0`. This may be added
 to an [sbt](https://www.scala-sbt.org/) build with:
 ```
-libraryDependencies += "com.softwaremill" %% "magnolia" % "0.18.0"
+libraryDependencies += "com.softwaremill.magnolia-core" %% "magnolia" % "0.18.0"
 ```
 
 ## Contributing
