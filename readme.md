@@ -1,5 +1,5 @@
 [![CI](https://github.com/softwaremill/magnolia/actions/workflows/main.yml/badge.svg)](https://github.com/softwaremill/magnolia/actions/workflows/main.yml)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.magnolia/magnolia-core_2.12/badge.svg?style=plastic)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.magnolia/magnolia-core_2.12)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.magnolia/magnolia-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.magnolia/magnolia-core_2.12)
 
 <img src="/doc/images/github.png" valign="middle">
 
