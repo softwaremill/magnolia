@@ -4,7 +4,6 @@ import magnolia.examples.*
 import magnolia.TypeInfo
 
 import java.time.LocalDate
-import probably.*
 
 import scala.annotation.StaticAnnotation
 
@@ -201,126 +200,153 @@ final case class Huey(height: Int) extends GoodChild
 class Dewey(val height: Int) extends GoodChild
 final case class Louie(height: Int) extends BadChild
 
-object Tests extends Suite("Magnolia tests"):
+class Tests extends munit.FunSuite {
 
-  def run(using Runner) =
     test("construct a Show product instance with alternative apply functions") {
-      Show.derived[TestEntry].show(TestEntry("a", "b"))
-    }.assert(_ == """TestEntry(param=Param(a=a,b=b))""")
+      val res = Show.derived[TestEntry].show(TestEntry("a", "b"))
+      assertEquals(res, """TestEntry(param=Param(a=a,b=b))""")
+    }
 
     test("construct a Show product instance") {
-      Show.derived[Person].show(Person("John Smith", 34))
-    }.assert(_ == """Person(name=John Smith,age=34)""")
+      val res = Show.derived[Person].show(Person("John Smith", 34))
+      assertEquals(res, """Person(name=John Smith,age=34)""")
+    }
 
     test("construct a Show coproduct instance") {
-      Show.derived[Person].show(Person("John Smith", 34))
-    }.assert(_ == "Person(name=John Smith,age=34)")
+      val res = Show.derived[Person].show(Person("John Smith", 34))
+      assertEquals(res, "Person(name=John Smith,age=34)")
+    }
 
     test("construct a Show instance for product with partially private fields") {
-      Show.derived[Abc].show(Abc(12, 54, "pm"))
-    }.assert(_ == "Abc(a=12,b=54L,c=pm)")
+      val res = Show.derived[Abc].show(Abc(12, 54, "pm"))
+      assertEquals(res, "Abc(a=12,b=54L,c=pm)")
+    }
 
     test("construct a Show instance for a product with multiple default values") {
-      Show.derived[ParamsWithDefault].show(ParamsWithDefault())
-    }.assert(_ == "ParamsWithDefault(a=3,b=4)")
+      val res = Show.derived[ParamsWithDefault].show(ParamsWithDefault())
+      assertEquals(res, "ParamsWithDefault(a=3,b=4)")
+    }
 
     test("local implicit beats Magnolia") {
       given showPerson: Show[String, Person] = _ => "nobody"
-      summon[Show[String, Address]].show(Address("Home", Person("John Smith", 44)))
-    }.assert(_ == "Address(line1=Home,occupant=nobody)")
+      val res = summon[Show[String, Address]].show(Address("Home", Person("John Smith", 44)))
+      assertEquals(res, "Address(line1=Home,occupant=nobody)")
+    }
 
     test("even low-priority implicit beats Magnolia for nested case") {
-      summon[Show[String, Lunchbox]].show(Lunchbox(Fruit("apple"), "lemonade"))
-    }.assert(_ == "Lunchbox(fruit=apple,drink=lemonade)")
+      val res = summon[Show[String, Lunchbox]].show(Lunchbox(Fruit("apple"), "lemonade"))
+      assertEquals(res, "Lunchbox(fruit=apple,drink=lemonade)")
+    }
 
     test("low-priority implicit beats Magnolia when not nested") {
-      summon[Show[String, Fruit]].show(Fruit("apple"))
-    }.assert(_ == "apple")
+      val res = summon[Show[String, Fruit]].show(Fruit("apple"))
+      assertEquals(res, "apple")
+    }
 
     test("low-priority implicit beats Magnolia when chained") {
-      summon[Show[String, FruitBasket]].show(FruitBasket(Fruit("apple"), Fruit("banana")))
-    }.assert(_ == "FruitBasket(fruits=[apple,banana])")
+      val res = summon[Show[String, FruitBasket]].show(FruitBasket(Fruit("apple"), Fruit("banana")))
+      assertEquals(res, "FruitBasket(fruits=[apple,banana])")
+    }
 
     test("typeclass implicit scope has lower priority than ADT implicit scope") {
-      summon[Show[String, Fruit]].show(Fruit("apple"))
-    }.assert(_ == "apple")
+      val res = summon[Show[String, Fruit]].show(Fruit("apple"))
+      assertEquals(res, "apple")
+    }
 
     test("test equality false") {
-      Eq.derived[Entity].equal(Person("John Smith", 34), Person("", 0))
-    }.assert(!_)
+      val res = Eq.derived[Entity].equal(Person("John Smith", 34), Person("", 0))
+      assert(!res)
+    }
 
     test("test equality true") {
-      Eq.derived[Entity].equal(Person("John Smith", 34), Person("John Smith", 34))
-    }.assert(_ == true)
+      val res = Eq.derived[Entity].equal(Person("John Smith", 34), Person("John Smith", 34))
+      assert(res)
+    }
 
     test("test branch equality true") {
-      Eq.derived[Tree[String]].equal(Branch(Leaf("one"), Leaf("two")), Branch(Leaf("one"), Leaf("two")))
-    }.assert(_ == true)
+      val res = Eq.derived[Tree[String]].equal(Branch(Leaf("one"), Leaf("two")), Branch(Leaf("one"), Leaf("two")))
+      assert(res)
+    }
 
     test("construct a default value") {
-      HasDefault.derived[Entity].defaultValue
-    }.assert(_ == Right(Company("")))
+      val res = HasDefault.derived[Entity].defaultValue
+      assertEquals(res, Right(Company("")))
+    }
 
     test("serialize a Leaf") {
-      implicitly[Show[String, Leaf[String]]].show(Leaf("testing"))
-    }.assert(_ == "Leaf[String](value=testing)")
+      val res = implicitly[Show[String, Leaf[String]]].show(Leaf("testing"))
+      assertEquals(res, "Leaf[String](value=testing)")
+    }
 
     test("serialize case object") {
-      summon[Show[String, Red.type]].show(Red)
-    }.assert(_ == "Red()")
+      val res = summon[Show[String, Red.type]].show(Red)
+      assertEquals(res, "Red()")
+    }
 
     test("serialize self recursive type") {
-      summon[Show[String, GPerson]].show(GPerson(Nil))
-    }.assert(_ == "GPerson(children=[])")
+      val res = summon[Show[String, GPerson]].show(GPerson(Nil))
+      assertEquals(res, "GPerson(children=[])")
+    }
 
     test("serialize case object as a sealed trait") {
-      summon[Show[String, Color]].show(Blue)
-    }.assert(_ == "Blue()")
+      val res = summon[Show[String, Color]].show(Blue)
+      assertEquals(res, "Blue()")
+    }
 
     test("serialize case class with protected constructor") {
-      ProtectedCons.show.show(ProtectedCons("dada", "phil"))
-    }.assert(_ == "ProtectedCons(name=dada phil)")
+      val res = ProtectedCons.show.show(ProtectedCons("dada", "phil"))
+      assertEquals(res, "ProtectedCons(name=dada phil)")
+    }
 
     test("serialize case class with accessible private constructor") {
-      PrivateCons.show.show(PrivateCons("dada", "phil"))
-    }.assert(_ == "PrivateCons(name=dada phil)")
+      val res = PrivateCons.show.show(PrivateCons("dada", "phil"))
+      assertEquals(res, "PrivateCons(name=dada phil)")
+    }
 
     test("read-only typeclass can serialize case class with inaccessible private constructor") {
-      summon[Print[PrivateCons]].print(PrivateCons("dada", "phil"))
-    }.assert(_ == "PrivateCons(dada phil)")
+      val res = summon[Print[PrivateCons]].print(PrivateCons("dada", "phil"))
+      assertEquals(res, "PrivateCons(dada phil)")
+    }
 
     test("read-only typeclass can serialize case class with protected constructor") {
-      summon[Print[ProtectedCons]].print(ProtectedCons("dada", "phil"))
-    }.assert(_ == "ProtectedCons(dada phil)")
+      val res = summon[Print[ProtectedCons]].print(ProtectedCons("dada", "phil"))
+      assertEquals(res, "ProtectedCons(dada phil)")
+    }
 
     test("decode a company") {
-      Decoder.derived[Company].decode("""Company(name=Acme Inc)""")
-    }.assert(_ == Company("Acme Inc"))
+      val res = Decoder.derived[Company].decode("""Company(name=Acme Inc)""")
+      assertEquals(res, Company("Acme Inc"))
+    }
 
     test("decode a Person as an Entity") {
-      summon[Decoder[Entity]].decode("""tests.Person(name=John Smith,age=32)""")
-    }.assert(_ == Person("John Smith", 32))
+      val res = summon[Decoder[Entity]].decode("""tests.Person(name=John Smith,age=32)""")
+      assertEquals(res, Person("John Smith", 32))
+    }
 
     test("decode a nested product") {
-      summon[Decoder[Address]].decode(
+      val res = summon[Decoder[Address]].decode(
         """Address(line1=53 High Street,occupant=Person(name=Richard Jones,age=44))"""
       )
-    }.assert(_ == Address("53 High Street", Person("Richard Jones", 44)))
+      assertEquals(res, Address("53 High Street", Person("Richard Jones", 44)))
+    }
 
     test("typenames and labels are not encoded") {
-      summon[Show[String, `%%`]].show(`%%`(1, "two"))
-    }.assert(_ == "%%(/=1,#=two)")
+      val res = summon[Show[String, `%%`]].show(`%%`(1, "two"))
+      assertEquals(res, "%%(/=1,#=two)")
+    }
 
     val tupleDerivation = summon[Show[String, (Int, String)]]
 
     test("serialize a tuple") {
-      tupleDerivation.show((42, "Hello World"))
-    }.assert(_ == "Tuple2[Int,String](_1=42,_2=Hello World)")
+      val res = tupleDerivation.show((42, "Hello World"))
+      assertEquals(res, "Tuple2[Int,String](_1=42,_2=Hello World)")
+    }
 
     // Corrupt being covariant in L <: Seq[Company] enables the derivation for Corrupt[String, _]
     test("show a Politician with covariant lobby") {
-      Show.derived[Politician[String]].show(Corrupt("wall", Seq(Company("Alice Inc"))))
-    }.assert(_ == "Corrupt[String,Seq[Company]](slogan=wall,lobby=[Company(name=Alice Inc)])")
+      val res = Show.derived[Politician[String]].show(Corrupt("wall", Seq(Company("Alice Inc"))))
+      assertEquals(res, "Corrupt[String,Seq[Company]](slogan=wall,lobby=[Company(name=Alice Inc)])")
+    }
 
     //test("patch a Person via a Patcher[Entity]") {
     //  val person = Person("Bob", 42)
@@ -328,20 +354,24 @@ object Tests extends Suite("Magnolia tests"):
     //}.assert(_ == Person("Bob", 21))
 
     test("show an Account") {
-      Show.derived[Account].show(Account("john_doe", "john.doe@yahoo.com", "john.doe@gmail.com"))
-    }.assert(_ == "Account(id=john_doe,emails=[john.doe@yahoo.com,john.doe@gmail.com])")
+      val res = Show.derived[Account].show(Account("john_doe", "john.doe@yahoo.com", "john.doe@gmail.com"))
+      assertEquals(res, "Account(id=john_doe,emails=[john.doe@yahoo.com,john.doe@gmail.com])")
+    }
 
     test("construct a default Account") {
-      HasDefault.derived[Account].defaultValue
-    }.assert(_ == Right(Account("")))
+      val res = HasDefault.derived[Account].defaultValue
+      assertEquals(res, Right(Account("")))
+    }
 
     test("construct a failed NoDefault") {
-      HasDefault.derived[NoDefault].defaultValue
-    }.assert(_ == Left("truth is a lie"))
+      val res = HasDefault.derived[NoDefault].defaultValue
+      assertEquals(res, Left("truth is a lie"))
+    }
 
     test("show a Portfolio of Companies") {
-      Show.derived[Portfolio].show(Portfolio(Company("Alice Inc"), Company("Bob & Co")))
-    }.assert(_ == "Portfolio(companies=[Company(name=Alice Inc),Company(name=Bob & Co)])")
+      val res = Show.derived[Portfolio].show(Portfolio(Company("Alice Inc"), Company("Bob & Co")))
+      assertEquals(res, "Portfolio(companies=[Company(name=Alice Inc),Company(name=Bob & Co)])")
+    }
 
     // test("show a List[Int]") {
     //   given [T: [X] =>> Show[String, X]] : Show[String, List[T]] = Show.derived
@@ -351,12 +381,14 @@ object Tests extends Suite("Magnolia tests"):
     // }
 
     test("sealed trait typeName should be complete and unchanged") {
-      TypeNameInfo.derived[Color].name
-    }.assert(_.full == "tests.Color")
+      val res = TypeNameInfo.derived[Color].name
+      assertEquals(res.full, "tests.Color")
+    }
 
     test("sealed trait subtypes should be ordered") {
-      TypeNameInfo.derived[Color].subtypeNames.map(_.short)
-    }.assert(_ == Seq("Red", "Green", "Blue", "Orange", "Pink"))
+      val res = TypeNameInfo.derived[Color].subtypeNames.map(_.short)
+      assertEquals(res, Seq("Red", "Green", "Blue", "Orange", "Pink"))
+    }
 
     test("case class typeName should be complete and unchanged") {
       given stringTypeName: TypeNameInfo[String] with {
@@ -364,28 +396,35 @@ object Tests extends Suite("Magnolia tests"):
 
         def subtypeNames = ???
       }
-      TypeNameInfo.derived[Fruit].name
-    }.assert(_.full == "tests.Fruit")
+      val res = TypeNameInfo.derived[Fruit].name
+      assertEquals(res.full, "tests.Fruit")
+    }
 
     test("show a recursive case class") {
-      Show.derived[Recursive].show(Recursive(Seq(Recursive(Nil))))
-    }.assert(_ == "Recursive(children=[Recursive(children=[])])")
+      val res = Show.derived[Recursive].show(Recursive(Seq(Recursive(Nil))))
+      assertEquals(res, "Recursive(children=[Recursive(children=[])])")
+    }
 
     test("manually derive a recursive case class instance") {
-      Recursive.showRecursive.show(Recursive(Seq(Recursive(Nil))))
-    }.assert(_ == "Recursive(children=[Recursive(children=[])])")
+      val res = Recursive.showRecursive.show(Recursive(Seq(Recursive(Nil))))
+      assertEquals(res, "Recursive(children=[Recursive(children=[])])")
+    }
 
     test("show underivable type with fallback") {
-      summon[TypeNameInfo[NotDerivable]].name
-    }.assert(_ == TypeInfo("", "Unknown Type", Seq.empty))
+      val res = summon[TypeNameInfo[NotDerivable]].name
+      assertEquals(res, TypeInfo("", "Unknown Type", Seq.empty))
+    }
 
     test("equality of Wrapper") {
-      Eq.derived[Wrapper].equal(Wrapper(Some(KArray(KArray(Nil) :: Nil))), Wrapper(Some(KArray(KArray(Nil) :: KArray(Nil) :: Nil))))
-    }.assert(!_)
+      val res = Eq.derived[Wrapper].equal(Wrapper(Some(KArray(KArray(Nil) :: Nil))), Wrapper(Some(KArray(KArray(Nil) :: KArray(Nil) :: Nil))))
+      assert(!res)
+    }
 
     test("very long") {
       val vl =
         VeryLong("p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9", "p10", "p11", "p12", "p13", "p14", "p15",
             "p16", "p17", "p18", "p19", "p20", "p21", "p22", "p23")
-      Eq.derived[VeryLong].equal(vl, vl)
-    }.assert(_ == true)
+      val res = Eq.derived[VeryLong].equal(vl, vl)
+      assert(res)
+    }
+  }
