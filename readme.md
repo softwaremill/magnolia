@@ -19,18 +19,15 @@ __Magnolia__ is a generic macro for automatic materialization of typeclasses for
 
 Given an ADT such as,
 ```scala
-enum Tree[+T]:
+enum Tree[+T] derives Print:
   case Branch(left: Tree[T], right: Tree[T])
   case Leaf(value: T)
-
-object Tree:
-  given [T: [X] =>> Print[X]] : Print[Tree[T]] = Print.derived
 ```
 and provided an given instance of `Print[Int]` is in scope, and a Magnolia derivation for the `Print` typeclass
 has been provided, we can automatically derive given typeclass instances of `Print[Tree[Int]]` on-demand, like
 so,
 ```scala
-Print.derived[Tree[Int]].print(Branch(Branch(Leaf(1), Leaf(2)), Leaf(3)))
+Tree.Branch(Tree.Branch(Tree.Leaf(1), Tree.Leaf(2)), Tree.Leaf(3)).print
 ```
 Typeclass authors may provide Magnolia derivations in the typeclass's companion object, but it is easy to create
 your own.
@@ -40,7 +37,7 @@ The definition of a `Print` typeclass with generic derivation defined with Magno
 import magnolia.*
 
 trait Print[T] {
-  def print(t: T): String
+  extension (x: T) def print: String
 }
 
 object Print extends Derivation[Print]:
