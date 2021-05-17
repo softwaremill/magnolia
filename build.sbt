@@ -17,6 +17,7 @@ lazy val root =
     .aggregate((core.projectRefs ++ examples.projectRefs ++ test.projectRefs): _*)
 
 lazy val core = (projectMatrix in file(".core"))
+  .settings(commonSettings)
   .settings(
     name := "magnolia-core",
     Compile / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "core",
@@ -25,6 +26,7 @@ lazy val core = (projectMatrix in file(".core"))
 
 lazy val examples = (projectMatrix in file(".examples"))
   .dependsOn(core)
+  .settings(commonSettings)
   .settings(
     name := "magnolia-examples",
     Compile / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "examples",
@@ -33,6 +35,7 @@ lazy val examples = (projectMatrix in file(".examples"))
 
 lazy val test = (projectMatrix in file(".test"))
   .dependsOn(examples)
+  .settings(commonSettings)
   .settings(
     name := "magnolia-test",
     projectDependencies ++= Seq(
