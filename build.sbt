@@ -34,6 +34,6 @@ lazy val test = (project in file(".test"))
     Compile / scalaSource := baseDirectory.value / ".." / "src" / "test",
     Compile / scalacOptions ++= Seq("-Ywarn-macros:after"),
     Compile / scalacOptions --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
-    libraryDependencies += "com.propensive" %% "probably-cli" % "0.8.0",
+    libraryDependencies += "org.scalameta" %% "munit" % "0.7.26",
     libraryDependencies += "com.propensive" %% "contextual-examples" % "1.5.0"
   )
