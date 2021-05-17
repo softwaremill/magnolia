@@ -20,38 +20,44 @@ __Magnolia__ is a generic macro for automatic materialization of typeclasses for
 Given an ADT such as,
 ```scala
 enum Tree[+T]:
-  case class Branch(left: Tree[T], right: Tree[T])
-  case class Leaf(value: T)
+  case Branch(left: Tree[T], right: Tree[T])
+  case Leaf(value: T)
+
+object Tree:
+  given [T: [X] =>> Print[X]] : Print[Tree[T]] = Print.derived
 ```
-and provided an given instance of `Show[Int]` is in scope, and a Magnolia derivation for the `Show` typeclass
-has been provided, we can automatically derive given typeclass instances of `Show[Tree[Int]]` on-demand, like
+and provided an given instance of `Print[Int]` is in scope, and a Magnolia derivation for the `Print` typeclass
+has been provided, we can automatically derive given typeclass instances of `Print[Tree[Int]]` on-demand, like
 so,
 ```scala
-Branch(Branch(Leaf(1), Leaf(2)), Leaf(3)).show
+Print.derived[Tree[Int]].print(Branch(Branch(Leaf(1), Leaf(2)), Leaf(3)))
 ```
 Typeclass authors may provide Magnolia derivations in the typeclass's companion object, but it is easy to create
 your own.
 
-The definition of a `Show` typeclass with generic derivation defined with Magnolia might look like this:
+The definition of a `Print` typeclass with generic derivation defined with Magnolia might look like this:
 ```scala
 import magnolia.*
 
-trait Show[T]:
-  def show(value: T): String
+trait Print[T] {
+  def print(t: T): String
+}
 
-object Show extends Derivation[Show]:
-  def join[T](ctx: CaseClass[Show, T]): Show[T] =
-    ctx.params.map { p =>
-      s"${p.label}=${p.typeclass.show(p.dereference(value))}"
-    }.mkString("{", ",", "}")
+object Print extends Derivation[Print]:
+  def join[T](ctx: CaseClass[Typeclass, T]): Print[T] = value =>
+    ctx.params.map { param =>
+      param.typeclass.print(param.deref(value))
+    }.mkString(s"${ctx.typeInfo.short}(", ",", ")")
 
-  override def split[T](ctx: SealedTrait[Show, T]): Show[T] = value =>
-    ctx.dispatch(value) { sub => sub.typeclass.show(sub.cast(value))
+  override def split[T](ctx: SealedTrait[Print, T]): Print[T] = value =>
+    ctx.choose(value) { sub => sub.typeclass.print(sub.cast(value)) }
+  
+  given Print[Int] = _.toString
 ```
 
 The `Derivation` trait provides a `derived` method which will attempt to construct a corresponding typeclass
-instance for the type passed to it. Importing `Show.derived` as defined in the example above will make generic
-derivation for `Show` typeclasses available in the scope of the import.
+instance for the type passed to it. Importing `Print.derived` as defined in the example above will make generic
+derivation for `Print` typeclasses available in the scope of the import.
 
 While any object may be used to define a derivation, if you control the typeclass you are deriving for, the
 companion object of the typeclass is the obvious choice since it generic derivations for that typeclass will
