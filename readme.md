@@ -66,7 +66,7 @@ Magnolia is not currently able to access default values for case class parameter
 For Scala 3:
 
 ```scala
-val magnolia = "com.softwaremill.magnolia" %% "magnolia-core" % "v2.0.0-M3"
+val magnolia = "com.softwaremill.magnolia" %% "magnolia-core" % "2.0.0-M3"
 ```
 
 For Scala 2, see the [legacy branch](https://github.com/softwaremill/magnolia/tree/legacy).
