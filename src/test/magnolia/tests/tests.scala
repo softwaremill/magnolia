@@ -1,7 +1,6 @@
 package magnolia.tests
 
 import language.experimental.macros
-import probably._
 import contextual.data.scalac._
 import contextual.data.fqt._
 import contextual.data.txt._
@@ -9,8 +8,8 @@ import magnolia.examples._
 import magnolia.TypeName
 
 import java.time.LocalDate
-
 import scala.annotation.StaticAnnotation
+import scala.language.experimental.macros
 import scala.util.control.NonFatal
 
 sealed trait Tree[+T]
@@ -58,13 +57,13 @@ sealed trait AttributeParent
 case class `%%`(`/`: Int, `#`: String)
 
 case class Param(a: String, b: String)
-case class Test(param: Param)
-object Test {
-  def apply(): Test = Test(Param("", ""))
+case class TestEntry(param: Param)
+object TestEntry {
+  def apply(): TestEntry = TestEntry(Param("", ""))
 
-  def apply(a: String)(implicit b: Int): Test = Test(Param(a, b.toString))
+  def apply(a: String)(implicit b: Int): TestEntry = TestEntry(Param(a, b.toString))
 
-  def apply(a: String, b: String): Test = Test(Param(a, b))
+  def apply(a: String, b: String): TestEntry = TestEntry(Param(a, b))
 }
 
 sealed trait Politician[+S]
@@ -207,245 +206,300 @@ final case class Huey(height: Int) extends GoodChild
 class Dewey(val height: Int) extends GoodChild
 final case class Louie(height: Int) extends BadChild
 
-object Tests extends Suite("Magnolia tests") {
+class Tests extends munit.FunSuite {
 
-  def run(test: Runner): Unit = for (_ <- 1 to 1) {
     test("construct a Show product instance with alternative apply functions") {
-      Show.gen[Test].show(Test("a", "b"))
-    }.assert(_ == """Test(param=Param(a=a,b=b))""")
+      val res = Show.gen[TestEntry].show(TestEntry("a", "b"))
+      assertEquals(res, """Test(param=Param(a=a,b=b))""")
+    }
 
     test("construct a Show product instance") {
-      Show.gen[Person].show(Person("John Smith", 34))
-    }.assert(_ == """Person(name=John Smith,age=34)""")
+      val res = Show.gen[Person].show(Person("John Smith", 34))
+      assertEquals(res, """Person(name=John Smith,age=34)""")
+    }
 
     test("construct a Show coproduct instance") {
-      Show.gen[Person].show(Person("John Smith", 34))
-    }.assert(_ == "Person(name=John Smith,age=34)")
+      val res = Show.gen[Person].show(Person("John Smith", 34))
+      assertEquals(res, "Person(name=John Smith,age=34)")
+    }
 
     test("construct a Show instance for product with partially private fields") {
-      Show.gen[Abc].show(Abc(12, 54, "pm"))
-    }.assert(_ == "Abc(a=12,b=54L,c=pm)")
+      val res = Show.gen[Abc].show(Abc(12, 54, "pm"))
+      assertEquals(res, "Abc(a=12,b=54L,c=pm)")
+    }
 
     test("construct a Show instance for value case class") {
-      Show.gen[ServiceName1].show(ServiceName1("service"))
-    }.assert(_ == "service")
+      val res = Show.gen[ServiceName1].show(ServiceName1("service"))
+      assertEquals(res, "service")
+    }
 
     test("construct a Show instance for a product with multiple default values") {
-      Show.gen[ParamsWithDefault].show(ParamsWithDefault())
-    }.assert(_ == "ParamsWithDefault(a=3,b=4)")
+      val res = Show.gen[ParamsWithDefault].show(ParamsWithDefault())
+      assertEquals(res, "ParamsWithDefault(a=3,b=4)")
+    }
 
     test("construct a HasDefault instance for a generic product with default values") {
-      HasDefault.gen[ParamsWithDefaultGeneric[String, Int]].defaultValue
-    }.assert(_ == Right(ParamsWithDefaultGeneric("A", 0)))
+      val res = HasDefault.gen[ParamsWithDefaultGeneric[String, Int]].defaultValue
+      assertEquals(res, Right(ParamsWithDefaultGeneric("A", 0)))
+    }
 
     test("serialize a Branch") {
-      implicitly[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
-    }.assert(_ == "Branch[String](left=Leaf[String](value=LHS),right=Leaf[String](value=RHS))")
+      val res = implicitly[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
+      assertEquals(res, "Branch[String](left=Leaf[String](value=LHS),right=Leaf[String](value=RHS))")
+    }
 
     test("local implicit beats Magnolia") {
       implicit val showPerson: Show[String, Person] = _ => "nobody"
-      implicitly[Show[String, Address]].show(Address("Home", Person("John Smith", 44)))
-    }.assert(_ == "Address(line1=Home,occupant=nobody)")
+      val res = implicitly[Show[String, Address]].show(Address("Home", Person("John Smith", 44)))
+      assertEquals(res, "Address(line1=Home,occupant=nobody)")
+    }
 
     test("even low-priority implicit beats Magnolia for nested case") {
-      implicitly[Show[String, Lunchbox]].show(Lunchbox(Fruit("apple"), "lemonade"))
-    }.assert(_ == "Lunchbox(fruit=apple,drink=lemonade)")
+      val res = implicitly[Show[String, Lunchbox]].show(Lunchbox(Fruit("apple"), "lemonade"))
+      assertEquals(res, "Lunchbox(fruit=apple,drink=lemonade)")
+    }
 
     test("low-priority implicit beats Magnolia when not nested") {
-      implicitly[Show[String, Fruit]].show(Fruit("apple"))
-    }.assert(_ == "apple")
+      val res = implicitly[Show[String, Fruit]].show(Fruit("apple"))
+      assertEquals(res, "apple")
+    }
 
     test("low-priority implicit beats Magnolia when chained") {
-      implicitly[Show[String, FruitBasket]].show(FruitBasket(Fruit("apple"), Fruit("banana")))
-    }.assert(_ == "FruitBasket(fruits=[apple,banana])")
+      val res = implicitly[Show[String, FruitBasket]].show(FruitBasket(Fruit("apple"), Fruit("banana")))
+      assertEquals(res, "FruitBasket(fruits=[apple,banana])")
+    }
 
     test("typeclass implicit scope has lower priority than ADT implicit scope") {
-      implicitly[Show[String, Fruit]].show(Fruit("apple"))
-    }.assert(_ == "apple")
+      val res = implicitly[Show[String, Fruit]].show(Fruit("apple"))
+      assertEquals(res, "apple")
+    }
 
     test("test equality false") {
-      Eq.gen[Entity].equal(Person("John Smith", 34), Person("", 0))
-    }.assert(_ == false)
+      val res = Eq.gen[Entity].equal(Person("John Smith", 34), Person("", 0))
+      assertEquals(res, false)
+    }
 
     test("test equality true") {
-      Eq.gen[Entity].equal(Person("John Smith", 34), Person("John Smith", 34))
-    }.assert(_ == true)
+      val res = Eq.gen[Entity].equal(Person("John Smith", 34), Person("John Smith", 34))
+      assertEquals(res, true)
+    }
 
     test("test branch equality true") {
-      Eq.gen[Tree[String]].equal(Branch(Leaf("one"), Leaf("two")), Branch(Leaf("one"), Leaf("two")))
-    }.assert(_ == true)
+      val res = Eq.gen[Tree[String]].equal(Branch(Leaf("one"), Leaf("two")), Branch(Leaf("one"), Leaf("two")))
+      assertEquals(res, true)
+    }
 
     test("construct a default value") {
-      HasDefault.gen[Entity].defaultValue
-    }.assert(_ == Right(Company("")))
+      val res = HasDefault.gen[Entity].defaultValue
+      assertEquals(res, Right(Company("")))
+    }
 
     test("construction of Show instance for Leaf") {
-      scalac"""
+      val res = scalac"""
         implicitly[Show[String, Leaf[java.lang.String]]]
       """
-    }.assert(_ == Returns(fqt"magnolia.examples.Show[String,magnolia.tests.Leaf[String]]"))
+      assertEquals(res, Returns(fqt"magnolia.examples.Show[String,magnolia.tests.Leaf[String]]"))
+    }
 
     test("construction of Show instance for Tree") {
-      scalac"""
+      val res =
+        scalac"""
         implicitly[Show[String, Tree[String]]]
       """
-    }.assert(_ == Returns(fqt"magnolia.examples.Show[String,magnolia.tests.Tree[String]]"))
+      assertEquals(res, Returns(fqt"magnolia.examples.Show[String,magnolia.tests.Tree[String]]"))
+    }
 
     test("serialize a Leaf") {
-      implicitly[Show[String, Leaf[String]]].show(Leaf("testing"))
-    }.assert(_ == "Leaf[String](value=testing)")
+      val res = implicitly[Show[String, Leaf[String]]].show(Leaf("testing"))
+      assertEquals(res, "Leaf[String](value=testing)")
+    }
 
     test("serialize a Branch as a Tree") {
-      implicitly[Show[String, Tree[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
-    }.assert(_ == "Branch[String](left=Leaf[String](value=LHS),right=Leaf[String](value=RHS))")
+      val res = implicitly[Show[String, Tree[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
+      assertEquals(res, "Branch[String](left=Leaf[String](value=LHS),right=Leaf[String](value=RHS))")
+    }
 
     test("serialize case object") {
-      implicitly[Show[String, Red.type]].show(Red)
-    }.assert(_ == "Red()")
+      val res = implicitly[Show[String, Red.type]].show(Red)
+      assertEquals(res, "Red()")
+    }
 
     test("serialize self recursive type") {
-      implicitly[Show[String, GPerson]].show(GPerson(Nil))
-    }.assert(_ == "GPerson(children=[])")
+      val res = implicitly[Show[String, GPerson]].show(GPerson(Nil))
+      assertEquals(res, "GPerson(children=[])")
+    }
 
     test("access default constructor values") {
-      implicitly[HasDefault[Item]].defaultValue
-    }.assert(_ == Right(Item("", 1, 0)))
+      val res = implicitly[HasDefault[Item]].defaultValue
+      assertEquals(res, Right(Item("", 1, 0)))
+    }
 
     test("serialize case object as a sealed trait") {
-      implicitly[Show[String, Color]].show(Blue)
-    }.assert(_ == "Blue()")
+      val res = implicitly[Show[String, Color]].show(Blue)
+      assertEquals(res, "Blue()")
+    }
 
     test("serialize case class with protected constructor") {
-      ProtectedCons.show.show(ProtectedCons("dada", "phil"))
-    }.assert(_ == "ProtectedCons(name=dada phil)")
+      val res = ProtectedCons.show.show(ProtectedCons("dada", "phil"))
+      assertEquals(res, "ProtectedCons(name=dada phil)")
+    }
 
     test("serialize case class with accessible private constructor") {
-      PrivateCons.show.show(PrivateCons("dada", "phil"))
-    }.assert(_ == "PrivateCons(name=dada phil)")
+      val res = PrivateCons.show.show(PrivateCons("dada", "phil"))
+      assertEquals(res, "PrivateCons(name=dada phil)")
+    }
 
     test("serialize value case class with accessible private constructor") {
-      PrivateValueClass.show.show(PrivateValueClass(42))
-    }.assert(_ == "42")
+      val res = PrivateValueClass.show.show(PrivateValueClass(42))
+      assertEquals(res, "42")
+    }
 
     test("read-only typeclass can serialize case class with inaccessible private constructor") {
-      implicitly[Print[PrivateCons]].print(PrivateCons("dada", "phil"))
-    }.assert(_ == "PrivateCons(dada phil)")
+      val res = implicitly[Print[PrivateCons]].print(PrivateCons("dada", "phil"))
+      assertEquals(res, "PrivateCons(dada phil)")
+    }
 
     test("read-only typeclass can serialize value case class with inaccessible private constructor") {
-      implicitly[Print[PrivateValueClass]].print(PrivateValueClass(42))
-    }.assert(_ == "42")
+      val res = implicitly[Print[PrivateValueClass]].print(PrivateValueClass(42))
+      assertEquals(res, "42")
+    }
 
     test("read-only typeclass can serialize case class with protected constructor") {
-      implicitly[Print[ProtectedCons]].print(ProtectedCons("dada", "phil"))
-    }.assert(_ == "ProtectedCons(dada phil)")
+      val res = implicitly[Print[ProtectedCons]].print(ProtectedCons("dada", "phil"))
+      assertEquals(res, "ProtectedCons(dada phil)")
+    }
 
     test("decode a company") {
-      Decoder.gen[Company].decode("""Company(name=Acme Inc)""")
-    }.assert(_ == Company("Acme Inc"))
+      val res = Decoder.gen[Company].decode("""Company(name=Acme Inc)""")
+      assertEquals(res, Company("Acme Inc"))
+    }
 
     test("decode a Person as an Entity") {
-      implicitly[Decoder[Entity]].decode("""magnolia.tests.Person(name=John Smith,age=32)""")
-    }.assert(_ == Person("John Smith", 32))
+      val res = implicitly[Decoder[Entity]].decode("""magnolia.tests.Person(name=John Smith,age=32)""")
+      assertEquals(res, Person("John Smith", 32))
+    }
 
     test("decode a nested product") {
-      implicitly[Decoder[Address]].decode(
+      val res = implicitly[Decoder[Address]].decode(
         """Address(line1=53 High Street,occupant=Person(name=Richard Jones,age=44))"""
       )
-    }.assert(_ == Address("53 High Street", Person("Richard Jones", 44)))
+      assertEquals(res, Address("53 High Street", Person("Richard Jones", 44)))
+    }
 
     test("show error stack") {
-      scalac"""
+      val res =
+        scalac"""
         case class Alpha(integer: Double)
         case class Beta(alpha: Alpha)
         Show.gen[Beta]
       """
-    }.assert(_ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type Double
-        |    in parameter 'integer' of product type Alpha
-        |    in parameter 'alpha' of product type Beta
-        |"""))
+      assertEquals(res, TypecheckError(
+        txt"""magnolia: could not find Show.Typeclass for type Double
+             |    in parameter 'integer' of product type Alpha
+             |    in parameter 'alpha' of product type Beta
+             |"""))
+    }
 
     test("serialize case class with Java annotations by skipping them") {
-      Show.gen[MyDto].show(MyDto("foo", 42))
-    }.assert(_ == "MyDto{MyAnnotation(0)}(foo=foo,bar=42)")
+      val res = Show.gen[MyDto].show(MyDto("foo", 42))
+      assertEquals(res, "MyDto{MyAnnotation(0)}(foo=foo,bar=42)")
+    }
 
     test("serialize case class with Java annotations which comes from external module by skipping them") {
-      Show.gen[JavaAnnotatedCase].show(JavaAnnotatedCase(1))
-    }.assert(_ == "JavaAnnotatedCase(v=1)")
+      val res = Show.gen[JavaAnnotatedCase].show(JavaAnnotatedCase(1))
+      assertEquals(res, "JavaAnnotatedCase(v=1)")
+    }
 
     test("not attempt to instantiate Unit when producing error stack") {
-      scalac"""
+      val res =
+        scalac"""
         case class Gamma(unit: Unit)
         Show.gen[Gamma]
       """
-    }.assert(_ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type Unit
-        |    in parameter 'unit' of product type Gamma
-        |"""))
+      assertEquals(res, TypecheckError(
+        txt"""magnolia: could not find Show.Typeclass for type Unit
+             |    in parameter 'unit' of product type Gamma
+             |"""))
+    }
 
     test("not assume full auto derivation of external value classes") {
-      scalac"""
+      val res =
+        scalac"""
         case class LoggingConfig(n: ServiceName1)
         object LoggingConfig {
           implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
         }
         """
-    }.assert(_ == TypecheckError(txt"""magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName1
-    in parameter 'n' of product type LoggingConfig
-""") )
+      assertEquals(res, TypecheckError(
+        txt"""magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName1
+              in parameter 'n' of product type LoggingConfig
+           """))
+    }
 
     test("not assume full auto derivation of external products") {
-      scalac"""
+      val res =
+        scalac"""
         case class LoggingConfig(n: ServiceName2)
         object LoggingConfig {
           implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
         }
         """
-    }.assert(_ == TypecheckError(txt"""magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName2
-    in parameter 'n' of product type LoggingConfig
-""") )
+      assertEquals(res, TypecheckError(
+        txt"""magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName2
+              in parameter 'n' of product type LoggingConfig
+           """))
+    }
 
     test("not assume full auto derivation of external coproducts") {
-      scalac"""
+      val res =
+        scalac"""
         case class LoggingConfig(o: Option[String])
         object LoggingConfig {
           implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
         }
         """
-    }.assert(_ == TypecheckError(txt"""magnolia: could not find SemiDefault.Typeclass for type Option[String]
-    in parameter 'o' of product type LoggingConfig
-""") )
+      assertEquals(res, TypecheckError(
+        txt"""magnolia: could not find SemiDefault.Typeclass for type Option[String]
+              in parameter 'o' of product type LoggingConfig
+          """))
+    }
 
     test("half auto derivation of sealed families") {
-      SemiDefault.gen[Halfy].default
-    }.assert(_ == Lefty())
+      val res = SemiDefault.gen[Halfy].default
+      assertEquals(res, Lefty())
+    }
 
     test("typenames and labels are not encoded") {
-      implicitly[Show[String, `%%`]].show(`%%`(1, "two"))
-    }.assert(_ == "%%(/=1,#=two)")
-
-    val tupleDerivation = test("derive for a tuple") {
-      implicitly[Show[String, (Int, String)]]
-    }.check { _ => true }
+      val res = implicitly[Show[String, `%%`]].show(`%%`(1, "two"))
+      assertEquals(res, "%%(/=1,#=two)")
+    }
 
     test("serialize a tuple") {
-      tupleDerivation.show((42, "Hello World"))
-    }.assert(_ == "Tuple2[Int,String](_1=42,_2=Hello World)")
+      val tupleDerivation = implicitly[Show[String, (Int, String)]]
+      val res = tupleDerivation.show((42, "Hello World"))
+      assertEquals(res, "Tuple2[Int,String](_1=42,_2=Hello World)")
+    }
 
     test("serialize a value class") {
-      Show.gen[Length].show(new Length(100))
-    }.assert(_ == "100")
+      val res = Show.gen[Length].show(new Length(100))
+      assertEquals(res, "100")
+    }
 
     // Corrupt being covariant in L <: Seq[Company] enables the derivation for Corrupt[String, _]
     test("show a Politician with covariant lobby") {
-      Show.gen[Politician[String]].show(Corrupt("wall", Seq(Company("Alice Inc"))))
-    }.assert(_ == "Corrupt[String,Seq[Company]](slogan=wall,lobby=[Company(name=Alice Inc)])")
+      val res = Show.gen[Politician[String]].show(Corrupt("wall", Seq(Company("Alice Inc"))))
+      assertEquals(res, "Corrupt[String,Seq[Company]](slogan=wall,lobby=[Company(name=Alice Inc)])")
+    }
 
     // LabelledBox being invariant in L <: String prohibits the derivation for LabelledBox[Int, _]
     test("can't show a Box with invariant label") {
-      scalac"Show.gen[Box[Int]]"
-    }.assert { _ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type L
+      val res = scalac"Show.gen[Box[Int]]"
+      assertEquals(res,TypecheckError(txt"""magnolia: could not find Show.Typeclass for type L
         |    in parameter 'label' of product type magnolia.tests.LabelledBox[Int, _ <: String]
         |    in coproduct type magnolia.tests.Box[Int]
-        |""") }
+        |""") )
+    }
+
 
     test("patch a Person via a Patcher[Entity]") {
       // these two implicits can be removed once https://github.com/propensive/magnolia/issues/58 is closed
@@ -453,38 +507,38 @@ object Tests extends Suite("Magnolia tests") {
       implicit val intPatcher = Patcher.forSingleValue[Int]
 
       val person = Person("Bob", 42)
-      implicitly[Patcher[Entity]].patch(person, Seq(null, 21))
-    }.assert(_ == Person("Bob", 21))
+      val res = implicitly[Patcher[Entity]].patch(person, Seq(null, 21))
+      assertEquals(res, Person("Bob", 21))
+    }
 
     test("throw on an illegal patch attempt with field count mismatch") {
       // these two implicits can be removed once https://github.com/propensive/magnolia/issues/58 is closed
       implicit val stringPatcher = Patcher.forSingleValue[String]
       implicit val intPatcher = Patcher.forSingleValue[Int]
 
-      try {
+      val res = try {
         val person = Person("Bob", 42)
         implicitly[Patcher[Entity]].patch(person, Seq(null, 21, 'killer))
       } catch {
         case NonFatal(e) => e.getMessage
       }
-    }.assert(_ == "Cannot patch value `Person(Bob,42)`, expected 2 fields but got 3")
-
+      assertEquals(res, "Cannot patch value `Person(Bob,42)`, expected 2 fields but got 3")
+    }
 
     test("throw on an illegal patch attempt with field type mismatch") {
       // these two implicits can be removed once https://github.com/propensive/magnolia/issues/58 is closed
       implicit val stringPatcher = Patcher.forSingleValue[String]
       implicit val intPatcher = Patcher.forSingleValue[Int]
 
-      try {
+      val res = try {
         val person = Person("Bob", 42)
         implicitly[Patcher[Entity]].patch(person, Seq(null, 'killer))
         "it worked"
       } catch {
         case NonFatal(e) => e.getMessage
       }
-    }.assert{x =>
-      // Tiny hack because different Java versions have different error messages.
-      x.contains("scala.Symbol cannot be cast to") && x.contains("java.lang.Integer")
+      assertEquals(res, "scala.Symbol cannot be cast to")
+      assertEquals(res,"java.lang.Integer")
     }
 
     class ParentClass {
@@ -493,12 +547,14 @@ object Tests extends Suite("Magnolia tests") {
 
       def testInner(): Unit = {
         test("serialize a case class inside another class") {
-          implicitly[Show[String, InnerClass]].show(InnerClass("foo"))
-        }.assert(_ == "InnerClass(name=foo)")
+          val res = implicitly[Show[String, InnerClass]].show(InnerClass("foo"))
+          assertEquals(res, "InnerClass(name=foo)")
+        }
 
         test("construct a default case class inside another class") {
-          HasDefault.gen[InnerClassWithDefault].defaultValue
-        }.assert(_ == Right(InnerClassWithDefault()))
+          val res = HasDefault.gen[InnerClassWithDefault].defaultValue
+          assertEquals(res, Right(InnerClassWithDefault()))
+        }
 
         ()
       }
@@ -508,12 +564,14 @@ object Tests extends Suite("Magnolia tests") {
         case class LocalClassWithDefault(name: String = "foo")
 
         test("serialize a case class inside a method") {
-          implicitly[Show[String, LocalClass]].show(LocalClass("foo"))
-        }.assert(_ == "LocalClass(name=foo)")
+          val res = implicitly[Show[String, LocalClass]].show(LocalClass("foo"))
+          assertEquals(res, "LocalClass(name=foo)")
+        }
 
         test("construct a default case class inside a method") {
-          HasDefault.gen[LocalClassWithDefault].defaultValue
-        }.assert(_ == Right(LocalClassWithDefault()))
+          val res = HasDefault.gen[LocalClassWithDefault].defaultValue
+          assertEquals(res, Right(LocalClassWithDefault()))
+        }
 
         ()
       }
@@ -524,32 +582,39 @@ object Tests extends Suite("Magnolia tests") {
     parent.testLocal()
 
     test("show an Account") {
-      Show.gen[Account].show(Account("john_doe", "john.doe@yahoo.com", "john.doe@gmail.com"))
-    }.assert(_ == "Account(id=john_doe,emails=[john.doe@yahoo.com,john.doe@gmail.com])")
+      val res = Show.gen[Account].show(Account("john_doe", "john.doe@yahoo.com", "john.doe@gmail.com"))
+      assertEquals(res, "Account(id=john_doe,emails=[john.doe@yahoo.com,john.doe@gmail.com])")
+    }
 
     test("construct a default Account") {
-      HasDefault.gen[Account].defaultValue
-    }.assert(_ == Right(Account("")))
+      val res = HasDefault.gen[Account].defaultValue
+      assertEquals(res, Right(Account("")))
+    }
 
     test("construct a failed NoDefault") {
-      HasDefault.gen[NoDefault].defaultValue
-    }.assert(_ == Left("truth is a lie"))
+      val res = HasDefault.gen[NoDefault].defaultValue
+      assertEquals(res, Left("truth is a lie"))
+    }
 
     test("show a Portfolio of Companies") {
-      Show.gen[Portfolio].show(Portfolio(Company("Alice Inc"), Company("Bob & Co")))
-    }.assert(_ == "Portfolio(companies=[Company(name=Alice Inc),Company(name=Bob & Co)])")
+      val res = Show.gen[Portfolio].show(Portfolio(Company("Alice Inc"), Company("Bob & Co")))
+      assertEquals(res, "Portfolio(companies=[Company(name=Alice Inc),Company(name=Bob & Co)])")
+    }
 
     test("show a List[Int]") {
-      Show.gen[List[Int]].show(List(1, 2, 3))
-    }.assert(_ == "::[Int](head=1,tl=::[Int](head=2,tl=::[Int](head=3,tl=Nil())))")
+      val res = Show.gen[List[Int]].show(List(1, 2, 3))
+      assertEquals(res, "::[Int](head=1,tl=::[Int](head=2,tl=::[Int](head=3,tl=Nil())))")
+    }
 
     test("sealed trait typeName should be complete and unchanged") {
-      TypeNameInfo.gen[Color].name
-    }.assert(_.full == "magnolia.tests.Color")
+      val res = TypeNameInfo.gen[Color].name
+      assertEquals(res.full, "magnolia.tests.Color")
+    }
 
     test("sealed trait subtypes should be ordered") {
-      TypeNameInfo.gen[Color].subtypeNames
-    }.assert(_.map(_.short) == Seq("Blue", "Green", "Orange", "Pink", "Red"))
+      val res = TypeNameInfo.gen[Color].subtypeNames
+      assertEquals(res.map(_.short), Seq("Blue", "Green", "Orange", "Pink", "Red"))
+    }
 
     test("case class typeName should be complete and unchanged") {
       implicit val stringTypeName: TypeNameInfo[String] = new TypeNameInfo[String] {
@@ -557,166 +622,190 @@ object Tests extends Suite("Magnolia tests") {
 
         def subtypeNames = ???
       }
-      TypeNameInfo.gen[Fruit].name
-    }.assert(_.full == "magnolia.tests.Fruit")
+      val res = TypeNameInfo.gen[Fruit].name
+      assertEquals(res.full, "magnolia.tests.Fruit")
+    }
 
     test("show chained error stack") {
-      scalac"""
+      val res = scalac"""
         Show.gen[(Int, Seq[(Double, String)])]
       """
-    } assert { _ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type Double
+      assertEquals(res,TypecheckError(txt"""magnolia: could not find Show.Typeclass for type Double
         |    in parameter '_1' of product type (Double, String)
         |    in chained implicit Show.Typeclass for type Seq[(Double, String)]
         |    in parameter '_2' of product type (Int, Seq[(Double, String)])
-        |""") }
+        |"""))
+    }
 
     test("show chained error stack when leaf instance is missing") {
-      scalac"""Show.gen[Schedule]"""
-    } assert { //
-      _ == TypecheckError(txt"""magnolia: could not find Show.Typeclass for type java.time.LocalDate
+      val res = scalac"""Show.gen[Schedule]"""
+      assertEquals(res, TypecheckError(txt"""magnolia: could not find Show.Typeclass for type java.time.LocalDate
         |    in parameter 'date' of product type magnolia.tests.Event
         |    in chained implicit Show.Typeclass for type Seq[magnolia.tests.Event]
         |    in parameter 'events' of product type magnolia.tests.Schedule
-        |""")
+        |"""))
     }
 
     test("show a recursive case class") {
-      Show.gen[Recursive].show(Recursive(Seq(Recursive(Nil))))
-    }.assert(_ == "Recursive(children=[Recursive(children=[])])")
+      val res = Show.gen[Recursive].show(Recursive(Seq(Recursive(Nil))))
+      assertEquals(res, "Recursive(children=[Recursive(children=[])])")
+    }
 
     test("manually derive a recursive case class instance") {
       implicit lazy val showRecursive: Show[String, Recursive] = Show.gen[Recursive]
-      showRecursive.show(Recursive(Seq(Recursive(Nil))))
-    }.assert(_ == "Recursive(children=[Recursive(children=[])])")
+      val res = showRecursive.show(Recursive(Seq(Recursive(Nil))))
+      assertEquals(res, "Recursive(children=[Recursive(children=[])])")
+    }
 
     test("show a type aliased case class") {
       type T = Person
-      Show.gen[T].show(Person("Donald Duck", 313))
-    }.assert(_ == "Person(name=Donald Duck,age=313)")
+      val res = Show.gen[T].show(Person("Donald Duck", 313))
+      assertEquals(res, "Person(name=Donald Duck,age=313)")
+    }
 
     test("dependencies between derived type classes") {
       implicit def showDefaultOption[A](
-        implicit showA: Show[String, A],
-        defaultA: HasDefault[A]
-      ): Show[String, Option[A]] = (optA: Option[A]) => showA.show(optA.getOrElse(defaultA.defaultValue.right.get))
+                                         implicit showA: Show[String, A],
+                                         defaultA: HasDefault[A]
+                                       ): Show[String, Option[A]] = (optA: Option[A]) => showA.show(optA.getOrElse(defaultA.defaultValue.right.get))
 
-      Show.gen[Path[String]].show(OffRoad(Some(Crossroad(Destination("A"), Destination("B")))))
-    }.assert(_ == "OffRoad[String](path=Crossroad[String](left=Destination[String](value=A),right=Destination[String](value=B)))")
+      val res = Show.gen[Path[String]].show(OffRoad(Some(Crossroad(Destination("A"), Destination("B")))))
+      assertEquals(res, "OffRoad[String](path=Crossroad[String](left=Destination[String](value=A),right=Destination[String](value=B)))")
+    }
 
     test("resolve aliases for type names") {
       type LO[X] = Leaf[Option[X]]
 
-      Show.gen[LO[String]].show(Leaf(None))
-    }.assert(_.contains("Leaf[Option[String]]"))
+      val res = Show.gen[LO[String]].show(Leaf(None))
+      assertEquals(res,"Leaf[Option[String]]")
+    }
 
     test("capture attributes against params") {
-      Show.gen[Attributed].show(Attributed("xyz", 100))
-    }.assert(_ == "Attributed{MyAnnotation(0)}{MyTypeAnnotation(2)}(p1{MyAnnotation(1)}{MyTypeAnnotation(0)}=xyz,p2{MyAnnotation(2)}{MyTypeAnnotation(1)}=100)")
+      val res = Show.gen[Attributed].show(Attributed("xyz", 100))
+      assertEquals(res, "Attributed{MyAnnotation(0)}{MyTypeAnnotation(2)}(p1{MyAnnotation(1)}{MyTypeAnnotation(0)}=xyz,p2{MyAnnotation(2)}{MyTypeAnnotation(1)}=100)")
+    }
 
     test("capture attributes against subtypes") {
-      Show.gen[AttributeParent].show(Attributed("xyz", 100))
-    }.assert(_ == "{MyAnnotation(0)}Attributed{MyAnnotation(0)}{MyTypeAnnotation(2)}(p1{MyAnnotation(1)}{MyTypeAnnotation(0)}=xyz,p2{MyAnnotation(2)}{MyTypeAnnotation(1)}=100)")
+      val res = Show.gen[AttributeParent].show(Attributed("xyz", 100))
+      assertEquals(res, "{MyAnnotation(0)}Attributed{MyAnnotation(0)}{MyTypeAnnotation(2)}(p1{MyAnnotation(1)}{MyTypeAnnotation(0)}=xyz,p2{MyAnnotation(2)}{MyTypeAnnotation(1)}=100)")
+    }
 
     test("show underivable type with fallback") {
-      TypeNameInfo.gen[NotDerivable].name
-    }.assert(_ == TypeName("", "Unknown Type", Seq.empty))
+      val res = TypeNameInfo.gen[NotDerivable].name
+      assertEquals(res, TypeName("", "Unknown Type", Seq.empty))
+    }
 
     test("allow no-coproduct derivation definitions") {
-      scalac"""
+      val res =
+        scalac"""
         WeakHash.gen[Person]
       """
-    }.assert(_ == Returns(fqt"magnolia.examples.WeakHash[magnolia.tests.Person]"))
+      assertEquals(res, Returns(fqt"magnolia.examples.WeakHash[magnolia.tests.Person]"))
+    }
 
     test("disallow coproduct derivations without dispatch method") {
-      scalac"""
+      val res =
+        scalac"""
         WeakHash.gen[Entity]
       """
-    }.assert(_ == TypecheckError("magnolia: the method `dispatch` must be defined on the derivation object WeakHash to derive typeclasses for sealed traits"))
+      assertEquals(res, TypecheckError("magnolia: the method `dispatch` must be defined on the derivation object WeakHash to derive typeclasses for sealed traits"))
+    }
 
     test("equality of Wrapper") {
-      Eq.gen[Wrapper].equal(Wrapper(Some(KArray(KArray(Nil) :: Nil))), Wrapper(Some(KArray(KArray(Nil) :: KArray(Nil) :: Nil))))
-    }.assert(_ == false)
+      val res = Eq.gen[Wrapper].equal(Wrapper(Some(KArray(KArray(Nil) :: Nil))), Wrapper(Some(KArray(KArray(Nil) :: KArray(Nil) :: Nil))))
+      assertEquals(res, false)
+    }
 
     test("very long") {
       val vl =
         VeryLong("p1",
-                 "p2",
-                 "p3",
-                 "p4",
-                 "p5",
-                 "p6",
-                 "p7",
-                 "p8",
-                 "p9",
-                 "p10",
-                 "p11",
-                 "p12",
-                 "p13",
-                 "p14",
-                 "p15",
-                 "p16",
-                 "p17",
-                 "p18",
-                 "p19",
-                 "p20",
-                 "p21",
-                 "p22",
-                 "p23")
-      Eq.gen[VeryLong].equal(vl, vl)
-    }.assert(_ == true)
+          "p2",
+          "p3",
+          "p4",
+          "p5",
+          "p6",
+          "p7",
+          "p8",
+          "p9",
+          "p10",
+          "p11",
+          "p12",
+          "p13",
+          "p14",
+          "p15",
+          "p16",
+          "p17",
+          "p18",
+          "p19",
+          "p20",
+          "p21",
+          "p22",
+          "p23")
+      val res = Eq.gen[VeryLong].equal(vl, vl)
+      assertEquals(res, true)
+    }
 
     test("not attempt to derive instances for refined types") {
-      scalac"Show.gen[Character]"
-    }.assert(_ == TypecheckError(txt"magnolia: could not infer Show.Typeclass for refined type magnolia.tests.Character.Id"))
+      val res = scalac"Show.gen[Character]"
+      assertEquals(res, TypecheckError(txt"magnolia: could not infer Show.Typeclass for refined type magnolia.tests.Character.Id"))
+    }
 
     test("derive instances for types with refined types if implicit provided") {
-      scalac"Show.gen[AnotherCharacter]"
-    }.assert(_ == Returns(fqt"magnolia.examples.Show[String,magnolia.tests.AnotherCharacter]"))
+      val res = scalac"Show.gen[AnotherCharacter]"
+      assertEquals(res, Returns(fqt"magnolia.examples.Show[String,magnolia.tests.AnotherCharacter]"))
+    }
 
     test("not attempt to derive instances for Java enums") {
-      scalac"Show.gen[WeekDay]"
-    }.assert(_ == TypecheckError(txt"magnolia: could not infer Show.Typeclass for type magnolia.tests.WeekDay"))
+      val res = scalac"Show.gen[WeekDay]"
+      assertEquals(res, TypecheckError(txt"magnolia: could not infer Show.Typeclass for type magnolia.tests.WeekDay"))
+    }
 
     test("determine subtypes of Exactly[Int]") {
       implicit def hideFallbackWarning: TypeNameInfo[Int] = TypeNameInfo.fallback[Int]
-      TypeNameInfo.gen[Exactly[Int]].subtypeNames.map(_.short).mkString(" | ")
-    }.assert(_ == "Custom | Int")
+
+      val res = TypeNameInfo.gen[Exactly[Int]].subtypeNames.map(_.short).mkString(" | ")
+      assertEquals(res, "Custom | Int")
+    }
 
     test("determine subtypes of Covariant[String]") {
       implicit def hideFallbackWarning: TypeNameInfo[String] = TypeNameInfo.fallback[String]
-      TypeNameInfo.gen[Covariant[String]].subtypeNames.map(_.short).mkString(" | ")
-    }.assert(_ == "Custom | Nothing | String")
+
+      val res = TypeNameInfo.gen[Covariant[String]].subtypeNames.map(_.short).mkString(" | ")
+      assertEquals(res, "Custom | Nothing | String")
+    }
 
     test("determine subtypes of Contravariant[Double]") {
       implicit def hideFallbackWarning: TypeNameInfo[Double] = TypeNameInfo.fallback[Double]
-      TypeNameInfo.gen[Contravariant[Double]].subtypeNames.map(_.short).mkString(" | ")
-    }.assert(_ == "Any | Custom")
+
+      val res = TypeNameInfo.gen[Contravariant[Double]].subtypeNames.map(_.short).mkString(" | ")
+      assertEquals(res, "Any | Custom")
+    }
 
     test("allow derivation result to have arbitrary type") {
-      (ExportedTypeclass.gen[Length], ExportedTypeclass.gen[Color])
-    }.assert(_ == ((ExportedTypeclass.Exported(), ExportedTypeclass.Exported())))
+      val res = (ExportedTypeclass.gen[Length], ExportedTypeclass.gen[Color])
+      assertEquals(res, (ExportedTypeclass.Exported[Length](), ExportedTypeclass.Exported[Color]()))
+    }
 
     test("no support for arbitrary derivation result type for recursive classes yet") {
-      scalac"ExportedTypeclass.gen[Recursive]"
-    }.assert(_ == TypecheckError(
-      txt"""magnolia: could not find ExportedTypeclass.Typeclass for type Seq[magnolia.tests.Recursive]
-           |    in parameter 'children' of product type magnolia.tests.Recursive
-           |"""))
+      val res = scalac"ExportedTypeclass.gen[Recursive]"
+      assertEquals(res, TypecheckError(
+        txt"""magnolia: could not find ExportedTypeclass.Typeclass for type Seq[magnolia.tests.Recursive]
+             |    in parameter 'children' of product type magnolia.tests.Recursive
+             |"""))
+    }
 
     test("report an error when an abstract member of a sealed hierarchy is not sealed") {
-      scalac"Show.gen[Parent]"
-    }.assert {
-      _ == TypecheckError("magnolia: child trait BadChild of trait Parent is not sealed")
+      val res = scalac"Show.gen[Parent]"
+      assertEquals(res,TypecheckError("magnolia: child trait BadChild of trait Parent is not sealed"))
     }
 
     test("report an error when a concrete member of a sealed hierarchy is neither final nor a case class") {
-      scalac"Show.gen[GoodChild]"
-    }.assert {
-      _ == TypecheckError("magnolia: child class Dewey of trait GoodChild is neither final nor a case class")
+      val res = scalac"Show.gen[GoodChild]"
+      assertEquals(res, TypecheckError("magnolia: child class Dewey of trait GoodChild is neither final nor a case class"))
     }
 
     test("support dispatch without combine") {
-      implicitly[NoCombine[Halfy]].nameOf(Righty())
-    }.assert(_ == "Righty")
-  }
+      val res = implicitly[NoCombine[Halfy]].nameOf(Righty())
+      assertEquals(res, "Righty")
+    }
 }
