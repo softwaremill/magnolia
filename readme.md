@@ -1,4 +1,4 @@
-![Magnolia](https://github.com/softwaremill/magnolia/raw/master/banner.jpg)
+![Magnolia](https://github.com/softwaremill/magnolia/raw/main/banner.jpg)
 
 [<img alt="GitHub Workflow" src="https://img.shields.io/github/workflow/status/softwaremill/magnolia/Build/main?style=for-the-badge" height="24">](https://github.com/softwaremill/magnolia/actions)
 [<img src="https://img.shields.io/badge/gitter-discuss-f00762?style=for-the-badge" height="24">](https://gitter.im/softwaremill/magnolia)
