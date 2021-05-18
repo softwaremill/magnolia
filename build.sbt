@@ -13,7 +13,7 @@ lazy val root =
   project
     .in(file("."))
     .settings(commonSettings)
-    .settings(publishArtifact := false)
+    .settings(name := "magnolia", publishArtifact := false)
     .aggregate((core.projectRefs ++ examples.projectRefs ++ test.projectRefs): _*)
 
 lazy val core = (projectMatrix in file(".core"))
