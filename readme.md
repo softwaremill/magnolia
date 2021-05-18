@@ -1,3 +1,5 @@
+![Magnolia](https://github.com/softwaremill/magnolia/raw/master/banner.jpg)
+
 [<img alt="GitHub Workflow" src="https://img.shields.io/github/workflow/status/softwaremill/magnolia/Build/main?style=for-the-badge" height="24">](https://github.com/softwaremill/magnolia/actions)
 [<img src="https://img.shields.io/badge/gitter-discuss-f00762?style=for-the-badge" height="24">](https://gitter.im/softwaremill/magnolia)
 [<img src="https://img.shields.io/maven-central/v/com.softwaremill.magnolia/magnolia-core_3?color=2465cd&style=for-the-badge" height="24">](https://search.maven.org/artifact/com.softwaremill.magnolia/magnolia-core_3)
