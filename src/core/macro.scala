@@ -102,10 +102,14 @@ object Macro:
     def normalizedName(s: Symbol): String = if s.flags.is(Flags.Module) then s.name.stripSuffix("$") else s.name
     def name(tpe: TypeRepr) : Expr[String] = Expr(normalizedName(tpe.typeSymbol))
 
-    def owner(tpe: TypeRepr): Expr[String] =
-      if tpe.typeSymbol.maybeOwner.isNoSymbol then Expr("<no owner>")
-      else if (tpe.typeSymbol.owner == defn.EmptyPackageClass) Expr("")
-      else Expr(tpe.typeSymbol.owner.name)
+    def ownerNameChain(sym: Symbol): List[String] =
+      if sym.isNoSymbol then List.empty
+      else if sym == defn.EmptyPackageClass then List.empty
+      else if sym == defn.RootPackage then List.empty
+      else if sym == defn.RootClass then List.empty
+      else ownerNameChain(sym.owner) :+ normalizedName(sym)
+
+    def owner(tpe: TypeRepr): Expr[String] = Expr(ownerNameChain(tpe.typeSymbol.maybeOwner).mkString("."))
 
     def typeInfo(tpe: TypeRepr): Expr[TypeInfo] = tpe match
       case AppliedType(tpe, args) =>

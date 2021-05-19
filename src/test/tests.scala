@@ -200,6 +200,10 @@ final case class Huey(height: Int) extends GoodChild
 class Dewey(val height: Int) extends GoodChild
 final case class Louie(height: Int) extends BadChild
 
+object Obj1:
+  object Obj2:
+    case class NestedInObjects(i: Int)
+
 class Tests extends munit.FunSuite {
 
     test("construct a Show product instance with alternative apply functions") {
@@ -319,8 +323,14 @@ class Tests extends munit.FunSuite {
     }
 
     test("decode a Person as an Entity") {
-      val res = summon[Decoder[Entity]].decode("""tests.Person(name=John Smith,age=32)""")
+      val res = summon[Decoder[Entity]].decode("""magnolia.tests.Person(name=John Smith,age=32)""")
       assertEquals(res, Person("John Smith", 32))
+    }
+
+    test("decode a product nested in objects") {
+      import Obj1.Obj2._
+      val res = summon[Decoder[NestedInObjects]].decode("""magnolia.tests.Obj1.Obj2.NestedInObjects(i=42)""")
+      assertEquals(res, NestedInObjects(42))
     }
 
     test("decode a nested product") {
@@ -382,7 +392,7 @@ class Tests extends munit.FunSuite {
 
     test("sealed trait typeName should be complete and unchanged") {
       val res = TypeNameInfo.derived[Color].name
-      assertEquals(res.full, "tests.Color")
+      assertEquals(res.full, "magnolia.tests.Color")
     }
 
     test("sealed trait subtypes should be ordered") {
@@ -397,7 +407,7 @@ class Tests extends munit.FunSuite {
         def subtypeNames = ???
       }
       val res = TypeNameInfo.derived[Fruit].name
-      assertEquals(res.full, "tests.Fruit")
+      assertEquals(res.full, "magnolia.tests.Fruit")
     }
 
     test("show a recursive case class") {
