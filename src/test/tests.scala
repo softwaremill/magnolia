@@ -200,6 +200,10 @@ final case class Huey(height: Int) extends GoodChild
 class Dewey(val height: Int) extends GoodChild
 final case class Louie(height: Int) extends BadChild
 
+object Obj1:
+  object Obj2:
+    case class NestedInObjects(i: Int)
+
 class Tests extends munit.FunSuite {
 
     test("construct a Show product instance with alternative apply functions") {
@@ -321,6 +325,12 @@ class Tests extends munit.FunSuite {
     test("decode a Person as an Entity") {
       val res = summon[Decoder[Entity]].decode("""magnolia.tests.Person(name=John Smith,age=32)""")
       assertEquals(res, Person("John Smith", 32))
+    }
+
+    test("decode a product nested in objects") {
+      import Obj1.Obj2._
+      val res = summon[Decoder[NestedInObjects]].decode("""magnolia.tests.Obj1.Obj2.NestedInObjects(i=42)""")
+      assertEquals(res, NestedInObjects(42))
     }
 
     test("decode a nested product") {
