@@ -1,7 +1,6 @@
 package magnolia
 
 import scala.quoted.*
-import scala.util.chaining.*
 
 object Macro:
   inline def isObject[T]: Boolean = ${isObject[T]}
@@ -56,7 +55,8 @@ object Macro:
 
     tpe.typeSymbol.tree match
       case ClassDef(_, _, parents, _, _) =>
-        parents
+        Expr.ofList {
+          parents
           .collect {
             case t: TypeTree => t.tpe
           }
@@ -66,7 +66,7 @@ object Macro:
               a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
           }
           .map(_.asExpr.asInstanceOf[Expr[Any]])
-          .pipe(Expr.ofList)
+        }
       case _ => Expr.ofList(List.empty)
 
   def isValueClass[T: Type](using Quotes): Expr[Boolean] =
