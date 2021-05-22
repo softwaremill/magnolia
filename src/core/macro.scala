@@ -14,14 +14,14 @@ object Macro:
   inline def repeated[T]: List[(String, Boolean)] = ${repeated[T]}
   inline def typeInfo[T]: TypeInfo = ${typeInfo[T]}
 
-  def isObject[T](using qctx: Quotes, tpe: Type[T]): Expr[Boolean] =
-    import qctx.reflect.*
+  def isObject[T: Type](using Quotes): Expr[Boolean] =
+    import quotes.reflect.*
 
     Expr(TypeRepr.of[T].typeSymbol.flags.is(Flags.Module))
   
 
-  def paramAnns[T: Type](using qctx: Quotes): Expr[List[(String, List[Any])]] =
-    import qctx.reflect.*
+  def paramAnns[T: Type](using Quotes): Expr[List[(String, List[Any])]] =
+    import quotes.reflect.*
 
     val tpe = TypeRepr.of[T]
 
@@ -34,8 +34,8 @@ object Macro:
       }.filter(_._2.nonEmpty).map { (name, anns) => Expr.ofTuple(name, Expr.ofList(anns)) }
     }
 
-  def anns[T: Type](using qctx: Quotes): Expr[List[Any]] =
-    import qctx.reflect.*
+  def anns[T: Type](using Quotes): Expr[List[Any]] =
+    import quotes.reflect.*
 
     val tpe = TypeRepr.of[T]
     
@@ -45,8 +45,8 @@ object Macro:
       }.map(_.asExpr.asInstanceOf[Expr[Any]])
     }
   
-  def typeAnns[T: Type](using qctx: Quotes): Expr[List[Any]] =
-    import qctx.reflect.*
+  def typeAnns[T: Type](using Quotes): Expr[List[Any]] =
+    import quotes.reflect.*
     
     def getAnnotations(t: TypeRepr): List[Term] = t match
       case AnnotatedType(inner, ann) => ann :: getAnnotations(inner)
@@ -69,19 +69,19 @@ object Macro:
           .pipe(Expr.ofList)
       case _ => Expr.ofList(List.empty)
 
-  def isValueClass[T: Type](using qctx: Quotes): Expr[Boolean] =
-    import qctx.reflect.*
+  def isValueClass[T: Type](using Quotes): Expr[Boolean] =
+    import quotes.reflect.*
     
     Expr(TypeRepr.of[T].baseClasses.contains(Symbol.classSymbol("scala.AnyVal")))
   
-  def defaultValue[T: Type](using qctx: Quotes): Expr[List[(String, Option[Any])]] =
-    import qctx.reflect._
+  def defaultValue[T: Type](using Quotes): Expr[List[(String, Option[Any])]] =
+    import quotes.reflect._
 
     // TODO: Implement RHS
     Expr.ofList(TypeRepr.of[T].typeSymbol.caseFields.map { case s => Expr(s.name -> None) })
   
-  def paramTypeAnns[T: Type](using qctx: Quotes): Expr[List[(String, List[Any])]] =
-    import qctx.reflect._
+  def paramTypeAnns[T: Type](using Quotes): Expr[List[(String, List[Any])]] =
+    import quotes.reflect._
 
     def getAnnotations(t: TypeRepr): List[Term] = t match
       case AnnotatedType(inner, ann) => ann :: getAnnotations(inner)
@@ -100,8 +100,8 @@ object Macro:
       }.filter(_._2.nonEmpty).map { (name, annots) => Expr.ofTuple(name, Expr.ofList(annots)) }
     }
   
-  def repeated[T: Type](using qctx: Quotes): Expr[List[(String, Boolean)]] =
-    import qctx.reflect.*
+  def repeated[T: Type](using Quotes): Expr[List[(String, Boolean)]] =
+    import quotes.reflect.*
     
     def isRepeated[T](tpeRepr: TypeRepr): Boolean = tpeRepr match
       case a: AnnotatedType =>
@@ -122,8 +122,8 @@ object Macro:
     
     Expr(areRepeated)
 
-  def typeInfo[T: Type](using qctx: Quotes): Expr[TypeInfo] =
-    import qctx.reflect._
+  def typeInfo[T: Type](using Quotes): Expr[TypeInfo] =
+    import quotes.reflect._
 
     def normalizedName(s: Symbol): String = if s.flags.is(Flags.Module) then s.name.stripSuffix("$") else s.name
     def name(tpe: TypeRepr) : Expr[String] = Expr(normalizedName(tpe.typeSymbol))
