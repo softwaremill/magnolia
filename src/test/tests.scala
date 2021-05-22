@@ -257,6 +257,11 @@ class Tests extends munit.FunSuite {
       assertEquals(res, "apple")
     }
 
+    test("capture attributes against params") {
+      val res = summon[Show[String, Attributed]].show(Attributed("xyz", 100))
+      assertEquals(res, "Attributed{MyAnnotation(0)}{MyTypeAnnotation(2)}(p1{MyAnnotation(1)}{MyTypeAnnotation(0)}=xyz,p2{MyAnnotation(2)}{MyTypeAnnotation(1)}=100)")
+    }
+
     test("test equality false") {
       val res = Eq.derived[Entity].equal(Person("John Smith", 34), Person("", 0))
       assert(!res)

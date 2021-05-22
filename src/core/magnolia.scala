@@ -14,7 +14,7 @@ trait CommonDerivation[TypeClass[_]]:
         paramAnns[A].to(Map), paramTypeAnns[A].to(Map), repeated[A].to(Map))*)
     
     val caseClass = new CaseClass[Typeclass, A](typeInfo[A], isObject[A], isValueClass[A], parameters,
-        IArray(anns[A]*), IArray[Any]()):
+        IArray(anns[A]*), IArray[Any](typeAnns[A]*)):
       
       def construct[PType](makeParam: Param => PType)(using ClassTag[PType]): A =
         product.fromProduct(Tuple.fromArray(this.params.map(makeParam(_)).to(Array)))
