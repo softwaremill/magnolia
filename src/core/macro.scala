@@ -1,10 +1,12 @@
 package magnolia
 
 import scala.quoted.*
+import scala.util.chaining.*
 
 object Macro:
   inline def isObject[T]: Boolean = ${isObject[T]}
   inline def anns[T]: List[Any] = ${anns[T]}
+  inline def typeAnns[T]: List[Any] = ${typeAnns[T]}
   inline def paramAnns[T]: List[(String, List[Any])] = ${paramAnns[T]}
   inline def isValueClass[T]: Boolean = ${isValueClass[T]}
   inline def defaultValue[T]: List[(String, Option[Any])] = ${defaultValue[T]}
@@ -43,6 +45,30 @@ object Macro:
       }.map(_.asExpr.asInstanceOf[Expr[Any]])
     }
   
+  def typeAnns[T: Type](using qctx: Quotes): Expr[List[Any]] =
+    import qctx.reflect.*
+    
+    def getAnnotations(t: TypeRepr): List[Term] = t match
+      case AnnotatedType(inner, ann) => ann :: getAnnotations(inner)
+      case _                         => Nil
+
+    val tpe = TypeRepr.of[T]
+
+    tpe.typeSymbol.tree match
+      case ClassDef(_, _, parents, _, _) =>
+        parents
+          .collect {
+            case t: TypeTree => t.tpe
+          }
+          .flatMap(getAnnotations)
+          .filter { a =>
+            a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
+              a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
+          }
+          .map(_.asExpr.asInstanceOf[Expr[Any]])
+          .pipe(Expr.ofList)
+      case _ => Expr.ofList(List.empty)
+
   def isValueClass[T: Type](using qctx: Quotes): Expr[Boolean] =
     import qctx.reflect.*
     
