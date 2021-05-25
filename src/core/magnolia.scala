@@ -87,5 +87,8 @@ trait Derivation[TypeClass[_]] extends CommonDerivation[TypeClass]:
     case sum: Mirror.SumOf[A]         => derivedMirrorSum[A](sum)
     case product: Mirror.ProductOf[A] => derivedMirrorProduct[A](product)
 
-  inline given derived[A](using Mirror.Of[A]): Typeclass[A] = derivedMirror[A]
+  inline def derived[A](using Mirror.Of[A]): Typeclass[A] = derivedMirror[A]
 end Derivation
+
+trait AutoDerivation[TypeClass[_]] extends Derivation[TypeClass]:
+  inline given autoDerived[A](using Mirror.Of[A]): TypeClass[A] = derived

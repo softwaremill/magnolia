@@ -7,7 +7,7 @@ trait Decoder[T]:
   def decode(str: String): T
 
 /** derivation object (and companion object) for [[Decoder]] instances */
-object Decoder extends Derivation[Decoder]:
+object Decoder extends AutoDerivation[Decoder]:
 
   given Decoder[String] = (s: String) => s
   given Decoder[Int] = _.toInt
