@@ -204,7 +204,25 @@ object Obj1:
   object Obj2:
     case class NestedInObjects(i: Int)
 
+sealed trait Y
+case object A extends Y
+case class B(s: String) extends Y
+
 class Tests extends munit.FunSuite {
+
+    test("construct a semi print for sealed hierarchy") {
+      import scala.deriving.*
+      inline given [X <: Y](using Mirror.Of[X]): SemiPrint[X] = SemiPrint.derived[X]
+      val res = SemiPrint.derived[Y].print(A)
+      assertEquals(res, "A()")
+    }
+
+    test("construct a semi print for sealed hierarchy too") {
+      import scala.deriving.*
+      inline given [X <: Y](using Mirror.Of[X]): SemiPrint[X] = SemiPrint.derived[X]
+      val res = SemiPrint.derived[Y].print(B("b"))
+      assertEquals(res, "B(b)")
+    }
 
     test("construct a Show product instance with alternative apply functions") {
       val res = Show.derived[TestEntry].show(TestEntry("a", "b"))
