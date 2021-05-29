@@ -452,8 +452,8 @@ class Tests extends munit.FunSuite {
       assertEquals(res, "A()")
     }
 
-    test("construct a print for not owned type hierarchy") {
-      val res = Print.derived[List[String]].print(List("xd"))
-      assertEquals(res, "::(xd,Nil())")
+    test("not find a given for semi print") {
+      val res = compileErrors("""summon[SemiPrint[Y]].print(A)""")
+      assert(res.nonEmpty)
     }
   }
