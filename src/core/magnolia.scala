@@ -49,7 +49,7 @@ trait CommonDerivation[TypeClass[_]]:
         Nil
       case _: ((l *: ltail), (p *: ptail)) =>
         val label = constValue[l].asInstanceOf[String]
-        val typeclass = CallByNeed(summonOption[Typeclass[p]].get)
+        val typeclass = CallByNeed(summonOption[Typeclass[p]].get) //<-- not sure about this part
 
         CaseClass.Param[Typeclass, T, p](label, idx, repeated.getOrElse(label, false), typeclass,
             CallByNeed(None), IArray.from(annotations.getOrElse(label, List())),
