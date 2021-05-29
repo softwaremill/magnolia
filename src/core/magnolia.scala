@@ -74,7 +74,7 @@ trait Derivation[TypeClass[_]] extends CommonDerivation[TypeClass]:
         Nil
       case _: (s *: tail) =>
         new SealedTrait.Subtype(typeInfo[s], IArray[Any](), IArray.from(paramTypeAnns[T]), idx,
-            CallByNeed(summonInline[Typeclass[s]]), x => m.ordinal(x) == idx,
+            CallByNeed(summonOption[Typeclass[s]].getOrElse(derived[s](using summonInline[Mirror.Of[s]]))), x => m.ordinal(x) == idx,
             _.asInstanceOf[s & T]) :: subtypes[T, tail](m, idx + 1)
 
   inline def derivedMirrorSum[A](sum: Mirror.SumOf[A]): Typeclass[A] =
