@@ -210,20 +210,6 @@ case class B(s: String) extends Y
 
 class Tests extends munit.FunSuite {
 
-    test("construct a semi print for sealed hierarchy") {
-      import scala.deriving.*
-      inline given [X <: Y](using Mirror.Of[X]): SemiPrint[X] = SemiPrint.derived[X]
-      val res = SemiPrint.derived[Y].print(A)
-      assertEquals(res, "A()")
-    }
-
-    test("construct a semi print for sealed hierarchy too") {
-      import scala.deriving.*
-      inline given [X <: Y](using Mirror.Of[X]): SemiPrint[X] = SemiPrint.derived[X]
-      val res = SemiPrint.derived[Y].print(B("b"))
-      assertEquals(res, "B(b)")
-    }
-
     test("construct a Show product instance with alternative apply functions") {
       val res = Show.derived[TestEntry].show(TestEntry("a", "b"))
       assertEquals(res, """TestEntry(param=Param(a=a,b=b))""")
@@ -459,5 +445,10 @@ class Tests extends munit.FunSuite {
             "p16", "p17", "p18", "p19", "p20", "p21", "p22", "p23")
       val res = Eq.derived[VeryLong].equal(vl, vl)
       assert(res)
+    }
+
+    test("construct a semi print for sealed hierarchy") {
+      val res = SemiPrint.derived[Y].print(A)
+      assertEquals(res, "A()")
     }
   }
