@@ -31,9 +31,11 @@ lazy val test = (project in file(".test"))
   .dependsOn(examples)
   .settings(
     name := "magnolia-test",
-    Compile / scalaSource := baseDirectory.value / ".." / "src" / "test",
-    Compile / scalacOptions ++= Seq("-Ywarn-macros:after"),
-    Compile / scalacOptions --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
-    libraryDependencies += "org.scalameta" %% "munit" % "0.7.26",
-    libraryDependencies += "com.propensive" %% "contextual-examples" % "1.5.0"
+    Test / scalaSource := baseDirectory.value / ".." / "src" / "test",
+    Test / scalacOptions ++= Seq("-Ywarn-macros:after"),
+    Test / scalacOptions --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
+    libraryDependencies ++= Seq(
+      "org.scalameta" %% "munit" % "0.7.26",
+      "com.propensive" %% "contextual-examples" % "1.5.0"
+    ).map(_ % Test)
   )
