@@ -210,7 +210,7 @@ class Tests extends munit.FunSuite {
 
     test("construct a Show product instance with alternative apply functions") {
       val res = Show.gen[TestEntry].show(TestEntry("a", "b"))
-      assertEquals(res, """Test(param=Param(a=a,b=b))""")
+      assertEquals(res, """TestEntry(param=Param(a=a,b=b))""")
     }
 
     test("construct a Show product instance") {
@@ -431,9 +431,9 @@ class Tests extends munit.FunSuite {
         }
         """
       assertEquals(res, TypecheckError(
-        txt"""magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName1
-              in parameter 'n' of product type LoggingConfig
-           """))
+        """|magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName1
+           |    in parameter 'n' of product type LoggingConfig
+           |""".stripMargin))
     }
 
     test("not assume full auto derivation of external products") {
@@ -445,9 +445,9 @@ class Tests extends munit.FunSuite {
         }
         """
       assertEquals(res, TypecheckError(
-        txt"""magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName2
-              in parameter 'n' of product type LoggingConfig
-           """))
+        """|magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName2
+           |    in parameter 'n' of product type LoggingConfig
+           |""".stripMargin))
     }
 
     test("not assume full auto derivation of external coproducts") {
@@ -459,9 +459,9 @@ class Tests extends munit.FunSuite {
         }
         """
       assertEquals(res, TypecheckError(
-        txt"""magnolia: could not find SemiDefault.Typeclass for type Option[String]
-              in parameter 'o' of product type LoggingConfig
-          """))
+        """|magnolia: could not find SemiDefault.Typeclass for type Option[String]
+           |    in parameter 'o' of product type LoggingConfig
+           |""".stripMargin))
     }
 
     test("half auto derivation of sealed families") {
@@ -537,8 +537,9 @@ class Tests extends munit.FunSuite {
       } catch {
         case NonFatal(e) => e.getMessage
       }
-      assertEquals(res, "scala.Symbol cannot be cast to")
-      assertEquals(res,"java.lang.Integer")
+
+      assert(res.contains("scala.Symbol cannot be cast to"))
+      assert(res.contains("java.lang.Integer"))
     }
 
     class ParentClass {
@@ -677,7 +678,7 @@ class Tests extends munit.FunSuite {
       type LO[X] = Leaf[Option[X]]
 
       val res = Show.gen[LO[String]].show(Leaf(None))
-      assertEquals(res,"Leaf[Option[String]]")
+      assertEquals(res,"Leaf[Option[String]](value=None())")
     }
 
     test("capture attributes against params") {
