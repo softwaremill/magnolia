@@ -18,4 +18,13 @@ class newTests extends munit.FunSuite {
     assertEquals(res, """NewRecursive()""")
   }
 
+  test("basic use case") {
+    case class X(a: Int, b: String)
+    case class Y(c: String)
+    val instance = SemiPrint.derived[X]
+
+    // val res = instance.print(X(1, Y("s")))
+    val res = instance.print(X(1, "s"))
+    assertEquals(res, """Y(1, X(s))""")
+  }
 }
