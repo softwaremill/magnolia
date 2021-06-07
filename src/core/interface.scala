@@ -84,6 +84,7 @@ object SealedTrait:
                (val typeInfo: TypeInfo,
                 val annotations: IArray[Any],
                 val typeAnnotations: IArray[Any],
+                val isObject: Boolean,
                 index: Int,
                 callByNeed: CallByNeed[Typeclass[SType]],
                 isType: Type => Boolean,
