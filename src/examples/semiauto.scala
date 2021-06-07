@@ -79,7 +79,7 @@ trait SemiPrintDerivation {
     val name = getTypeName[A]
     println(s"ADDING CACHED INSTANCES OF [$name] - [$result]")
 
-    cacheInstance(result)
+    // cacheInstance(result)
     result
 
   inline def getParams[T, Labels <: Tuple, Params <: Tuple]
@@ -113,6 +113,13 @@ trait SemiPrintDerivation {
           case product: Mirror.ProductOf[A] => derivedMirrorProduct[A](product)
     }
 
+  inline def derivedMirrorFresh[A](using mirror: Mirror.Of[A]): Typeclass[A] = {
+        addInProgress[A]
+        inline mirror match
+          case sum: Mirror.SumOf[A]         => ???
+          case product: Mirror.ProductOf[A] => derivedMirrorProduct[A](product)
+    }
+
   inline def findCached[A]: Option[SemiPrint[A]] = ${ findCachedImpl[A] }
 
   inline def resolveTypeclasses[A]: Unit = ${ SemiPrintDerivation.resolveTypeclasses[A] }
@@ -122,7 +129,12 @@ trait SemiPrintDerivation {
   inline def getTypeclass[T] = ${ getTypeclassImpl[T] }
     //FIXME derived[NonRecursive] -> derived[Recursive] works, derived[Recursive] -> derived[NonRecursive] fails
   inline def derived[A](using Mirror.Of[A]): Typeclass[A] = {
-    derivedMirror[A]
+    addDefinitions(() => derivedMirror[A])
+  }
+
+  inline def addDefinitions[T](f: () => T) = ${ addDefinitionsImpl[T]('f) }
+  inline def derivedFresh[A](using Mirror.Of[A]): Typeclass[A] = {
+    derivedMirrorFresh[A]
   }
 
 
@@ -260,8 +272,10 @@ object SemiPrintDerivation {
           Expr.summon[Mirror.Of[A]] match {
             case Some(m: Expr[Mirror.Of[A]]) => 
               println(s"SUMMONED MIRROR FOR [${symbol.name}]")
+              addNewAccessor(symbol.name, '{ SemiPrint.derivedFresh[A](using $m)} )
+
               '{ 
-                SemiPrint.derived[A](using $m)
+                // SemiPrint.derived[A](using $m)
                 ()
               }
             case None => println(s"MISSING INSTANCE [${symbol.name}]")
@@ -291,7 +305,8 @@ object SemiPrintDerivation {
     }
 
     Block(
-      typeclassDefinitions.get.map(_.asInstanceOf[DefDef]), 
+      List.empty,
+      // typeclassDefinitions.get.map(_.asInstanceOf[DefDef]), 
       typeclasses.asTerm
     ).asExprOf[Map[String, SemiPrint[Any]]]
   }
@@ -305,7 +320,8 @@ object SemiPrintDerivation {
     val defSymbol = typeclassCache.get.apply(TypeRepr.of[T].typeSymbol.name).asInstanceOf[Symbol]
     
     val block = Block(
-      typeclassDefinitions.get.map(_.asInstanceOf[DefDef]), 
+    // List.empty,  
+    typeclassDefinitions.get.map(_.asInstanceOf[DefDef]), 
       Apply(Ref(defSymbol), List.empty)
     ).asExprOf[SemiPrint[T]].asInstanceOf[Expr[SemiPrint[Any]]]
     
@@ -318,13 +334,10 @@ object SemiPrintDerivation {
     import q.reflect.*
     
     def applySymbol[T: Type](symbol: Any) =  {
-      val methodCall = '{
-        val closure = ${ Closure(Ref(symbol.asInstanceOf[Symbol]), None).asExprOf[() => T] }
-        closure()
-      }
       Block(
-      typeclassDefinitions.get.map(_.asInstanceOf[DefDef]), 
-      methodCall.asTerm
+        List.empty,
+      // typeclassDefinitions.get.map(_.asInstanceOf[DefDef]), 
+      Apply(Ref(symbol.asInstanceOf[Symbol]), List.empty)
       ).asExprOf[T]
     } 
     
@@ -347,5 +360,21 @@ object SemiPrintDerivation {
     val tpe = TypeRepr.of[T]
 
     Expr(tpe.typeSymbol.name)
+  }
+
+  def addDefinitionsImpl[T: Type](fe: Expr[() => T])(using q: Quotes): Expr[T] = {
+    import q.reflect.*
+
+    val result = '{
+      val f = $fe
+      f()
+    }
+      val b = Block(
+        typeclassDefinitions.get.map(_.asInstanceOf[DefDef]),
+        result.asTerm
+      ).asExprOf[T]
+
+      println(s"FINAL BLOCK $b")
+      b
   }
 }
