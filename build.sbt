@@ -5,10 +5,9 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   version := "1.0.0-SNAPSHOT",
 )
 
-lazy val core = (project in file(".core"))
+lazy val core = (project in file("core"))
   .settings(
     name := "magnolia-core",
-    Compile / scalaSource := baseDirectory.value / ".." / "src" / "core",
     Compile / scalacOptions ++= Seq("-Ywarn-macros:after"),
     Compile / scalacOptions --= Seq("-Ywarn-unused:params"),
     Compile / doc / scalacOptions ~= (_.filterNot(Set("-Xfatal-warnings"))),
@@ -16,22 +15,20 @@ lazy val core = (project in file(".core"))
     libraryDependencies += "com.propensive" %% "mercator" % "0.2.1"
   )
 
-lazy val examples = (project in file(".examples"))
+lazy val examples = (project in file("examples"))
   .dependsOn(core)
   .settings(
     scalacOptions ++= Seq("-Xexperimental", "-Xfuture"),
     name := "magnolia-examples",
-    Compile / scalaSource := baseDirectory.value / ".." / "src" / "examples",
     Compile / scalacOptions ++= Seq("-Ywarn-macros:after"),
     Compile / scalacOptions --= Seq("-Ywarn-unused:params"),
   )
   .dependsOn(core)
 
-lazy val test = (project in file(".test"))
+lazy val test = (project in file("test"))
   .dependsOn(examples)
   .settings(
     name := "magnolia-test",
-    Test / scalaSource := baseDirectory.value / ".." / "src" / "test",
     Test / scalacOptions ++= Seq("-Ywarn-macros:after"),
     Test / scalacOptions --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
     libraryDependencies ++= Seq(
