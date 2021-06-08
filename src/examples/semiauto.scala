@@ -104,12 +104,13 @@ object SemiPrintDerivation {
         Apply(Ref(symbol.asInstanceOf[Symbol]), List.empty).asExprOf[SemiPrint[T]] 
       case None => 
         println(s"NOT FOUND CACHED INSTANCES FOR [${name}]")
+
         deriveForCaseClass[T](join)
   }
 
   val b = Block(
       typeclassDefinitions.get.values.map(_.asInstanceOf[DefDef]).toList,
-      r.asTerm
+      '{$r}.asTerm
     )
     // println(s"Block: [${b.show}]")
     
@@ -248,7 +249,6 @@ object SemiPrintDerivation {
     val defSymbol = buildMethodSymbol[T]
     val body = '{new SemiPrint[T] {
       def print(t: T): String = {
-        println(s"DUPA")
         ???
       }
     }}
@@ -318,12 +318,30 @@ object SemiPrintDerivation {
               }
             case None => 
               println(s"MISSING INSTANCE [${symbol.name}]")
-            ???
+              // import scala.quoted.staging.Compiler; given Compiler = Compiler.make(this.getClass.getClassLoader)
+              
+                
+              '{
+                import scala.quoted.staging.Compiler; given Compiler = Compiler.make(SemiPrintDerivation.getClass.getClassLoader) 
+                val r = scala.quoted.staging.run(nestedSummon[SemiPrint[A]]) 
+                println(s"SEQ [${r}]")
+                ???
+              }
+              
+            
           }
       }
     }
   }
 
+  def nestedSummon[T: Type](using q: Quotes) = {
+    import q.reflect.*
+
+    Implicits.search(TypeRepr.of[T]) match {
+      case iss: ImplicitSearchSuccess => iss.tree.asExpr.asInstanceOf[Expr[T]]
+      case isf: ImplicitSearchFailure => ???
+    }
+  }
   def getTypeclassesImpl(using q: Quotes): Expr[Map[String, SemiPrint[Any]]] = {
     import q.reflect.*
 
