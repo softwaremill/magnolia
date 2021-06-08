@@ -96,7 +96,8 @@ trait SemiPrintDerivation {
         val name = getTypeName[p]
 
         println(s"Looking for name [$name]")
-        val typeclass = CallByNeed(getTypeclass[p].asInstanceOf[Typeclass[p]])
+        
+        val typeclass = getTypeclass[p]
 
         CaseClass.Param[Typeclass, T, p](label, idx, repeated.getOrElse(label, false), typeclass,
             CallByNeed(None), IArray.from(annotations.getOrElse(label, List())),
@@ -113,13 +114,6 @@ trait SemiPrintDerivation {
           case product: Mirror.ProductOf[A] => derivedMirrorProduct[A](product)
     }
 
-  inline def derivedMirrorFresh[A](using mirror: Mirror.Of[A]): Typeclass[A] = {
-        addInProgress[A]
-        inline mirror match
-          case sum: Mirror.SumOf[A]         => ???
-          case product: Mirror.ProductOf[A] => derivedMirrorProduct[A](product)
-    }
-
   inline def findCached[A]: Option[SemiPrint[A]] = ${ findCachedImpl[A] }
 
   inline def resolveTypeclasses[A]: Unit = ${ SemiPrintDerivation.resolveTypeclasses[A] }
@@ -129,13 +123,10 @@ trait SemiPrintDerivation {
   inline def getTypeclass[T] = ${ getTypeclassImpl[T] }
     //FIXME derived[NonRecursive] -> derived[Recursive] works, derived[Recursive] -> derived[NonRecursive] fails
   inline def derived[A](using Mirror.Of[A]): Typeclass[A] = {
-    addDefinitions(() => derivedMirror[A])
+    addDefinitions(() =>  derivedMirror[A])
   }
 
   inline def addDefinitions[T](f: () => T) = ${ addDefinitionsImpl[T]('f) }
-  inline def derivedFresh[A](using Mirror.Of[A]): Typeclass[A] = {
-    derivedMirrorFresh[A]
-  }
 
 
   inline def cacheInstance[T](instance: SemiPrint[T]) = ${ cacheInstanceImpl[T]('instance) }
@@ -152,28 +143,35 @@ object SemiPrintDerivation {
     //Symbol
   val cachedRootSymbol: AtomicReference[Option[Any]] = new AtomicReference(None) 
 
-  def cacheInstanceImpl[T: Type](body: Expr[SemiPrint[T]])(using q: Quotes): Expr[Unit] = {
-    import q.reflect.*  
-    
-    val name = TypeRepr.of[T].typeSymbol.name
-    println(s"ADDING TO CACHE [$name]")
+  def buildMethodSymbol[T: Type](using q: Quotes): q.reflect.Symbol = {
+    import q.reflect.*
 
+    val name = TypeRepr.of[T].typeSymbol.name
     val rootSymbol = (cachedRootSymbol.get match {
         case None => 
           val so = Symbol.spliceOwner
           cachedRootSymbol.updateAndGet(_ => Some(so))
           so
-        case Some(so) => so
+        case Some(so) => Symbol.spliceOwner
       }).asInstanceOf[Symbol]
     
-    val defSymbol = Symbol.newMethod(
+    Symbol.newMethod(
       rootSymbol,
-      name,
+      s"${name}_impl",
       MethodType(List())(_ => List(), _ => TypeRepr.of[SemiPrint[T]]), 
       Flags.Given,
       Symbol.noSymbol
-      )
+    )
 
+  }
+  
+  def cacheInstanceImpl[T: Type](body: Expr[SemiPrint[T]])(using q: Quotes): Expr[Unit] = {
+    import q.reflect.*  
+    
+    val name = TypeRepr.of[T].typeSymbol.name
+    val defSymbol = buildMethodSymbol[T]
+
+    println(s"ADDING TO CACHE [$name]")
 
     val defdef = DefDef(defSymbol, { case t => Some(body.asTerm.changeOwner(defSymbol)) })
     typeclassCache.updateAndGet(_.+((name, defSymbol)))
@@ -185,67 +183,20 @@ object SemiPrintDerivation {
     import q.reflect.*  
     
     val name = TypeRepr.of[T].typeSymbol.name
-    val rootSymbol = (cachedRootSymbol.get match {
-        case None => 
-          val so = Symbol.spliceOwner
-          cachedRootSymbol.updateAndGet(_ => Some(so))
-          so
-        case Some(so) => so
-      }).asInstanceOf[Symbol]
-    val defSymbol = Symbol.newMethod(
-      rootSymbol,
-      name,
-      MethodType(List())(_ => List(), _ => TypeRepr.of[SemiPrint[T]]), 
-      Flags.Given,
-      Symbol.noSymbol
-      )
-    val body = '{
-      new SemiPrint[T] {
-        def print(a: T): String = ???
-      }
-    }
-
-    val defdef = DefDef(defSymbol, { case t => Some(body.asTerm.changeOwner(defSymbol)) })
+    val defSymbol = buildMethodSymbol[T]
+    
     typeclassCache.updateAndGet(_.+((name, defSymbol)))
-    // typeclassDefinitions.updateAndGet(_.appended(defdef))
 
     '{}
   }
 
-  // def resolveTypeclasses[A: Type](using q: Quotes): Expr[Map[String, SemiPrint[Any]]] = {
   def resolveTypeclasses[A: Type](using q: Quotes): Expr[Unit] = {
     import q.reflect.*
     
-    case class Definition(refSymbol: Symbol, body: Term) {
-      val ref = Closure(Ref(refSymbol), None)
-      val defdef = DefDef(
-        refSymbol, {
-            case t => Some(body.changeOwner(refSymbol))
-        }
-        )
-    }
-
-    def applySymbol[T: Type](symbol: Any) =  '{
-      ${ Apply(Ref(symbol.asInstanceOf[Symbol]), List.empty).asExprOf[T] }
-    }
-
-    def addNewAccessor[T](name:String, body: Expr[SemiPrint[T]]): Unit = {
+    def addNewAccessor[T: Type](name:String, body: Expr[SemiPrint[T]]): Unit = {
       println(s"Adding accessor for [$name]")
       
-      val rootSymbol = (cachedRootSymbol.get match {
-        case None => 
-          val so = Symbol.spliceOwner
-          cachedRootSymbol.updateAndGet(_ => Some(so))
-          so
-        case Some(so) => so
-      }).asInstanceOf[Symbol]
-      val defSymbol = Symbol.newMethod(
-        rootSymbol,
-        name,
-        MethodType(List())(_ => List(), _ => TypeRepr.of[SemiPrint[A]]),
-        Flags.Given,
-        Symbol.noSymbol
-        )
+      val defSymbol = buildMethodSymbol[T]
       val defdef = DefDef(defSymbol, { case t => Some(body.asTerm.changeOwner(defSymbol)) })
 
       typeclassCache.updateAndGet(_.+((name, defSymbol)))
@@ -261,26 +212,27 @@ object SemiPrintDerivation {
       case Some(_) => 
         println(s"FOUND INSTANCE FOR [${symbol.name}] IN CACHE")
         '{}
-      case None => Expr.summon[SemiPrint[A]] match {
+      case None => Expr.summon[SemiPrint[A]](using summon[Type[SemiPrint[A]]])(using q) match {
         case Some(expr) => 
           println(s"SUMMONED INSTANCE FOR [${symbol.name}]")
           addNewAccessor(symbol.name, expr)
           '{}
         case None => 
-          println(s"NOT FOUND INSTANCE FOR [${symbol.name}]")
+          report.throwError(s"Not found instance fo ${symbol.name}")
 
-          Expr.summon[Mirror.Of[A]] match {
-            case Some(m: Expr[Mirror.Of[A]]) => 
-              println(s"SUMMONED MIRROR FOR [${symbol.name}]")
-              addNewAccessor(symbol.name, '{ SemiPrint.derivedFresh[A](using $m)} )
+          // Expr.summon[Mirror.Of[A]] match {
+          //   case Some(m: Expr[Mirror.Of[A]]) => 
+          //   //TODO error
+          //     println(s"SUMMONED MIRROR FOR [${symbol.name}]")
+          //     addNewAccessor(symbol.name, '{ SemiPrint.derived[A](using $m)} )
 
-              '{ 
-                // SemiPrint.derived[A](using $m)
-                ()
-              }
-            case None => println(s"MISSING INSTANCE [${symbol.name}]")
-            ???
-          }
+          //     '{ 
+          //       // SemiPrint.derived[A](using $m)
+          //       ()
+          //     }
+          //   case None => println(s"MISSING INSTANCE [${symbol.name}]")
+          //   ???
+          // }
       }
     }
   }
@@ -288,67 +240,34 @@ object SemiPrintDerivation {
   def getTypeclassesImpl(using q: Quotes): Expr[Map[String, SemiPrint[Any]]] = {
     import q.reflect.*
 
-
-    def applySymbol[T: Type](symbol: Any) =  '{
-
-      val closure = ${ Closure(Ref(symbol.asInstanceOf[Symbol]), None).asExprOf[() => Any] }
-      closure().asInstanceOf[T]
-    }
-
-    val typeclasses = '{
-      ${Expr.ofList(
+    Expr.ofList(
       typeclassCache.get.toList.map {
-        // case (name, symbol) => '{(${Expr(name)}, ${ applySymbol[SemiPrint[Any]](symbol)})}
         case (name, symbol) => '{(${Expr(name)}, ${ Apply(Ref(symbol.asInstanceOf[Symbol]), List.empty).asExprOf[() => SemiPrint[Any]] })}
       }
-    )}.toMap
-    }
-
-    Block(
-      List.empty,
-      // typeclassDefinitions.get.map(_.asInstanceOf[DefDef]), 
-      typeclasses.asTerm
     ).asExprOf[Map[String, SemiPrint[Any]]]
   }
 
-  def getTypeclassImpl[T: Type](using q: Quotes): Expr[SemiPrint[Any]] = {
+  def getTypeclassImpl[T: Type](using q: Quotes): Expr[CallByNeed[SemiPrint[T]]] = {
     import q.reflect.*
-
-
-    def applySymbol[T: Type](symbol: Any) = Apply(Ref(symbol.asInstanceOf[Symbol]), List.empty).asExprOf[T]
 
     val defSymbol = typeclassCache.get.apply(TypeRepr.of[T].typeSymbol.name).asInstanceOf[Symbol]
     
-    val block = Block(
-    // List.empty,  
-    typeclassDefinitions.get.map(_.asInstanceOf[DefDef]), 
-      Apply(Ref(defSymbol), List.empty)
-    ).asExprOf[SemiPrint[T]].asInstanceOf[Expr[SemiPrint[Any]]]
-    
-    println(s"BLOCK ${block.show}")
-    
-    block
+    '{
+      CallByNeed(${Apply(Ref(defSymbol), List.empty).asExprOf[SemiPrint[T]]})
+    }
   }
 
   def findCachedImpl[T: Type](using q: Quotes): Expr[Option[SemiPrint[T]]] = {
     import q.reflect.*
     
-    def applySymbol[T: Type](symbol: Any) =  {
-      Block(
-        List.empty,
-      // typeclassDefinitions.get.map(_.asInstanceOf[DefDef]), 
-      Apply(Ref(symbol.asInstanceOf[Symbol]), List.empty)
-      ).asExprOf[T]
-    } 
-    
+    val name = TypeRepr.of[T].typeSymbol.name
 
-    val s = TypeRepr.of[T].typeSymbol
-    typeclassCache.get.get(s.name) match {
+    typeclassCache.get.get(name) match {
       case Some(symbol) => 
-        println(s"FOUND CACHED INSTANCES FOR [${s.name}]")
-        '{ Some(${applySymbol[SemiPrint[T]](symbol)})}
+        println(s"FOUND CACHED INSTANCES FOR [${name}]")
+        '{ Some(${ Apply(Ref(symbol.asInstanceOf[Symbol]), List.empty).asExprOf[SemiPrint[T]] })}
       case None => 
-        println(s"NOT FOUND CACHED INSTANCES FOR [${s.name}]")
+        println(s"NOT FOUND CACHED INSTANCES FOR [${name}]")
         '{ None }
     }
     
@@ -364,7 +283,7 @@ object SemiPrintDerivation {
 
   def addDefinitionsImpl[T: Type](fe: Expr[() => T])(using q: Quotes): Expr[T] = {
     import q.reflect.*
-
+    println(s"Add def ")
     val result = '{
       val f = $fe
       f()
