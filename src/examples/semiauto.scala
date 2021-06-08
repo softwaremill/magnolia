@@ -13,7 +13,9 @@ object SemiPrint extends SemiPrintDerivation:
       val param = ctx.params.head
       param.typeclass.print(param.deref(value))
     else ctx.params.map { param =>
+      println(s"PARAM [$param], TC: [${param.typeclass}] VALUE: [$value], DEREFED VALUE [${param.deref(value)}]")
       param.typeclass.print(param.deref(value))
+      
     }.mkString(s"${ctx.typeInfo.short}(", ",", ")")
 
   override def split[T](ctx: SealedTrait[SemiPrint, T]): SemiPrint[T] =
@@ -46,73 +48,21 @@ trait SemiPrintDerivation {
 
   inline def getTypeName[T]: String = ${ getTypeNameImpl[T] }
 
-  inline def derivedMirrorProduct[A](product: Mirror.ProductOf[A]): Typeclass[A] =
-    val parameters = IArray(getParams[A, product.MirroredElemLabels, product.MirroredElemTypes](
-        paramAnns[A].to(Map), paramTypeAnns[A].to(Map), repeated[A].to(Map))(using product)*)
-    
-    val caseClass = new CaseClass[Typeclass, A](typeInfo[A], isObject[A], isValueClass[A], parameters,
-        IArray(anns[A]*), IArray[Any](typeAnns[A]*)):
-      
-      def construct[PType](makeParam: Param => PType)(using ClassTag[PType]): A =
-        product.fromProduct(Tuple.fromArray(this.params.map(makeParam(_)).to(Array)))
+  inline def derivedMirrorProduct[A](product: Mirror.ProductOf[A]): Typeclass[A] = ${ deriveForCaseClass[A]('join) }
 
-      def rawConstruct(fieldValues: Seq[Any]): A = product.fromProduct(Tuple.fromArray(fieldValues.to(Array)))
+  inline def getParams[T](using Mirror.ProductOf[T]): List[CaseClass.Param[Typeclass, T]] = ${ getParamsImpl[T] }
 
-      def constructEither[Err, PType: ClassTag](makeParam: Param => Either[Err, PType]): Either[List[Err], A] =
-        params.map(makeParam(_)).to(Array).foldLeft[Either[List[Err], Array[PType]]](Right(Array())) {
-          case (Left(errs), Left(err))    => Left(errs ++ List(err))
-          case (Right(acc), Right(param)) => Right(acc ++ Array(param))
-          case (errs@Left(_), _)          => errs
-          case (_, Left(err))             => Left(List(err))
-        }.map { params => product.fromProduct(Tuple.fromArray(params)) }
+  // inline def derivedMirror[A](using mirror: Mirror.Of[A]): Typeclass[A] =
+  //   findCached[A] match {
+  //     case Some(t) => t
+  //     case None =>
+  //       addInProgress[A]
+  //       inline mirror match
+  //         case sum: Mirror.SumOf[A]         => ???
+  //         case product: Mirror.ProductOf[A] => derivedMirrorProduct[A](product)
+  //   }
 
-      def constructMonadic[M[_]: Monadic, PType: ClassTag](makeParam: Param => M[PType]): M[A] =
-        summon[Monadic[M]].map {
-          params.map(makeParam(_)).to(Array).foldLeft(summon[Monadic[M]].point(Array())) {
-            (accM, paramM) => summon[Monadic[M]].flatMap(accM) { acc =>
-              summon[Monadic[M]].map(paramM)(acc ++ List(_))
-            }
-          }
-        } { params => product.fromProduct(Tuple.fromArray(params)) }
-
-    val result = join(caseClass)
-    val name = getTypeName[A]
-    println(s"ADDING CACHED INSTANCES OF [$name] - [$result]")
-
-    // cacheInstance(result)
-    result
-
-  inline def getParams[T, Labels <: Tuple, Params <: Tuple]
-                      (annotations: Map[String, List[Any]], typeAnnotations: Map[String, List[Any]],
-                      repeated: Map[String, Boolean], idx: Int = 0)(using prod: Mirror.ProductOf[T]): List[CaseClass.Param[Typeclass, T]] =
-
-    inline erasedValue[(Labels, Params)] match
-      case _: (EmptyTuple, EmptyTuple) =>
-        Nil
-      case _: ((l *: ltail), (p *: ptail)) =>
-        val label = constValue[l].asInstanceOf[String]
-        resolveTypeclasses[p]
-        
-        val name = getTypeName[p]
-
-        println(s"Looking for name [$name]")
-        
-        val typeclass = getTypeclass[p]
-
-        CaseClass.Param[Typeclass, T, p](label, idx, repeated.getOrElse(label, false), typeclass,
-            CallByNeed(None), IArray.from(annotations.getOrElse(label, List())),
-            IArray.from(typeAnnotations.getOrElse(label, List()))) ::
-            getParams[T, ltail, ptail](annotations, typeAnnotations, repeated, idx + 1)
-
-  inline def derivedMirror[A](using mirror: Mirror.Of[A]): Typeclass[A] =
-    findCached[A] match {
-      case Some(t) => t
-      case None =>
-        addInProgress[A]
-        inline mirror match
-          case sum: Mirror.SumOf[A]         => ???
-          case product: Mirror.ProductOf[A] => derivedMirrorProduct[A](product)
-    }
+  inline def derivedMirror[A](using mirror: Mirror.Of[A]): Typeclass[A] = ${ derivedImpl[A]('join)}
 
   inline def findCached[A]: Option[SemiPrint[A]] = ${ findCachedImpl[A] }
 
@@ -143,6 +93,113 @@ object SemiPrintDerivation {
     //Symbol
   val cachedRootSymbol: AtomicReference[Option[Any]] = new AtomicReference(None) 
 
+  def derivedImpl[T: Type](join: Expr[CaseClass[SemiPrint, T] => SemiPrint[T]])(using q: Quotes): Expr[SemiPrint[T]] = {
+    import q.reflect.*
+
+    val name = TypeRepr.of[T].typeSymbol.name
+
+    val r = typeclassCache.get.get(name) match {
+      case Some(symbol) => 
+        println(s"FOUND CACHED INSTANCES FOR [${name}]")
+        Apply(Ref(symbol.asInstanceOf[Symbol]), List.empty).asExprOf[SemiPrint[T]] 
+      case None => 
+        println(s"NOT FOUND CACHED INSTANCES FOR [${name}]")
+        deriveForCaseClass[T](join)
+  }
+
+  val b = Block(
+      typeclassDefinitions.get.map(_.asInstanceOf[DefDef]),
+      r.asTerm
+    )
+    println(s"Block: [${b.show}]")
+    
+    b.asExprOf[SemiPrint[T]]
+}
+  def deriveForCaseClass[T: Type](join: Expr[CaseClass[SemiPrint, T] => SemiPrint[T]])(using q: Quotes): Expr[SemiPrint[T]] = {
+    import q.reflect.*
+    Expr.summon[Mirror.ProductOf[T]] match {
+      case None => ???
+      case Some(m) => '{
+        val product = $m
+        
+        val parameters = IArray(${getParamsImpl[T]}*)
+        val caseClass = new CaseClass[SemiPrint, T](typeInfo[T], isObject[T], isValueClass[T], parameters,
+        IArray(anns[T]*), IArray[Any](typeAnns[T]*)) {
+      
+          def construct[PType](makeParam: Param => PType)(using ClassTag[PType]): T =
+            product.fromProduct(Tuple.fromArray(this.params.map(makeParam(_)).to(Array)))
+
+          def rawConstruct(fieldValues: Seq[Any]): T = product.fromProduct(Tuple.fromArray(fieldValues.to(Array)))
+
+          def constructEither[Err, PType: ClassTag](makeParam: Param => Either[Err, PType]): Either[List[Err], T] =
+            params.map(makeParam(_)).to(Array).foldLeft[Either[List[Err], Array[PType]]](Right(Array())) {
+              case (Left(errs), Left(err))    => Left(errs ++ List(err))
+              case (Right(acc), Right(param)) => Right(acc ++ Array(param))
+              case (errs@Left(_), _)          => errs
+              case (_, Left(err))             => Left(List(err))
+            }.map { params => product.fromProduct(Tuple.fromArray(params)) }
+
+          def constructMonadic[M[_]: Monadic, PType: ClassTag](makeParam: Param => M[PType]): M[T] =
+            summon[Monadic[M]].map {
+              params.map(makeParam(_)).to(Array).foldLeft(summon[Monadic[M]].point(Array())) {
+                (accM, paramM) => summon[Monadic[M]].flatMap(accM) { acc =>
+                  summon[Monadic[M]].map(paramM)(acc ++ List(_))
+                }
+              }
+            } { params => product.fromProduct(Tuple.fromArray(params)) }
+          }
+
+      ${join}.apply(caseClass)
+    }
+  
+
+    
+  }
+  }
+  
+  def getParamsImpl[T: Type](using q: Quotes): Expr[List[CaseClass.Param[SemiPrint, T]]] = {
+    import q.reflect.*
+
+    var i = -1
+    val params = TypeRepr.of[T].typeSymbol.caseFields
+    .map(_.tree)
+    .map { case ValDef(_, tt, _) => tt }
+    .map(_.tpe.asType)
+    .map {
+      case x@'[t] => {
+        resolveTypeclasses[t]
+        x
+      }
+    }
+    .map {
+      case '[t] => {
+        val tpe = TypeRepr.of[t]
+        val name = tpe.typeSymbol.name
+        i += 1
+        '{ 
+                  val typeclass = ${getTypeclassImpl[t]}
+                  val n = ${Expr(name)}
+        println(s"NAME: [$n] TC: [$typeclass]")
+
+        
+          CaseClass.Param[SemiPrint, T, t](${Expr(name)}, ${Expr(i)}, false, typeclass,
+            CallByNeed(None), IArray.from[Any](List()),
+            IArray.from[Any](List())) }
+      }
+    }
+
+    println(s"CACHE: [${typeclassCache.get.keySet.mkString(", ")}]")
+    
+    // val b = Block(
+    //   typeclassDefinitions.get.map(_.asInstanceOf[DefDef]),
+    //   Expr.ofList(params).asTerm
+    // )
+    // println(s"Block: [${b.show}]")
+    // b.asExprOf[List[CaseClass.Param[SemiPrint, T]]]
+
+    Expr.ofList(params)
+  }
+    
   def buildMethodSymbol[T: Type](using q: Quotes): q.reflect.Symbol = {
     import q.reflect.*
 
@@ -153,11 +210,13 @@ object SemiPrintDerivation {
           cachedRootSymbol.updateAndGet(_ => Some(so))
           so
         case Some(so) => Symbol.spliceOwner
+        // case Some(so) => so
       }).asInstanceOf[Symbol]
     
     Symbol.newMethod(
       rootSymbol,
-      s"${name}_impl",
+      // s"${name}_impl",
+      name,
       MethodType(List())(_ => List(), _ => TypeRepr.of[SemiPrint[T]]), 
       Flags.Given,
       Symbol.noSymbol
@@ -218,21 +277,25 @@ object SemiPrintDerivation {
           addNewAccessor(symbol.name, expr)
           '{}
         case None => 
-          report.throwError(s"Not found instance fo ${symbol.name}")
+          // report.throwError(s"Not found instance fo ${symbol.name}")
 
-          // Expr.summon[Mirror.Of[A]] match {
-          //   case Some(m: Expr[Mirror.Of[A]]) => 
-          //   //TODO error
-          //     println(s"SUMMONED MIRROR FOR [${symbol.name}]")
-          //     addNewAccessor(symbol.name, '{ SemiPrint.derived[A](using $m)} )
 
-          //     '{ 
-          //       // SemiPrint.derived[A](using $m)
-          //       ()
-          //     }
-          //   case None => println(s"MISSING INSTANCE [${symbol.name}]")
-          //   ???
-          // }
+          Expr.summon[Mirror.Of[A]] match {
+            case Some(m: Expr[Mirror.Of[A]]) => 
+            //TODO error
+              println(s"SUMMONED MIRROR FOR [${symbol.name}]")
+              addNewAccessor(symbol.name, derivedImpl[A]( '{(_: CaseClass[SemiPrint, A]) => new SemiPrint[A] {
+                def print(a: A): String = ???
+              }} ) )
+
+              '{ 
+                // SemiPrint.derived[A](using $m)
+                ()
+              }
+            case None => 
+              println(s"MISSING INSTANCE [${symbol.name}]")
+            ???
+          }
       }
     }
   }
@@ -251,8 +314,9 @@ object SemiPrintDerivation {
     import q.reflect.*
 
     val defSymbol = typeclassCache.get.apply(TypeRepr.of[T].typeSymbol.name).asInstanceOf[Symbol]
-    
+    val name = TypeRepr.of[T].typeSymbol.name
     '{
+      println(s"CALL [${${Expr(defSymbol.name)}} ] for [${${Expr(name)}}]")
       CallByNeed(${Apply(Ref(defSymbol), List.empty).asExprOf[SemiPrint[T]]})
     }
   }
@@ -277,7 +341,7 @@ object SemiPrintDerivation {
     import q.reflect.*
 
     val tpe = TypeRepr.of[T]
-
+    
     Expr(tpe.typeSymbol.name)
   }
 
@@ -293,7 +357,7 @@ object SemiPrintDerivation {
         result.asTerm
       ).asExprOf[T]
 
-      println(s"FINAL BLOCK $b")
+      println(s"FINAL BLOCK ${b.show}")
       b
   }
 }
