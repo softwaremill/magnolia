@@ -303,38 +303,17 @@ object SemiPrintDerivation {
           '{}
         case None => 
           // report.throwError(s"Not found instance fo ${symbol.name}")
-
-
-          Expr.summon[Mirror.Of[A]] match {
-            case Some(m: Expr[Mirror.Of[A]]) => 
-            //TODO error
-              println(s"SUMMONED MIRROR FOR [${symbol.name}]")
-              addNewAccessor(symbol.name, derivedImpl[A]( '{(_: CaseClass[SemiPrint, A]) => new SemiPrint[A] {
-                def print(a: A): String = "JOIN?"
-              }} ) )
-              '{ 
-                // SemiPrint.derived[A](using $m)
-                ()
-              }
-            case None => 
-              println(s"MISSING INSTANCE [${symbol.name}]")
-              // import scala.quoted.staging.Compiler; given Compiler = Compiler.make(this.getClass.getClassLoader)
-              
-                
-              '{
+          '{
                 import scala.quoted.staging.Compiler; given Compiler = Compiler.make(SemiPrintDerivation.getClass.getClassLoader) 
-                val r = scala.quoted.staging.run(nestedSummon[SemiPrint[A]]) 
+                val r = scala.quoted.staging.run(summonWithAlreadyResolvedInstances[SemiPrint[A]]) 
                 println(s"SEQ [${r}]")
-                ???
-              }
-              
-            
+                // r
           }
       }
     }
   }
 
-  def nestedSummon[T: Type](using q: Quotes) = {
+  def summonWithAlreadyResolvedInstances[T: Type](using q: Quotes) = {
     import q.reflect.*
 
     Implicits.search(TypeRepr.of[T]) match {
