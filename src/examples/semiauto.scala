@@ -83,8 +83,8 @@ trait SemiPrintDerivation {
 }
 
 object SemiPrintDerivation {
-  //typeclasses accessors definitions (DefDef)
-  val typeclassDefinitions: AtomicReference[List[Any]] = new AtomicReference(List.empty)
+  //TypeName -> typeclasses accessors definitions (DefDef)
+  val typeclassDefinitions: AtomicReference[Map[String, Any]] = new AtomicReference(Map.empty)
   
   //TypeName -> accessor reference (Symbol)
   val typeclassCache: AtomicReference[Map[String, Any]] =
@@ -95,7 +95,7 @@ object SemiPrintDerivation {
 
   def derivedImpl[T: Type](join: Expr[CaseClass[SemiPrint, T] => SemiPrint[T]])(using q: Quotes): Expr[SemiPrint[T]] = {
     import q.reflect.*
-
+    
     val name = TypeRepr.of[T].typeSymbol.name
 
     val r = typeclassCache.get.get(name) match {
@@ -108,10 +108,10 @@ object SemiPrintDerivation {
   }
 
   val b = Block(
-      typeclassDefinitions.get.map(_.asInstanceOf[DefDef]),
+      typeclassDefinitions.get.values.map(_.asInstanceOf[DefDef]).toList,
       r.asTerm
     )
-    println(s"Block: [${b.show}]")
+    // println(s"Block: [${b.show}]")
     
     b.asExprOf[SemiPrint[T]]
 }
@@ -120,6 +120,8 @@ object SemiPrintDerivation {
     Expr.summon[Mirror.ProductOf[T]] match {
       case None => ???
       case Some(m) => '{
+        $addInProgressImpl
+        
         val product = $m
         
         val parameters = IArray(${getParamsImpl[T]}*)
@@ -149,6 +151,7 @@ object SemiPrintDerivation {
             } { params => product.fromProduct(Tuple.fromArray(params)) }
           }
 
+      $removeInProgressImpl
       ${join}.apply(caseClass)
     }
   
@@ -234,7 +237,7 @@ object SemiPrintDerivation {
 
     val defdef = DefDef(defSymbol, { case t => Some(body.asTerm.changeOwner(defSymbol)) })
     typeclassCache.updateAndGet(_.+((name, defSymbol)))
-    typeclassDefinitions.updateAndGet(_.appended(defdef))
+    typeclassDefinitions.updateAndGet(_.+((name, defdef)))
     '{}
   }
 
@@ -243,8 +246,29 @@ object SemiPrintDerivation {
     
     val name = TypeRepr.of[T].typeSymbol.name
     val defSymbol = buildMethodSymbol[T]
-    
+    val body = '{new SemiPrint[T] {
+      def print(t: T): String = {
+        println(s"DUPA")
+        ???
+      }
+    }}
+
+    val defdef = DefDef(defSymbol, { case t => Some(body.asTerm.changeOwner(defSymbol)) })
+
     typeclassCache.updateAndGet(_.+((name, defSymbol)))
+    typeclassDefinitions.updateAndGet(_.+((name, defdef)))
+
+    '{}
+  }
+
+  def removeInProgressImpl[T: Type](using q: Quotes): Expr[Unit] = {
+    import q.reflect.*  
+    
+    val name = TypeRepr.of[T].typeSymbol.name
+
+
+    typeclassCache.updateAndGet(_.-(name))
+    typeclassDefinitions.updateAndGet(_.-(name))
 
     '{}
   }
@@ -253,13 +277,13 @@ object SemiPrintDerivation {
     import q.reflect.*
     
     def addNewAccessor[T: Type](name:String, body: Expr[SemiPrint[T]]): Unit = {
-      println(s"Adding accessor for [$name]")
+      println(s"Adding accessor for [$name] - CACHED DEFS: [${typeclassDefinitions.get.mkString(", ")}]")
       
       val defSymbol = buildMethodSymbol[T]
       val defdef = DefDef(defSymbol, { case t => Some(body.asTerm.changeOwner(defSymbol)) })
 
       typeclassCache.updateAndGet(_.+((name, defSymbol)))
-      typeclassDefinitions.updateAndGet(_.appended(defdef))
+      typeclassDefinitions.updateAndGet(_.+((name, defdef)))
     }
 
     val tpe = TypeRepr.of[A]
@@ -271,7 +295,8 @@ object SemiPrintDerivation {
       case Some(_) => 
         println(s"FOUND INSTANCE FOR [${symbol.name}] IN CACHE")
         '{}
-      case None => Expr.summon[SemiPrint[A]](using summon[Type[SemiPrint[A]]])(using q) match {
+    
+      case None => Expr.summon[SemiPrint[A]] match {
         case Some(expr) => 
           println(s"SUMMONED INSTANCE FOR [${symbol.name}]")
           addNewAccessor(symbol.name, expr)
@@ -285,9 +310,8 @@ object SemiPrintDerivation {
             //TODO error
               println(s"SUMMONED MIRROR FOR [${symbol.name}]")
               addNewAccessor(symbol.name, derivedImpl[A]( '{(_: CaseClass[SemiPrint, A]) => new SemiPrint[A] {
-                def print(a: A): String = ???
+                def print(a: A): String = "JOIN?"
               }} ) )
-
               '{ 
                 // SemiPrint.derived[A](using $m)
                 ()
@@ -353,7 +377,7 @@ object SemiPrintDerivation {
       f()
     }
       val b = Block(
-        typeclassDefinitions.get.map(_.asInstanceOf[DefDef]),
+        typeclassDefinitions.get.values.map(_.asInstanceOf[DefDef]).toList,
         result.asTerm
       ).asExprOf[T]
 
