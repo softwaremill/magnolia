@@ -73,7 +73,7 @@ trait Derivation[TypeClass[_]] extends CommonDerivation[TypeClass]:
       case _: EmptyTuple =>
         Nil
       case _: (s *: tail) =>
-        new SealedTrait.Subtype(typeInfo[s], IArray[Any](), IArray.from(paramTypeAnns[T]), idx,
+        new SealedTrait.Subtype(typeInfo[s], IArray[Any](), IArray.from(paramTypeAnns[T]), isObject[s], idx,
             CallByNeed(summonOption[Typeclass[s]].getOrElse(derived[s](using summonInline[Mirror.Of[s]]))), x => m.ordinal(x) == idx,
             _.asInstanceOf[s & T]) :: subtypes[T, tail](m, idx + 1)
 
