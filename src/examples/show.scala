@@ -8,7 +8,7 @@ import magnolia._
   *  be something other than a string. */
 trait Show[Out, T] { def show(value: T): Out }
 
-trait GenericShow[Out] extends Derivation[[X] =>> Show[Out, X]] {
+trait GenericShow[Out] extends AutoDerivation[[X] =>> Show[Out, X]] {
 
   def joinElems(typeName: String, strings: Seq[String]): Out
   def prefix(s: String, out: Out): Out

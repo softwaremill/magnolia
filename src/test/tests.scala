@@ -208,6 +208,10 @@ object Obj1:
   object Obj2:
     case class NestedInObjects(i: Int)
 
+sealed trait Y
+case object A extends Y
+case class B(s: String) extends Y
+
 class Tests extends munit.FunSuite {
 
     test("construct a Show product instance with alternative apply functions") {
@@ -455,5 +459,22 @@ class Tests extends munit.FunSuite {
             "p16", "p17", "p18", "p19", "p20", "p21", "p22", "p23")
       val res = Eq.derived[VeryLong].equal(vl, vl)
       assert(res)
+    }
+
+    test("construct a semi print for sealed hierarchy") {
+      val res = SemiPrint.derived[Y].print(A)
+      assertEquals(res, "A()")
+    }
+
+    test("construct a semi print for recursive hierarchy") {
+      given instance: SemiPrint[Recursive] = SemiPrint.derived
+      val res = instance.print(Recursive(Seq(Recursive(Seq.empty))))
+
+      assertEquals(res, "Recursive(Recursive())")
+    }
+
+    test("not find a given for semi print") {
+      val res = compileErrors("""summon[SemiPrint[Y]].print(A)""")
+      assert(res.nonEmpty)
     }
   }
