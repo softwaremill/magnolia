@@ -7,7 +7,7 @@ trait Print[T] {
   def print(t: T): String
 }
 
-trait GenericPrint extends Derivation[Print]:
+trait GenericPrint extends AutoDerivation[Print]:
   def join[T](ctx: CaseClass[Typeclass, T]): Print[T] = value =>
     if ctx.isValueClass then
       val param = ctx.params.head

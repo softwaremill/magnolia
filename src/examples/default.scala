@@ -7,7 +7,7 @@ trait HasDefault[T]:
   def defaultValue: Either[String, T]
 
 /** companion object and derivation object for [[HasDefault]] */
-object HasDefault extends Derivation[HasDefault]:
+object HasDefault extends AutoDerivation[HasDefault]:
 
   /** constructs a default for each parameter, using the constructor default (if provided),
     *  otherwise using a typeclass-provided default */

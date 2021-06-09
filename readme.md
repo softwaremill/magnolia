@@ -42,7 +42,7 @@ trait Print[T] {
   extension (x: T) def print: String
 }
 
-object Print extends Derivation[Print]:
+object Print extends AutoDerivation[Print]:
   def join[T](ctx: CaseClass[Typeclass, T]): Print[T] = value =>
     ctx.params.map { param =>
       param.typeclass.print(param.deref(value))
@@ -54,18 +54,23 @@ object Print extends Derivation[Print]:
   given Print[Int] = _.toString
 ```
 
-The `Derivation` trait provides a `derived` method which will attempt to construct a corresponding typeclass
-instance for the type passed to it. Importing `Print.derived` as defined in the example above will make generic
+The `AutoDerivation` trait provides a given `autoDerived` method which will attempt to construct a corresponding typeclass
+instance for the type passed to it. Importing `Print.autoDerived` as defined in the example above will make generic
 derivation for `Print` typeclasses available in the scope of the import.
 
 While any object may be used to define a derivation, if you control the typeclass you are deriving for, the
 companion object of the typeclass is the obvious choice since it generic derivations for that typeclass will
 be automatically available for consideration during contextual search.
 
+If you don't want to make the automatic derivation available in the given scope, consider using the `Derivation` trait which provides semi-auto derivation with `derived` method, but also brings some additional limitations.
 ## Limitations
 
 Magnolia is not currently able to access default values for case class parameters.
 
+In case of semiauto derivation, for a recursive structures it is required to assign the derived value to an implicit variable e.g.
+```Scala
+given instance: SemiPrint[Recursive] = SemiPrint.derived
+```  
 ## Availability
 
 For Scala 3:
