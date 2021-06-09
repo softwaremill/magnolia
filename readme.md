@@ -118,10 +118,10 @@ shown.
 
 ## Availability
 
-A binary is available on Maven Central as `com.softwaremill.magnolia:magnolia-core_<scala-version>:0.18.0`. This may be added
+A binary is available on Maven Central as `com.softwaremill.magnolia:magnolia-core_<scala-version>:1.0.0-M1`. This may be added
 to an [sbt](https://www.scala-sbt.org/) build with:
 ```
-libraryDependencies += "com.softwaremill.magnolia" %% "magnolia-core" % "0.18.0"
+libraryDependencies += "com.softwaremill.magnolia" %% "magnolia-core" % "1.0.0-M1"
 ```
 
 ## Contributing
