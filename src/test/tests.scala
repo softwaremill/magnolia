@@ -452,6 +452,13 @@ class Tests extends munit.FunSuite {
       assertEquals(res, "A()")
     }
 
+    test("construct a semi print for recursive hierarchy") {
+      given instance: SemiPrint[Recursive] = SemiPrint.derived
+      val res = instance.print(Recursive(Seq(Recursive(Seq.empty))))
+
+      assertEquals(res, "Recursive(Recursive())")
+    }
+
     test("not find a given for semi print") {
       val res = compileErrors("""summon[SemiPrint[Y]].print(A)""")
       assert(res.nonEmpty)

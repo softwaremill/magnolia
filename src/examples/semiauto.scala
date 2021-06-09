@@ -23,3 +23,6 @@ object SemiPrint extends Derivation[SemiPrint]:
   
   given SemiPrint[Int] with
     def print(i: Int) = i.toString
+  
+  given seq[T](using spt: SemiPrint[T]): SemiPrint[Seq[T]] with
+    def print(t: Seq[T]) = t.map(spt.print).mkString(", ")
