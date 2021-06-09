@@ -1,11 +1,23 @@
+import com.softwaremill.UpdateVersionInDocs
+
+val scala2 = "2.12.13"
+
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
-  scalaVersion := "2.12.13",
+  scalaVersion := scala2,
   organization := "com.softwaremill.magnolia",
   description := "Fast, easy and transparent typeclass derivation for Scala 2",
-  version := "1.0.0-SNAPSHOT",
+  updateDocs := UpdateVersionInDocs(sLog.value, organization.value, version.value, List(file("readme.md")))
 )
 
-lazy val core = (project in file("core"))
+lazy val root =
+  project
+    .in(file("."))
+    .settings(commonSettings)
+    .settings(name := "magnolia", publishArtifact := false)
+    .aggregate((core.projectRefs ++ examples.projectRefs ++ test.projectRefs): _*)
+
+lazy val core = (projectMatrix in file("core"))
+  .settings(commonSettings)
   .settings(
     name := "magnolia-core",
     Compile / scalacOptions ++= Seq("-Ywarn-macros:after"),
@@ -14,9 +26,11 @@ lazy val core = (project in file("core"))
     Compile / doc / scalacOptions --= Seq("-Xlint:doc-detached"),
     libraryDependencies += "com.propensive" %% "mercator" % "0.2.1"
   )
+  .jvmPlatform(scalaVersions = List(scala2))
 
-lazy val examples = (project in file("examples"))
+lazy val examples = (projectMatrix in file("examples"))
   .dependsOn(core)
+  .settings(commonSettings)
   .settings(
     scalacOptions ++= Seq("-Xexperimental", "-Xfuture"),
     name := "magnolia-examples",
@@ -24,9 +38,11 @@ lazy val examples = (project in file("examples"))
     Compile / scalacOptions --= Seq("-Ywarn-unused:params"),
   )
   .dependsOn(core)
+  .jvmPlatform(scalaVersions = List(scala2))
 
-lazy val test = (project in file("test"))
+lazy val test = (projectMatrix in file("test"))
   .dependsOn(examples)
+  .settings(commonSettings)
   .settings(
     name := "magnolia-test",
     Test / scalacOptions ++= Seq("-Ywarn-macros:after"),
@@ -36,3 +52,4 @@ lazy val test = (project in file("test"))
       "com.propensive" %% "contextual-examples" % "1.5.0"
     ).map(_ % Test)
   )
+  .jvmPlatform(scalaVersions = List(scala2))
