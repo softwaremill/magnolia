@@ -16,3 +16,4 @@ target
 .metals/
 .*.bak
 .vscode/
+.java-version
