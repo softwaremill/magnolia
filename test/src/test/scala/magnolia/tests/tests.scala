@@ -591,7 +591,8 @@ class Tests extends munit.FunSuite {
 
     test("show a List[Int]") {
       val res = Show.gen[List[Int]].show(List(1, 2, 3))
-      assertEquals(res, "::[Int](head=1,tl=::[Int](head=2,tl=::[Int](head=3,tl=Nil())))")
+      // in Scala 2.13, the List definition has changed, what used to be "tl" is now called "next"
+      assertEquals(res.replaceAll("next", "tl"), "::[Int](head=1,tl=::[Int](head=2,tl=::[Int](head=3,tl=Nil())))")
     }
 
     test("sealed trait typeName should be complete and unchanged") {
