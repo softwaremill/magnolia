@@ -45,11 +45,8 @@ lazy val test = (projectMatrix in file("test"))
   .settings(commonSettings)
   .settings(
     name := "magnolia-test",
-    Test / scalacOptions ++= Seq("-Ywarn-macros:after"),
+    Test / scalacOptions += "-Ywarn-macros:after",
     Test / scalacOptions --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
-    libraryDependencies ++= Seq(
-      "org.scalameta" %% "munit" % "0.7.26",
-      "com.propensive" %% "contextual-examples" % "1.5.0"
-    ).map(_ % Test)
+    libraryDependencies += "org.scalameta" %% "munit" % "0.7.26" % Test
   )
   .jvmPlatform(scalaVersions = List(scala2))
