@@ -53,4 +53,4 @@ lazy val test = (projectMatrix in file("test"))
     Test / scalacOptions --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
     libraryDependencies += "org.scalameta" %% "munit" % "0.7.26" % Test
   )
-  .jvmPlatform(scalaVersions = List(scala2_12))
+  .jvmPlatform(scalaVersions = scala2)
