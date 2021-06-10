@@ -1,19 +1,23 @@
 import com.softwaremill.UpdateVersionInDocs
 
-val scala2 = "2.12.13"
+val scala2_12 = "2.12.13"
+val scala2_13 = "2.13.6"
+val scala2 = List(scala2_12, scala2_13)
+
+excludeLintKeys in Global ++= Set(ideSkipProject)
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
-  scalaVersion := scala2,
   organization := "com.softwaremill.magnolia",
   description := "Fast, easy and transparent typeclass derivation for Scala 2",
-  updateDocs := UpdateVersionInDocs(sLog.value, organization.value, version.value, List(file("readme.md")))
+  updateDocs := UpdateVersionInDocs(sLog.value, organization.value, version.value, List(file("readme.md"))),
+  ideSkipProject := (scalaVersion.value == scala2_12), // only import 2.13 projects
 )
 
 lazy val root =
   project
     .in(file("."))
     .settings(commonSettings)
-    .settings(name := "magnolia", publishArtifact := false)
+    .settings(name := "magnolia", publishArtifact := false, scalaVersion := scala2_13)
     .aggregate((core.projectRefs ++ examples.projectRefs ++ test.projectRefs): _*)
 
 lazy val core = (projectMatrix in file("core"))
@@ -26,7 +30,7 @@ lazy val core = (projectMatrix in file("core"))
     Compile / doc / scalacOptions --= Seq("-Xlint:doc-detached"),
     libraryDependencies += "com.propensive" %% "mercator" % "0.2.1"
   )
-  .jvmPlatform(scalaVersions = List(scala2))
+  .jvmPlatform(scalaVersions = scala2)
 
 lazy val examples = (projectMatrix in file("examples"))
   .dependsOn(core)
@@ -38,7 +42,7 @@ lazy val examples = (projectMatrix in file("examples"))
     Compile / scalacOptions --= Seq("-Ywarn-unused:params"),
   )
   .dependsOn(core)
-  .jvmPlatform(scalaVersions = List(scala2))
+  .jvmPlatform(scalaVersions = scala2)
 
 lazy val test = (projectMatrix in file("test"))
   .dependsOn(examples)
@@ -52,4 +56,4 @@ lazy val test = (projectMatrix in file("test"))
       "com.propensive" %% "contextual-examples" % "1.5.0"
     ).map(_ % Test)
   )
-  .jvmPlatform(scalaVersions = List(scala2))
+  .jvmPlatform(scalaVersions = List(scala2_12))
