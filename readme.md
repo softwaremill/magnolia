@@ -67,7 +67,7 @@ If you don't want to make the automatic derivation available in the given scope,
 
 Magnolia is not currently able to access default values for case class parameters.
 
-In case of semiauto derivation, for a recursive structures it is required to assign the derived value to an implicit variable e.g.
+For a recursive structures it is required to assign the derived value to an implicit variable e.g.
 ```Scala
 given instance: SemiPrint[Recursive] = SemiPrint.derived
 ```  
