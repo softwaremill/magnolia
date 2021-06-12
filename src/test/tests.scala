@@ -66,6 +66,8 @@ case class Deprecated(@MyAnnotation(0) @deprecated f: Int)
 
 case class `%%`(`/`: Int, `#`: String)
 
+case class Tup2[T1, T2](_1: T1, _2: T2)
+
 case class Param(a: String, b: String)
 case class TestEntry(param: Param)
 object TestEntry {
@@ -97,8 +99,8 @@ object Recursive {
 }
 
 // This tests compilation.
-// class GenericCsv[A: Csv]
-// object ParamCsv extends GenericCsv[Param]
+class GenericCsv[A: Csv]
+object ParamCsv extends GenericCsv[Param]
 
 class NotDerivable
 
@@ -135,39 +137,39 @@ object PrivateCons {
   given show: Show[String, PrivateCons] = Show.derived
 }
 
-// class PrivateValueClass private (val value: Int) extends AnyVal
-// object PrivateValueClass {
-//   def apply(l: Int) = new PrivateValueClass(l)
-//   implicit val show: Show[String, PrivateValueClass] = Show.derived
-// }
+class PrivateValueClass private (val value: Int) extends AnyVal
+object PrivateValueClass {
+  def apply(l: Int) = new PrivateValueClass(l)
+  implicit val show: Show[String, PrivateValueClass] = Show.derived
+}
 
 case class KArray(value: List[KArray]) derives Eq
 case class Wrapper(v: Option[KArray])
 
 case class VeryLong(
-    p1: String,
-    p2: String,
-    p3: String,
-    p4: String,
-    p5: String,
-    p6: String,
-    p7: String,
-    p8: String,
-    p9: String,
-    p10: String,
-    p11: String,
-    p12: String,
-    p13: String,
-    p14: String,
-    p15: String,
-    p16: String,
-    p17: String,
-    p18: String,
-    p19: String,
-    p20: String,
-    p21: String,
-    p22: String,
-    p23: String
+  p1: String,
+  p2: String,
+  p3: String,
+  p4: String,
+  p5: String,
+  p6: String,
+  p7: String,
+  p8: String,
+  p9: String,
+  p10: String,
+  p11: String,
+  p12: String,
+  p13: String,
+  p14: String,
+  p15: String,
+  p16: String,
+  p17: String,
+  p18: String,
+  p19: String,
+  p20: String,
+  p21: String,
+  p22: String,
+  p23: String
 )
 
 case class Character(id: Character.Id)
@@ -185,9 +187,9 @@ object AnotherCharacter {
 }
 
 final case class Abc(
-    private val a: Int,
-    private val b: Long,
-    c: String
+  private val a: Int,
+  private val b: Long,
+  c: String
 )
 
 sealed trait Covariant[+A]
@@ -279,6 +281,11 @@ enum ExtendingTraits:
   case B extends ExtendingTraits with ExtendingTraits.Two
   case C extends ExtendingTraits with ExtendingTraits.Two
 
+sealed trait TreeValue
+sealed trait SubLevel extends TreeValue
+case class Leaf1(value: String) extends TreeValue
+case class Leaf2(value: Int)    extends SubLevel
+
 //
 
 trait PrintRepeated[T] {
@@ -298,6 +305,43 @@ object PrintRepeated extends AutoDerivation[PrintRepeated]:
 //
 
 class Tests extends munit.FunSuite {
+
+  test("work in some other way") {
+    sealed trait T
+    case class C(s: String) extends T
+    val res = Print.derived[T].print(C("XD"))
+    assertEquals(res, """C(XD)""")
+  }
+
+  test("work for a product type") {
+    case class C(s: String)
+    val res = Print.derived[C].print(C("XD"))
+    assertEquals(res, """C(XD)""")
+  }
+
+  test("work for nested product type with derives clause") {
+    case class A(a: Int) derives Print
+    case class C(s: String, a: A)
+    val res = Print.derived[C].print(C("XD", A(1)))
+    assertEquals(res, """C(XD,A(1))""")
+  }
+
+  test("work for nested product type without derives clause") {
+    case class A(a: Int)
+    case class C(s: String, a: A)
+    val res = Print.derived[C].print(C("XD", A(1)))
+    assertEquals(res, """C(XD,A(1))""")
+  }
+
+  test("work for nested hierarchies") {
+    val res = Print.derived[TreeValue].print(Leaf1("XD"))
+    assertEquals(res, "Leaf1(XD)")
+  }
+
+  test("work for nested hierarchies 1") {
+    val res = Print.derived[TreeValue].print(Leaf2(420))
+    assertEquals(res, "Leaf2(420)")
+  }
 
   test("construct a Show product instance with alternative apply functions") {
     val res = Show.derived[TestEntry].show(TestEntry("a", "b"))
@@ -319,10 +363,30 @@ class Tests extends munit.FunSuite {
     assertEquals(res, "Abc(a=12,b=54L,c=pm)")
   }
 
+  test("work for a value class") {
+    val res = Print.derived[ServiceName1].print(ServiceName1("A"))
+    assertEquals(res, "A")
+  }
+
+  test("construct a Show instance for value case class") {
+    val res = Show.derived[ServiceName1].show(ServiceName1("service"))
+    assertEquals(res, "service")
+  }
+
   test("construct a Show instance for a product with multiple default values") {
     val res = Show.derived[ParamsWithDefault].show(ParamsWithDefault())
     assertEquals(res, "ParamsWithDefault(a=3,b=4)")
   }
+
+  test("construct a Show instance for a product with multiple default values") {
+    val res = Show.derived[ParamsWithDefaultGeneric[String, String]].show(ParamsWithDefaultGeneric())
+    assertEquals(res, "ParamsWithDefaultGeneric[String,String](a=A,b=B)")
+  }
+
+  // test("construct a HasDefault instance for a generic product with default values") {
+  //   val res = HasDefault.derived[ParamsWithDefaultGeneric[String, Int]].defaultValue
+  //   assertEquals(res, Right(ParamsWithDefaultGeneric("A", 0)))
+  // }
 
   test("local implicit beats Magnolia") {
     given showPerson: Show[String, Person] = _ => "nobody"
@@ -382,8 +446,7 @@ class Tests extends munit.FunSuite {
   }
 
   test("test branch equality true") {
-    val res = Eq
-      .derived[Tree[String]]
+    val res = Eq.derived[Tree[String]]
       .equal(Branch(Leaf("one"), Leaf("two")), Branch(Leaf("one"), Leaf("two")))
     assert(res)
   }
@@ -437,6 +500,12 @@ class Tests extends munit.FunSuite {
     assertEquals(res, "ProtectedCons(dada phil)")
   }
 
+  test("decode a class with repeated params") {
+    case class Names(names: String*)
+    val res = Decoder.derived[Names].decode("""Company(names=Kacper;Kamil)""")
+    assertEquals(res, Names("Kacper", "Kamil"))
+  }
+
   test("decode a company") {
     val res = Decoder.derived[Company].decode("""Company(name=Acme Inc)""")
     assertEquals(res, Company("Acme Inc"))
@@ -483,12 +552,28 @@ class Tests extends munit.FunSuite {
     assertEquals(res, "%%(/=1,#=two)")
   }
 
-  val tupleDerivation = summon[Show[String, (Int, String)]]
+  val tup2Derivation = summon[Print[Tup2[Int, Double]]]
+  test("print a tuple-like class") {
+    val res = tup2Derivation.print(Tup2(42, 2.3))
+    assertEquals(res, "Tup2(42,2.3)")
+  }
 
+  val tupleDerivationPrint = summon[Print[(Int, Double)]]
+  test("print a tuple") {
+    val res = tupleDerivationPrint.print((42, 2.3))
+    assertEquals(res, "Tuple2(42,2.3)")
+  }
+
+  val tupleDerivation = summon[Show[String, (Int, String)]]
   test("serialize a tuple") {
     val res = tupleDerivation.show((42, "Hello World"))
     assertEquals(res, "Tuple2[Int,String](_1=42,_2=Hello World)")
   }
+
+  // test("serialize a value class") {
+  //   val res = Show.derived[Length].show(new Length(100))
+  //   assertEquals(res, "100")
+  // }
 
   // Corrupt being covariant in L <: Seq[Company] enables the derivation for Corrupt[String, _]
   test("show a Politician with covariant lobby") {
@@ -503,8 +588,10 @@ class Tests extends munit.FunSuite {
 
   // test("patch a Person via a Patcher[Entity]") {
   //  val person = Person("Bob", 42)
-  //  summon[Patcher[Entity]].patch(person, Seq(null, 21))
-  // }.assert(_ == Person("Bob", 21))
+  //  val res = summon[Patcher[Entity]].patch(person, Seq(null, 21))
+  //  assertEquals(res, Person("Bob", 21))
+  // }
+
 
   test("show an Account") {
     val res = Show
@@ -536,12 +623,38 @@ class Tests extends munit.FunSuite {
     )
   }
 
-  // test("show a List[Int]") {
-  //   given [T: [X] =>> Show[String, X]] : Show[String, List[T]] = Show.derived
+  test("print a List[Int]") {
+    given [X: Print]: Print[List[X]] = Print.derived
 
-  //   Show.derived[List[Int]].show(List(1, 2, 3))
-  // .assert(_ == "::[Int](head=1,tl=::[Int](head=2,tl=::[Int](head=3,tl=Nil())))")
+    assertEquals(summon[Print[List[Int]]].print(List(1, 2, 3)), "::(1,::(2,::(3,Nil())))")
+  }
+  
+  //TODO(kπ) not sure how to fix this one (The typeInfo is computed, when the given is declared)
+  // test("show a List[Int]") {
+  //   given [T: [X] =>> Show[String, X]]: Show[String, List[T]] = Show.derived[List[T]]
+
+  //   assertEquals(Show.derived[List[Int]].show(List(1, 2, 3)), "::[Int](head=1,next=::[Int](head=2,next=::[Int](head=3,next=Nil())))")
   // }
+
+  test("show a ST1[Int]") {
+    sealed trait ST1[+A]
+    sealed trait ST2[+A] extends ST1[A]
+    case class CC1[+A](a: A) extends ST2[A]
+
+    given [T: [X] =>> Show[String, X]] : Show[String, ST1[T]] = Show.derived
+
+    assertEquals(Show.derived[ST1[Int]].show(CC1(1)), "CC1[Int](a=1)")
+  }
+
+  test("show a Lst[Int]") {
+    case class Lst1[+A](head: A, next: Lst2[A])
+    case class Lst2[+A](head: A, next: Lst3[A])
+    case class Lst3[+A](head: A)
+
+    given [T: [X] =>> Show[String, X]] : Show[String, Lst1[T]] = Show.derived
+
+    assertEquals(Show.derived[Lst1[Int]].show(Lst1(1, Lst2(2, Lst3(3)))), "Lst1[Int](head=1,next=Lst2[Int](head=2,next=Lst3[Int](head=3)))")
+  }
 
   test("sealed trait typeName should be complete and unchanged") {
     val res = TypeNameInfo.derived[Color].name

@@ -2,7 +2,7 @@ import com.softwaremill.UpdateVersionInDocs
 import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
 import com.softwaremill.Publish.{updateDocs, ossPublishSettings}
 
-val scala3 = "3.1.3"
+val scala3 = "3.2.0-RC4"
 
 ThisBuild / dynverTagPrefix := "scala3-v" // a custom prefix is needed to differentiate tags between scala2 & scala3 versions
 
@@ -54,7 +54,7 @@ lazy val core = (projectMatrix in file(".core"))
   )
   .jvmPlatform(scalaVersions = List(scala3))
   .jsPlatform(scalaVersions = List(scala3))
-  .nativePlatform(scalaVersions = List(scala3))
+  // .nativePlatform(scalaVersions = List(scala3))
 
 lazy val examples = (projectMatrix in file(".examples"))
   .dependsOn(core)
@@ -66,7 +66,7 @@ lazy val examples = (projectMatrix in file(".examples"))
   )
   .jvmPlatform(scalaVersions = List(scala3))
   .jsPlatform(scalaVersions = List(scala3))
-  .nativePlatform(scalaVersions = List(scala3))
+  // .nativePlatform(scalaVersions = List(scala3))
 
 lazy val test = (projectMatrix in file(".test"))
   .dependsOn(examples)
@@ -83,4 +83,4 @@ lazy val test = (projectMatrix in file(".test"))
   )
   .jvmPlatform(scalaVersions = List(scala3))
   .jsPlatform(scalaVersions = List(scala3))
-  .nativePlatform(scalaVersions = List(scala3))
+  // .nativePlatform(scalaVersions = List(scala3))

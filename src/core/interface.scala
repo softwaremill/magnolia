@@ -39,21 +39,21 @@ object CaseClass:
         repeated: Boolean,
         cbn: CallByNeed[F[P]],
         defaultVal: CallByNeed[Option[P]],
-        annotations: IArray[Any],
-        inheritedAnns: IArray[Any],
-        typeAnnotations: IArray[Any]
+        annotations: List[Any],
+        inheritedAnns: List[Any],
+        typeAnnotations: List[Any]
     ): Param[F, T] =
       new CaseClass.Param[F, T](
         name,
         idx,
         repeated,
-        annotations,
-        typeAnnotations
+        IArray.from(annotations),
+        IArray.from(typeAnnotations)
       ):
         type PType = P
         def default: Option[PType] = defaultVal.value
         def typeclass = cbn.value
-        override def inheritedAnnotations = inheritedAnns
+        override def inheritedAnnotations = IArray.from(inheritedAnns)
         def deref(value: T): P =
           value.asInstanceOf[Product].productElement(idx).asInstanceOf[P]
 
@@ -114,14 +114,30 @@ abstract class CaseClass[Typeclass[_], Type](
 
   override def toString: String =
     s"CaseClass(${typeInfo.full}, ${params.mkString(",")})"
-  def construct[PType](makeParam: Param => PType)(using ClassTag[PType]): Type
-  def constructMonadic[Monad[_]: Monadic, PType: ClassTag](
-      make: Param => Monad[PType]
-  ): Monad[Type]
-  def constructEither[Err, PType: ClassTag](
-      makeParam: Param => Either[Err, PType]
-  ): Either[List[Err], Type]
   def rawConstruct(fieldValues: Seq[Any]): Type
+  def construct[PType](makeParam: Param => PType)(using ClassTag[PType]): Type =
+    rawConstruct(
+      params.map(makeParam)
+    )
+  def constructEither[Err, PType: ClassTag](makeParam: Param => Either[Err, PType]): Either[List[Err], Type] =
+    params
+      .map(makeParam)
+      .foldLeft[Either[List[Err], Seq[PType]]](Right(Seq.empty)) {
+        case (Left(errs), Left(err))    => Left(errs ++ List(err))
+        case (Right(acc), Right(param)) => Right(acc ++ Array(param))
+        case (errs @ Left(_), _)        => errs
+        case (_, Left(err))             => Left(List(err))
+      }
+      .map(rawConstruct)
+  def constructMonadic[M[_]: Monadic, PType: ClassTag](makeParam: Param => M[PType]): M[Type] =
+    val m = summon[Monadic[M]]
+    m.map {
+      params.map(makeParam).foldLeft(m.point(Array())) { (accM, paramM) =>
+        m.flatMap(accM) { acc =>
+          m.map(paramM)(acc ++ List(_))
+        }
+      }
+    } { params => rawConstruct(params.toSeq) }
 
   def param[P](
       name: String,
@@ -216,15 +232,16 @@ case class SealedTrait[Typeclass[_], Type](
     s"SealedTrait($typeInfo, IArray[${subtypes.mkString(",")}])"
 
   def choose[Return](value: Type)(handle: Subtype[_] => Return): Return =
-    @tailrec def rec(ix: Int): Return =
+    @tailrec
+    def rec(ix: Int): Return =
       if ix < subtypes.length then
         val sub = subtypes(ix)
-        if sub.cast.isDefinedAt(value) then
+        if sub.isDefinedAt(value) then
           handle(SealedTrait.SubtypeValue(sub, value))
         else rec(ix + 1)
       else
         throw new IllegalArgumentException(
-          s"The given value `$value` is not a sub type of `$typeInfo`"
+          s"The given value `$value` is not a sub type of `${typeInfo.short}`"
         )
 
     rec(0)
@@ -290,6 +307,29 @@ object SealedTrait:
     def isDefinedAt(t: Type): Boolean = isType(t)
     def apply(t: Type): SType & Type = asType(t)
     override def toString: String = s"Subtype(${typeInfo.full})"
+
+  object Subtype:
+    def apply[Typeclass[_], Type, SType](
+      typeInfo: TypeInfo,
+      annotations: List[Any],
+      typeAnnotations: List[Any],
+      inheritedAnnotations: List[Any],
+      isObject: Boolean,
+      index: Int,
+      callByNeed: CallByNeed[Typeclass[SType]],
+      isType: Type => Boolean
+    ) =
+      new Subtype[Typeclass, Type, SType](
+        typeInfo,
+        IArray.from(annotations),
+        IArray.from(inheritedAnnotations),
+        IArray.from(typeAnnotations),
+        isObject,
+        index,
+        callByNeed,
+        isType,
+        _.asInstanceOf[SType & Type]
+      )
 
   class SubtypeValue[Typeclass[_], Type, S](
       val subtype: Subtype[Typeclass, Type, S],

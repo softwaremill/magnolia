@@ -11,6 +11,10 @@ object Decoder extends AutoDerivation[Decoder]:
 
   given Decoder[String] = (s: String) => s
   given Decoder[Int] = _.toInt
+  given [T: Decoder]: Decoder[Seq[T]] = { (s: String) =>
+    val decoder = summon[Decoder[T]]
+    s.split(';').toSeq.map(decoder.decode)
+  }
 
   /** defines how new [[Decoder]]s for case classes should be constructed */
   def join[T](ctx: CaseClass[Decoder, T]): Decoder[T] = value =>
