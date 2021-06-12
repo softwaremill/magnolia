@@ -45,8 +45,11 @@ case object Blue extends Color
 case object Orange extends Color
 case object Pink extends Color
 
+@MyAnnotation(0)
 sealed trait Sport
+@MyAnnotation(1)
 case object Boxing extends Sport
+@MyAnnotation(2)
 case class Soccer(players: Int) extends Sport
 
 case class MyAnnotation(order: Int) extends StaticAnnotation
@@ -414,13 +417,24 @@ class Tests extends munit.FunSuite {
     }
 
     test("sealed trait subtypes should detect isObject") {
-      val subtypeIsObjects = ObjectInfo.derived[Sport].subtypeIsObject
+      val subtypeIsObjects = SubtypeInfo.derived[Sport].subtypeIsObject
       assertEquals(subtypeIsObjects, Seq(true, false))
     }
 
     test("sealed trait enumeration should detect isObject") {
-      val subtypeIsObjects = ObjectInfo.derived[Color].subtypeIsObject
+      val subtypeIsObjects = SubtypeInfo.derived[Color].subtypeIsObject
       assertEquals(subtypeIsObjects, Seq(true, true, true, true, true))
+    }
+
+    test("sealed trait enumeration should provide trait annotations") {
+      val traitAnnotations = SubtypeInfo.derived[Sport].traitAnnotations.map(_.toString)
+      assertEquals(traitAnnotations.mkString, "MyAnnotation(0)")
+    }
+
+    test("sealed trait enumeration should provide subtype annotations") {
+      val subtypeAnnotations = SubtypeInfo.derived[Sport].subtypeAnnotations
+      assertEquals(subtypeAnnotations(0).mkString, "MyAnnotation(1)")
+      assertEquals(subtypeAnnotations(1).mkString, "MyAnnotation(2)")
     }
 
     test("case class typeName should be complete and unchanged") {
