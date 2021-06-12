@@ -23,6 +23,7 @@ lazy val core = (projectMatrix in file(".core"))
     Compile / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "core",
   )
   .jvmPlatform(scalaVersions = List(scala3))
+  .jsPlatform(scalaVersions = List(scala3))
 
 lazy val examples = (projectMatrix in file(".examples"))
   .dependsOn(core)
@@ -32,6 +33,7 @@ lazy val examples = (projectMatrix in file(".examples"))
     Compile / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "examples",
   )
   .jvmPlatform(scalaVersions = List(scala3))
+  .jsPlatform(scalaVersions = List(scala3))
 
 lazy val test = (projectMatrix in file(".test"))
   .dependsOn(examples)
@@ -46,3 +48,4 @@ lazy val test = (projectMatrix in file(".test"))
     publishArtifact := false,
   )
   .jvmPlatform(scalaVersions = List(scala3))
+  .jsPlatform(scalaVersions = List(scala3))
