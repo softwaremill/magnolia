@@ -5,3 +5,4 @@ addSbtPlugin("com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-common" % s
 addSbtPlugin("com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-publish" % sbtSoftwareMillVersion)
 
 addSbtPlugin("org.jetbrains.scala" % "sbt-ide-settings" % "1.1.1")
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.6.0")

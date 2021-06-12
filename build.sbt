@@ -31,6 +31,7 @@ lazy val core = (projectMatrix in file("core"))
     libraryDependencies += "com.propensive" %% "mercator" % "0.2.1"
   )
   .jvmPlatform(scalaVersions = scala2)
+  .jsPlatform(scalaVersions = scala2)
 
 lazy val examples = (projectMatrix in file("examples"))
   .dependsOn(core)
@@ -43,6 +44,7 @@ lazy val examples = (projectMatrix in file("examples"))
   )
   .dependsOn(core)
   .jvmPlatform(scalaVersions = scala2)
+  .jsPlatform(scalaVersions = scala2)
 
 lazy val test = (projectMatrix in file("test"))
   .dependsOn(examples)
@@ -54,3 +56,4 @@ lazy val test = (projectMatrix in file("test"))
     libraryDependencies += "org.scalameta" %% "munit" % "0.7.26" % Test
   )
   .jvmPlatform(scalaVersions = scala2)
+  .jsPlatform(scalaVersions = scala2)
