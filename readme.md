@@ -1,7 +1,7 @@
 ![Magnolia](https://github.com/softwaremill/magnolia/raw/main/banner.jpg)
 
 [<img src="https://img.shields.io/badge/gitter-discuss-f00762?style=for-the-badge" height="24">](https://gitter.im/softwaremill/magnolia)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.magnolia/magnolia-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.magnolia/magnolia-core_2.12)
+[<img src="https://img.shields.io/maven-central/v/com.softwaremill.magnolia/magnolia-core_2.12?color=2465cd&style=for-the-badge" height="24">](https://search.maven.org/artifact/com.softwaremill.magnolia/magnolia-core_2.12)
 
 # Magnolia
 
