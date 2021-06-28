@@ -66,7 +66,7 @@ object Magnolia {
     *  will suffice, however the qualifications regarding additional type parameters and implicit
     *  parameters apply equally to `dispatch` as to `combine`.
     *  */
-  def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = Stack.withContext(c) { stack =>
+  def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = Stack.withContext(c) { (stack, depth) =>
     import c.internal._
     import c.universe._
     import definitions._
@@ -74,8 +74,28 @@ object Magnolia {
     val genericType = weakTypeOf[T]
     val genericSymbol = genericType.typeSymbol
 
-    def error(message: String): Nothing = c.abort(c.enclosingPosition, s"magnolia: $message")
+    def error(message: => String): Nothing = c.abort(c.enclosingPosition, if (depth > 1) "" else s"magnolia: $message")
     def warning(message: String): Unit = c.warning(c.enclosingPosition, s"magnolia: $message")
+
+    val prefixType = c.prefix.tree.tpe
+    val prefixObject = prefixType.typeSymbol
+    val prefixName = prefixObject.name.decodedName
+
+    val TypeClassNme = TypeName("Typeclass")
+    val typeDefs = prefixType.baseClasses.flatMap { baseClass =>
+      baseClass.asType.toType.decls.collectFirst {
+        case tpe: TypeSymbol if tpe.name == TypeClassNme =>
+          tpe.toType.asSeenFrom(prefixType, baseClass)
+      }
+    }
+
+    val typeConstructor = typeDefs.headOption.fold(
+      error(s"the derivation $prefixObject does not define the Typeclass type constructor")
+    )(_.typeConstructor)
+
+    val searchType = appliedType(typeConstructor, genericType)
+    val directlyReentrant = stack.top.exists(_.searchType =:= searchType)
+    if (directlyReentrant) error("attempt to recurse directly")
 
     val ArrayObj = reify(Array).tree
     val CallByNeedObj = reify(CallByNeed).tree
@@ -99,12 +119,7 @@ object Magnolia {
     val SomeObj = reify(Some).tree
     val SubtypeObj = reify(Subtype).tree
     val SubtypeTpe = typeOf[Subtype[Any, Any]].typeConstructor
-    val TypeClassNme = TypeName("Typeclass")
     val TypeNameObj = reify(magnolia.TypeName).tree
-
-    val prefixType = c.prefix.tree.tpe
-    val prefixObject = prefixType.typeSymbol
-    val prefixName = prefixObject.name.decodedName
 
     val debug = c.macroApplication.symbol.annotations
       .find(_.tree.tpe <:< DebugTpe)
@@ -279,12 +294,14 @@ object Magnolia {
               if (!fullAuto && !semiAuto(genericType)) None
               else directInferImplicit(genericType, typeConstructor)
             }.toRight {
-              val (top, paths) = stack.trace
-              val missingType = top.fold(searchType)(_.searchType)
-              val typeClassName = s"${missingType.typeSymbol.name.decodedName}.Typeclass"
-              val genericType = missingType.typeArgs.head
-              val trace = paths.mkString("    in ", "\n    in ", "\n")
-              s"could not find $typeClassName for type $genericType\n$trace"
+              if (depth > 1) "" else {
+                val (top, paths) = stack.trace
+                val missingType = top.fold(searchType)(_.searchType)
+                val typeClassName = s"${missingType.typeSymbol.name.decodedName}.Typeclass"
+                val genericType = missingType.typeArgs.head
+                val trace = paths.mkString("    in ", "\n    in ", "\n")
+                s"could not find $typeClassName for type $genericType\n$trace"
+              }
             }
         }
       } (Right(_))
@@ -427,7 +444,7 @@ object Magnolia {
                 val ref = c.freshName(TermName("paramTypeclass"))
                 val derivedImplicit = stack.recurse(frame, searchType, shouldCache) {
                   typeclassTree(paramType, typeConstructor, ref)
-                }.fold(error, identity)
+                }.fold(error(_), identity)
                 val assigned = deferredVal(ref, searchType, derivedImplicit)
                 CaseParam(paramName, repeated, assigned, paramType, ref, paramTypeName) :: acc
               } { backRef =>
@@ -553,7 +570,7 @@ object Magnolia {
           val subType = sub.asType.toType // FIXME: Broken for path dependent types
           val typeParams = sub.asType.typeParams
           val typeArgs = thisType(sub).baseType(genericType.typeSymbol).typeArgs
-          val mapping = (typeArgs.map(_.typeSymbol), genericType.typeArgs).zipped.toMap
+          val mapping = typeArgs.map(_.typeSymbol).zip(genericType.typeArgs).toMap
           val newTypeArgs = typeParams.map(mapping.withDefault(_.asType.toType))
           val applied = appliedType(subType.typeConstructor, newTypeArgs)
           if (applied <:< genericType) existentialAbstraction(typeParams, applied) :: Nil else Nil
@@ -569,7 +586,7 @@ object Magnolia {
           val frame = stack.Frame(path, resultType, assignedName)
           subType -> stack.recurse(frame, appliedType(typeConstructor, subType), shouldCache) {
             typeclassTree(subType, typeConstructor, termNames.ERROR)
-          }.fold(error, identity)
+          }.fold(error(_), identity)
         }
 
         val assignments = typeclasses.zipWithIndex.map {
@@ -613,21 +630,6 @@ object Magnolia {
         $assignedName
       }"""
     }
-
-    val typeDefs = prefixType.baseClasses.flatMap { baseClass =>
-      baseClass.asType.toType.decls.collectFirst {
-        case tpe: TypeSymbol if tpe.name == TypeClassNme =>
-          tpe.toType.asSeenFrom(prefixType, baseClass)
-      }
-    }
-
-    val typeConstructor = typeDefs.headOption.fold(
-      error(s"the derivation $prefixObject does not define the Typeclass type constructor")
-    )(_.typeConstructor)
-
-    val searchType = appliedType(typeConstructor, genericType)
-    val directlyReentrant = stack.top.exists(_.searchType =:= searchType)
-    if (directlyReentrant) throw DirectlyReentrantException()
 
     val result = stack
       .find(searchType)
@@ -706,9 +708,6 @@ object Magnolia {
 
 }
 
-private[magnolia] final case class DirectlyReentrantException()
-    extends Exception("attempt to recurse directly")
-
 @compileTimeOnly("magnolia.Deferred is used for derivation of recursive typeclasses")
 object Deferred { def apply[T](method: String): T = ??? }
 
@@ -771,10 +770,10 @@ private[magnolia] object CompileTimeState {
 
     def trace: (Option[Frame], List[TypePath]) = {
       val allFrames = errors reverse_::: frames
-      val trace = (allFrames.drop(1), allFrames).zipped.collect {
+      val trace = allFrames.drop(1).zip(allFrames).collect {
         case (Frame(path, tp1, _), Frame(_, tp2, _))
           if !(tp1 =:= tp2) => path
-      }.toList
+      }
       (allFrames.headOption, trace)
     }
 
@@ -790,12 +789,12 @@ private[magnolia] object CompileTimeState {
     private val threadLocalStack = ThreadLocal.withInitial[Stack[dummyContext.type]](() => new Stack[dummyContext.type])
     private val threadLocalWorkSet = ThreadLocal.withInitial[mutable.Set[whitebox.Context#Symbol]](() => mutable.Set.empty)
 
-    def withContext(c: whitebox.Context)(fn: Stack[c.type] => c.Tree): c.Tree = {
+    def withContext(c: whitebox.Context)(fn: (Stack[c.type], Int) => c.Tree): c.Tree = {
       val stack = threadLocalStack.get()
       val workSet = threadLocalWorkSet.get()
       workSet += c.macroApplication.symbol
       val depth = c.enclosingMacros.count(m => workSet(m.macroApplication.symbol))
-      try fn(stack.asInstanceOf[Stack[c.type]])
+      try fn(stack.asInstanceOf[Stack[c.type]], depth)
       finally if (depth <= 1) {
         stack.clear()
         workSet.clear()
