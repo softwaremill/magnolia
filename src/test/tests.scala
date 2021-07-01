@@ -61,6 +61,8 @@ sealed trait AttributeParent
   @MyAnnotation(2) p2: Int @MyTypeAnnotation(1)
 ) extends AttributeParent @MyTypeAnnotation(2)
 
+case class Deprecated(@MyAnnotation(0) @deprecated f: Int)
+
 case class `%%`(`/`: Int, `#`: String)
 
 case class Param(a: String, b: String)
@@ -104,7 +106,7 @@ final case class ServiceName2(value: String)
 
 @MyAnnotation(0)
 @SuppressWarnings(Array("deprecation"))
-@JavaExampleAnnotation(description = "Some model")
+//@JavaExampleAnnotation(description = "Some model")
 case class MyDto(foo: String, bar: Int)
 
 @SerialVersionUID(42) case class Schedule(events: Seq[Event])
@@ -271,6 +273,13 @@ class Tests extends munit.FunSuite {
     test("capture attributes against params") {
       val res = summon[Show[String, Attributed]].show(Attributed("xyz", 100))
       assertEquals(res, "Attributed{MyAnnotation(0)}{MyTypeAnnotation(2)}(p1{MyAnnotation(1)}{MyTypeAnnotation(0)}=xyz,p2{MyAnnotation(2)}{MyTypeAnnotation(1)}=100)")
+    }
+
+    test("show all annotatoins on a class") {
+      val res = summon[Show[String, Deprecated]].show(Deprecated(10))
+      println(res)
+      assert(res.contains("MyAnnotation(0)"))
+      assert(res.contains("scala.deprecated"))
     }
 
     test("test equality false") {
