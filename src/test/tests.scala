@@ -275,7 +275,7 @@ class Tests extends munit.FunSuite {
       assertEquals(res, "Attributed{MyAnnotation(0)}{MyTypeAnnotation(2)}(p1{MyAnnotation(1)}{MyTypeAnnotation(0)}=xyz,p2{MyAnnotation(2)}{MyTypeAnnotation(1)}=100)")
     }
 
-    test("show the scala.deprecated annotatoin on a field") {
+    test("show the scala.deprecated annotation on a field") {
       val res = summon[Show[String, Deprecated]].show(Deprecated(10))
       println(res)
       assert(res.contains("MyAnnotation(0)"))
