@@ -106,7 +106,7 @@ final case class ServiceName2(value: String)
 
 @MyAnnotation(0)
 @SuppressWarnings(Array("deprecation"))
-//@JavaExampleAnnotation(description = "Some model")
+@JavaExampleAnnotation(description = "Some model")
 case class MyDto(foo: String, bar: Int)
 
 @SerialVersionUID(42) case class Schedule(events: Seq[Event])
