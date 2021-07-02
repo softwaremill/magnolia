@@ -30,13 +30,26 @@ object Macro:
 
     val tpe = TypeRepr.of[T]
 
+    def filterAnnotation(a: Term): Boolean =
+      a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
+        a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
+
     Expr.ofList {
-      tpe.typeSymbol.primaryConstructor.paramSymss.flatten.map { field =>
-        Expr(field.name) -> field.annotations.filter { a =>
-          a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
-            a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
-        }.map(_.asExpr.asInstanceOf[Expr[Any]])
-      }.filter(_._2.nonEmpty).map { (name, anns) => Expr.ofTuple(name, Expr.ofList(anns)) }
+      val constructorAnnotations = tpe.typeSymbol.primaryConstructor.paramSymss.flatten.map { field =>
+        field.name -> field.annotations.filter(filterAnnotation).map(_.asExpr.asInstanceOf[Expr[Any]])
+      }
+      val fieldAnnotations = tpe.typeSymbol.caseFields.collect {
+        case field: Symbol if field.tree.isInstanceOf[ValDef] =>
+          field.name -> field.annotations.filter(filterAnnotation).map(_.asExpr.asInstanceOf[Expr[Any]])
+      }
+      (constructorAnnotations ++ fieldAnnotations)
+        .filter(_._2.nonEmpty)
+        .groupBy(_._1)
+        .toList
+        .map {
+          case (name, l) => Expr(name) -> l.flatMap(_._2)
+        }
+        .map { (name, anns) => Expr.ofTuple(name, Expr.ofList(anns)) }
     }
 
   def anns[T: Type](using Quotes): Expr[List[Any]] =
