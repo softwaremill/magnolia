@@ -277,7 +277,6 @@ class Tests extends munit.FunSuite {
 
     test("show the scala.deprecated annotation on a field") {
       val res = summon[Show[String, Deprecated]].show(Deprecated(10))
-      println(res)
       assert(res.contains("MyAnnotation(0)"))
       assert(res.contains("scala.deprecated"))
     }
