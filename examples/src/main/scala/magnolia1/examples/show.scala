@@ -7,33 +7,40 @@ import scala.language.experimental.macros
 /** shows one type as another, often as a string
   *
   *  Note that this is a more general form of `Show` than is usual, as it permits the return type to
-  *  be something other than a string. */
+  *  be something other than a string.
+  */
 trait Show[Out, T] { def show(value: T): Out }
 
 trait GenericShow[Out] {
 
   /** the type constructor for new [[Show]] instances
     *
-    *  The first parameter is fixed as `String`, and the second parameter varies generically. */
+    *  The first parameter is fixed as `String`, and the second parameter varies generically.
+    */
   type Typeclass[T] = Show[Out, T]
 
   def join(typeName: String, strings: Seq[String]): Out
   def prefix(s: String, out: Out): Out
 
   /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of
-    *  showing each parameter, and prefixing it with the class name */
+    *  showing each parameter, and prefixing it with the class name
+    */
   def combine[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = { value =>
     if (ctx.isValueClass) {
       val param = ctx.parameters.head
       param.typeclass.show(param.dereference(value))
     } else {
       val paramStrings = ctx.parameters.map { param =>
-        val attribStr = if(param.annotations.isEmpty) "" else {
-          param.annotations.mkString("{", ", ", "}")
-        }
-        val tpeAttribStr = if (param.typeAnnotations.isEmpty) "" else {
-          param.typeAnnotations.mkString("{", ", ", "}")
-        }
+        val attribStr =
+          if (param.annotations.isEmpty) ""
+          else {
+            param.annotations.mkString("{", ", ", "}")
+          }
+        val tpeAttribStr =
+          if (param.typeAnnotations.isEmpty) ""
+          else {
+            param.typeAnnotations.mkString("{", ", ", "}")
+          }
         s"${param.label}$attribStr$tpeAttribStr=${param.typeclass.show(param.dereference(value))}"
       }
 
@@ -43,17 +50,17 @@ trait GenericShow[Out] {
       val tpeAnns = ctx.typeAnnotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
       val typeAnnotationStr = if (tpeAnns.isEmpty) "" else tpeAnns.mkString("{", ",", "}")
 
-
       def typeArgsString(typeName: TypeName): String =
         if (typeName.typeArguments.isEmpty) ""
-        else typeName.typeArguments.map(arg => s"${ arg.short}${ typeArgsString(arg)}").mkString("[", ",", "]")
+        else typeName.typeArguments.map(arg => s"${arg.short}${typeArgsString(arg)}").mkString("[", ",", "]")
 
       join(ctx.typeName.short + typeArgsString(ctx.typeName) + annotationStr + typeAnnotationStr, paramStrings)
     }
   }
 
   /** choose which typeclass to use based on the subtype of the sealed trait
-    * and prefix with the annotations as discovered on the subtype. */
+    * and prefix with the annotations as discovered on the subtype.
+    */
   def dispatch[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
     ctx.dispatch(value) { sub =>
       val anns = sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])

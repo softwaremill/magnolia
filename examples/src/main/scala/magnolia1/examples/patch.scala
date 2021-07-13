@@ -4,14 +4,12 @@ import magnolia1.{CaseClass, Magnolia, SealedTrait}
 
 import scala.language.experimental.macros
 
-/**
-  * Type class for copying an instance of some type `T`,
+/** Type class for copying an instance of some type `T`,
   * thereby replacing certain fields with other values.
   */
 sealed abstract class Patcher[T] {
 
-  /**
-    * Returns a copy of `value` whereby all non-null elements of `fieldValues`
+  /** Returns a copy of `value` whereby all non-null elements of `fieldValues`
     * replace the respective fields of `value`.
     * For all null elements of `fieldValues` the original value of the
     * respective field of `value` is maintained.
@@ -34,8 +32,8 @@ object Patcher extends LowerPriorityPatcher {
             s"Cannot patch value `$value`, expected ${ctx.parameters.size} fields but got ${fieldValues.size}"
           )
         }
-        val effectiveFields = ctx.parameters.zip(fieldValues).map {
-          case (param, x) => if (x.asInstanceOf[AnyRef] ne null) x else param dereference value
+        val effectiveFields = ctx.parameters.zip(fieldValues).map { case (param, x) =>
+          if (x.asInstanceOf[AnyRef] ne null) x else param dereference value
         }
         ctx.rawConstruct(effectiveFields)
       }

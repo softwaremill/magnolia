@@ -42,10 +42,7 @@ object Decoder {
     val end = value.indexOf('(')
     val name = value.substring(0, end)
 
-    def parts(value: String,
-              idx: Int = 0,
-              depth: Int = 0,
-              collected: List[String] = List("")): List[String] = {
+    def parts(value: String, idx: Int = 0, depth: Int = 0, collected: List[String] = List("")): List[String] = {
       def plus(char: Char): List[String] = collected.head + char :: collected.tail
 
       if (idx == value.length) collected

@@ -13,17 +13,17 @@ trait GenericPrint {
   type Typeclass[T] = Print[T]
 
   def combine[T](ctx: ReadOnlyCaseClass[Typeclass, T]): Print[T] = { value =>
-  if (ctx.isValueClass) {
-    val param = ctx.parameters.head
-    param.typeclass.print(param.dereference(value))
-  }
-  else {
-    ctx.parameters.map { param =>
+    if (ctx.isValueClass) {
+      val param = ctx.parameters.head
       param.typeclass.print(param.dereference(value))
-    }.mkString(s"${ctx.typeName.short}(", ",", ")")
+    } else {
+      ctx.parameters
+        .map { param =>
+          param.typeclass.print(param.dereference(value))
+        }
+        .mkString(s"${ctx.typeName.short}(", ",", ")")
+    }
   }
-  }
-
 
   def dispatch[T](ctx: SealedTrait[Print, T])(): Print[T] = { value =>
     ctx.dispatch(value) { sub =>

@@ -13,8 +13,8 @@ object Csv {
 
   def combine[A](ctx: CaseClass[Csv, A]): Csv[A] = new Csv[A] {
     def apply(a: A): List[String] =
-      ctx.parameters.foldLeft(List[String]()) {
-        (acc, p) => acc ++ p.typeclass(p.dereference(a))
+      ctx.parameters.foldLeft(List[String]()) { (acc, p) =>
+        acc ++ p.typeclass(p.dereference(a))
       }
   }
 

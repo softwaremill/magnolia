@@ -11,9 +11,11 @@ object WeakHash {
   type Typeclass[T] = WeakHash[T]
 
   def combine[T](ctx: CaseClass[WeakHash, T]): WeakHash[T] = new WeakHash[T] {
-    def hash(value: T): Int = ctx.parameters.map { param =>
-      param.typeclass.hash(param.dereference(value))
-    }.foldLeft(0)(_ ^ _)
+    def hash(value: T): Int = ctx.parameters
+      .map { param =>
+        param.typeclass.hash(param.dereference(value))
+      }
+      .foldLeft(0)(_ ^ _)
   }
 
   implicit val string: WeakHash[String] = _.map(_.toInt).sum

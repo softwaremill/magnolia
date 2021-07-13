@@ -23,11 +23,11 @@ object Eq {
   /** choose which equality subtype to defer to
     *
     *  Note that in addition to dispatching based on the type of the first parameter to the `equal`
-    *  method, we check that the second parameter is the same type. */
+    *  method, we check that the second parameter is the same type.
+    */
   def dispatch[T](ctx: SealedTrait[Eq, T]): Eq[T] = new Eq[T] {
-    def equal(value1: T, value2: T): Boolean = ctx.dispatch(value1) {
-      case sub =>
-        sub.cast.isDefinedAt(value2) && sub.typeclass.equal(sub.cast(value1), sub.cast(value2))
+    def equal(value1: T, value2: T): Boolean = ctx.dispatch(value1) { case sub =>
+      sub.cast.isDefinedAt(value2) && sub.typeclass.equal(sub.cast(value1), sub.cast(value2))
     }
   }
 
@@ -39,8 +39,8 @@ object Eq {
 
   implicit def eqOption[T](implicit T: Eq[T]): Eq[Option[T]] = {
     case (Some(v1), Some(v2)) => T.equal(v1, v2)
-    case (None, None) => true
-    case _ => false
+    case (None, None)         => true
+    case _                    => false
   }
 
   implicit def eqIterable[T, C[x] <: Iterable[x]](implicit T: Eq[T]): Eq[C[T]] = { (v1, v2) =>

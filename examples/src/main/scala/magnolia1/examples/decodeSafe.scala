@@ -28,9 +28,12 @@ object DecoderSafe {
   /** defines how new [[DecoderSafe]]s for case classes should be constructed */
   def combine[T](ctx: CaseClass[DecoderSafe, T]): DecoderSafe[T] = value => {
     val (_, values) = parse(value)
-    ctx.constructEither { param =>
-      param.typeclass.decode(values(param.label))
-    }.left.map(_.reduce(_ + "\n" + _))
+    ctx
+      .constructEither { param =>
+        param.typeclass.decode(values(param.label))
+      }
+      .left
+      .map(_.reduce(_ + "\n" + _))
   }
 
   /** defines how to choose which subtype of the sealed trait to use for decoding */
@@ -45,10 +48,7 @@ object DecoderSafe {
     val end = value.indexOf('(')
     val name = value.substring(0, end)
 
-    def parts(value: String,
-              idx: Int = 0,
-              depth: Int = 0,
-              collected: List[String] = List("")): List[String] = {
+    def parts(value: String, idx: Int = 0, depth: Int = 0, collected: List[String] = List("")): List[String] = {
       def plus(char: Char): List[String] = collected.head + char :: collected.tail
 
       if (idx == value.length) collected
