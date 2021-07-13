@@ -7,23 +7,23 @@ val scala2 = List(scala2_12, scala2_13)
 excludeLintKeys in Global ++= Set(ideSkipProject)
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
-  organization := "com.softwaremill.magnolia",
+  organization := "com.softwaremill.magnolia1_2",
   description := "Fast, easy and transparent typeclass derivation for Scala 2",
   updateDocs := UpdateVersionInDocs(sLog.value, organization.value, version.value, List(file("readme.md"))),
-  ideSkipProject := (scalaVersion.value == scala2_12), // only import 2.13 projects
+  ideSkipProject := (scalaVersion.value == scala2_12) // only import 2.13 projects
 )
 
 lazy val root =
   project
     .in(file("."))
     .settings(commonSettings)
-    .settings(name := "magnolia", publishArtifact := false, scalaVersion := scala2_13)
+    .settings(name := "magnolia-root", publishArtifact := false, scalaVersion := scala2_13)
     .aggregate((core.projectRefs ++ examples.projectRefs ++ test.projectRefs): _*)
 
 lazy val core = (projectMatrix in file("core"))
   .settings(commonSettings)
   .settings(
-    name := "magnolia-core",
+    name := "magnolia",
     Compile / scalacOptions ++= Seq("-Ywarn-macros:after"),
     Compile / scalacOptions --= Seq("-Ywarn-unused:params"),
     Compile / doc / scalacOptions ~= (_.filterNot(Set("-Xfatal-warnings"))),
@@ -41,6 +41,7 @@ lazy val examples = (projectMatrix in file("examples"))
     name := "magnolia-examples",
     Compile / scalacOptions ++= Seq("-Ywarn-macros:after"),
     Compile / scalacOptions --= Seq("-Ywarn-unused:params"),
+    publishArtifact := false
   )
   .dependsOn(core)
   .jvmPlatform(scalaVersions = scala2)
@@ -53,7 +54,8 @@ lazy val test = (projectMatrix in file("test"))
     name := "magnolia-test",
     Test / scalacOptions += "-Ywarn-macros:after",
     Test / scalacOptions --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
-    libraryDependencies += "org.scalameta" %% "munit" % "0.7.26" % Test
+    libraryDependencies += "org.scalameta" %% "munit" % "0.7.26" % Test,
+    publishArtifact := false
   )
   .jvmPlatform(scalaVersions = scala2)
   .jsPlatform(scalaVersions = scala2)
