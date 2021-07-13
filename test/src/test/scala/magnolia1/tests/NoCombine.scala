@@ -1,6 +1,6 @@
-package magnolia.tests
+package magnolia1.tests
 
-import magnolia.{Magnolia, SealedTrait}
+import magnolia1.{Magnolia, SealedTrait}
 
 import scala.language.experimental.macros
 

@@ -1,6 +1,6 @@
-package magnolia.examples
+package magnolia1.examples
 
-import magnolia.{Magnolia, ReadOnlyCaseClass, SealedTrait}
+import magnolia1.{Magnolia, ReadOnlyCaseClass, SealedTrait}
 
 import scala.language.experimental.macros
 

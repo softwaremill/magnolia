@@ -44,7 +44,7 @@ object, but it is easy to create your own.
 
 The derivation typeclass for a `Show` typeclass might look like this:
 ```scala
-import language.experimental.macros, magnolia._
+import language.experimental.macros, magnolia1._
 
 object ShowDerivation {
   type Typeclass[T] = Show[T]

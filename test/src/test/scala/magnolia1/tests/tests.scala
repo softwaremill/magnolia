@@ -1,7 +1,7 @@
-package magnolia.tests
+package magnolia1.tests
 
-import magnolia.TypeName
-import magnolia.examples._
+import magnolia1.TypeName
+import magnolia1.examples._
 
 import java.time.LocalDate
 import scala.annotation.StaticAnnotation
@@ -366,7 +366,7 @@ class Tests extends munit.FunSuite {
     }
 
     test("decode a Person as an Entity") {
-      val res = implicitly[Decoder[Entity]].decode("""magnolia.tests.Person(name=John Smith,age=32)""")
+      val res = implicitly[Decoder[Entity]].decode("""magnolia1.tests.Person(name=John Smith,age=32)""")
       assertEquals(res, Person("John Smith", 32))
     }
 
@@ -419,7 +419,7 @@ class Tests extends munit.FunSuite {
         }
       """)
       assert(error contains """
-        |magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName1
+        |magnolia: could not find SemiDefault.Typeclass for type magnolia1.tests.ServiceName1
         |    in parameter 'n' of product type LoggingConfig
         |""".stripMargin)
     }
@@ -432,7 +432,7 @@ class Tests extends munit.FunSuite {
         }
       """)
       assert(error contains """
-        |magnolia: could not find SemiDefault.Typeclass for type magnolia.tests.ServiceName2
+        |magnolia: could not find SemiDefault.Typeclass for type magnolia1.tests.ServiceName2
         |    in parameter 'n' of product type LoggingConfig
         |""".stripMargin)
     }
@@ -482,8 +482,8 @@ class Tests extends munit.FunSuite {
       val error = compileErrors("Show.gen[Box[Int]]")
       assert(error contains """
         |magnolia: could not find Show.Typeclass for type L
-        |    in parameter 'label' of product type magnolia.tests.LabelledBox[Int, _ <: String]
-        |    in coproduct type magnolia.tests.Box[Int]
+        |    in parameter 'label' of product type magnolia1.tests.LabelledBox[Int, _ <: String]
+        |    in coproduct type magnolia1.tests.Box[Int]
         |""".stripMargin)
     }
 
@@ -597,7 +597,7 @@ class Tests extends munit.FunSuite {
 
     test("sealed trait typeName should be complete and unchanged") {
       val res = TypeNameInfo.gen[Color].name
-      assertEquals(res.full, "magnolia.tests.Color")
+      assertEquals(res.full, "magnolia1.tests.Color")
     }
 
     test("sealed trait subtypes should be ordered") {
@@ -611,7 +611,7 @@ class Tests extends munit.FunSuite {
         def subtypeNames = ???
       }
       val res = TypeNameInfo.gen[Fruit].name
-      assertEquals(res.full, "magnolia.tests.Fruit")
+      assertEquals(res.full, "magnolia1.tests.Fruit")
     }
 
     test("show chained error stack") {
@@ -628,9 +628,9 @@ class Tests extends munit.FunSuite {
       val error = compileErrors("Show.gen[Schedule]")
       assert(error contains """
         |magnolia: could not find Show.Typeclass for type java.time.LocalDate
-        |    in parameter 'date' of product type magnolia.tests.Event
-        |    in chained implicit Show.Typeclass for type Seq[magnolia.tests.Event]
-        |    in parameter 'events' of product type magnolia.tests.Schedule
+        |    in parameter 'date' of product type magnolia1.tests.Event
+        |    in chained implicit Show.Typeclass for type Seq[magnolia1.tests.Event]
+        |    in parameter 'events' of product type magnolia1.tests.Schedule
         |""".stripMargin)
     }
 
@@ -729,7 +729,7 @@ class Tests extends munit.FunSuite {
 
     test("not attempt to derive instances for refined types") {
       val error = compileErrors("Show.gen[Character]")
-      assert(error contains "magnolia: could not infer Show.Typeclass for refined type magnolia.tests.Character.Id")
+      assert(error contains "magnolia: could not infer Show.Typeclass for refined type magnolia1.tests.Character.Id")
     }
 
     test("derive instances for types with refined types if implicit provided") {
@@ -739,7 +739,7 @@ class Tests extends munit.FunSuite {
 
     test("not attempt to derive instances for Java enums") {
       val error = compileErrors("Show.gen[WeekDay]")
-      assert(error contains "magnolia: could not infer Show.Typeclass for type magnolia.tests.WeekDay")
+      assert(error contains "magnolia: could not infer Show.Typeclass for type magnolia1.tests.WeekDay")
     }
 
     test("determine subtypes of Exactly[Int]") {
@@ -771,8 +771,8 @@ class Tests extends munit.FunSuite {
     test("no support for arbitrary derivation result type for recursive classes yet") {
       val error = compileErrors("ExportedTypeclass.gen[Recursive]")
       assert(error contains """
-        |magnolia: could not find ExportedTypeclass.Typeclass for type Seq[magnolia.tests.Recursive]
-        |    in parameter 'children' of product type magnolia.tests.Recursive
+        |magnolia: could not find ExportedTypeclass.Typeclass for type Seq[magnolia1.tests.Recursive]
+        |    in parameter 'children' of product type magnolia1.tests.Recursive
         |""".stripMargin)
     }
 

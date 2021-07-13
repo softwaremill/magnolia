@@ -1,4 +1,4 @@
-package magnolia
+package magnolia1
 
 import mercator._
 
@@ -438,7 +438,7 @@ final case class TypeName(owner: String, short: String, typeArguments: Seq[TypeN
   */
 final class debug(typeNamePart: String = "") extends scala.annotation.StaticAnnotation
 
-private[magnolia] final case class EarlyExit[E](e: E) extends Exception with util.control.NoStackTrace
+private[magnolia1] final case class EarlyExit[E](e: E) extends Exception with util.control.NoStackTrace
 
 object MagnoliaUtil {
 
