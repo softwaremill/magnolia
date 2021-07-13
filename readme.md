@@ -1,4 +1,4 @@
-![Magnolia](https://github.com/softwaremill/magnolia/raw/main/banner.jpg)
+![Magnolia](https://github.com/softwaremill/magnolia/raw/scala2/banner.jpg)
 
 [<img src="https://img.shields.io/badge/gitter-discuss-f00762?style=for-the-badge" height="24">](https://gitter.im/softwaremill/magnolia)
 [<img src="https://img.shields.io/maven-central/v/com.softwaremill.magnolia/magnolia-core_2.12?color=2465cd&style=for-the-badge" height="24">](https://search.maven.org/artifact/com.softwaremill.magnolia/magnolia-core_2.12)
@@ -118,11 +118,16 @@ shown.
 
 ## Availability
 
+For Scala 2:
+
 A binary is available on Maven Central as `com.softwaremill.magnolia:magnolia-core_<scala-version>:1.0.0-M4`. This may be added
 to an [sbt](https://www.scala-sbt.org/) build with:
+
 ```
 libraryDependencies += "com.softwaremill.magnolia" %% "magnolia-core" % "1.0.0-M4"
 ```
+
+For Scala 3, see the [scala3 branch](https://github.com/softwaremill/magnolia/tree/scala3).
 
 ## Contributing
 
