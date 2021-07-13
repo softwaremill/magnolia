@@ -79,7 +79,7 @@ For Scala 3:
 val magnolia = "com.softwaremill.magnolia" %% "magnolia-core" % "2.0.0-M9"
 ```
 
-For Scala 2, see the [legacy branch](https://github.com/softwaremill/magnolia/tree/legacy).
+For Scala 2, see the [scala2 branch](https://github.com/softwaremill/magnolia/tree/scala2).
 
 ## Contributing
 
