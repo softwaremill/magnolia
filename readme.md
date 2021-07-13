@@ -2,7 +2,7 @@
 
 [<img alt="GitHub Workflow" src="https://img.shields.io/github/workflow/status/softwaremill/magnolia/Build/scala3?style=for-the-badge" height="24">](https://github.com/softwaremill/magnolia/actions)
 [<img src="https://img.shields.io/badge/gitter-discuss-f00762?style=for-the-badge" height="24">](https://gitter.im/softwaremill/magnolia)
-[<img src="https://img.shields.io/maven-central/v/com.softwaremill.magnolia/magnolia-core_3?color=2465cd&style=for-the-badge" height="24">](https://search.maven.org/artifact/com.softwaremill.magnolia/magnolia-core_3)
+[<img src="https://img.shields.io/maven-central/v/com.softwaremill.magnolia1_3/magnolia_3?color=2465cd&style=for-the-badge" height="24">](https://search.maven.org/artifact/com.softwaremill.magnolia1_3/magnolia_3)
 
 # Magnolia
 
@@ -76,7 +76,7 @@ given instance: SemiPrint[Recursive] = SemiPrint.derived
 For Scala 3:
 
 ```scala
-val magnolia = "com.softwaremill.magnolia" %% "magnolia-core" % "2.0.0-M9"
+val magnolia = "com.softwaremill.magnolia1_3" %% "magnolia" % "2.0.0-M9"
 ```
 
 For Scala 2, see the [scala2 branch](https://github.com/softwaremill/magnolia/tree/scala2).
