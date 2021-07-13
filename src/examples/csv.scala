@@ -1,6 +1,6 @@
-package magnolia.examples
+package magnolia1.examples
 
-import magnolia.*
+import magnolia1.*
 
 extension [A: Csv](value: A) def csv: List[String] = summon[Csv[A]](value)
 

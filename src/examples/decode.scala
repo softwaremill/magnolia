@@ -1,6 +1,6 @@
-package magnolia.examples
+package magnolia1.examples
 
-import magnolia._
+import magnolia1._
 
 /** very basic decoder for converting strings to other types */
 trait Decoder[T]:

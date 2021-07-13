@@ -1,7 +1,7 @@
-package magnolia.tests
+package magnolia1.tests
 
-import magnolia.examples.*
-import magnolia.TypeInfo
+import magnolia1.examples.*
+import magnolia1.TypeInfo
 
 import java.time.LocalDate
 
@@ -347,13 +347,13 @@ class Tests extends munit.FunSuite {
     }
 
     test("decode a Person as an Entity") {
-      val res = summon[Decoder[Entity]].decode("""magnolia.tests.Person(name=John Smith,age=32)""")
+      val res = summon[Decoder[Entity]].decode("""magnolia1.tests.Person(name=John Smith,age=32)""")
       assertEquals(res, Person("John Smith", 32))
     }
 
     test("decode a product nested in objects") {
       import Obj1.Obj2._
-      val res = summon[Decoder[NestedInObjects]].decode("""magnolia.tests.Obj1.Obj2.NestedInObjects(i=42)""")
+      val res = summon[Decoder[NestedInObjects]].decode("""magnolia1.tests.Obj1.Obj2.NestedInObjects(i=42)""")
       assertEquals(res, NestedInObjects(42))
     }
 
@@ -416,7 +416,7 @@ class Tests extends munit.FunSuite {
 
     test("sealed trait typeName should be complete and unchanged") {
       val res = TypeNameInfo.derived[Color].name
-      assertEquals(res.full, "magnolia.tests.Color")
+      assertEquals(res.full, "magnolia1.tests.Color")
     }
 
     test("sealed trait subtypes should be ordered") {
@@ -452,7 +452,7 @@ class Tests extends munit.FunSuite {
         def subtypeNames = ???
       }
       val res = TypeNameInfo.derived[Fruit].name
-      assertEquals(res.full, "magnolia.tests.Fruit")
+      assertEquals(res.full, "magnolia1.tests.Fruit")
     }
 
     test("show a recursive case class") {

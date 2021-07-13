@@ -1,6 +1,6 @@
-package magnolia.examples
+package magnolia1.examples
 
-import magnolia._
+import magnolia1._
 
 /** shows one type as another, often as a string
   *

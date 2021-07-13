@@ -1,4 +1,4 @@
-package magnolia
+package magnolia1
 
 import scala.concurrent.{Future, ExecutionContext}
 import scala.util.{Try, Success}

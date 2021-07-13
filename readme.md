@@ -36,7 +36,7 @@ your own.
 
 The definition of a `Print` typeclass with generic derivation defined with Magnolia might look like this:
 ```scala
-import magnolia.*
+import magnolia1.*
 
 trait Print[T] {
   extension (x: T) def print: String

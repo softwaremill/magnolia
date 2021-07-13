@@ -1,6 +1,6 @@
-package magnolia.examples
+package magnolia1.examples
 
-import magnolia._
+import magnolia1._
 
 // Prints a type, only requires read access to fields
 trait Print[T] {

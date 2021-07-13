@@ -1,4 +1,4 @@
-package magnolia
+package magnolia1
 
 import scala.deriving.Mirror
 import scala.compiletime.*

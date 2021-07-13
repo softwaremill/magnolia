@@ -1,4 +1,4 @@
-package magnolia
+package magnolia1
 
 import language.experimental.macros
 import scala.annotation.tailrec

@@ -1,4 +1,6 @@
-import magnolia._
+package magnolia1.examples
+
+import magnolia1._
 
 /** decoder for converting strings to other types providing good error messages */
 trait DecoderSafe[T] { def decode(str: String): Either[String, T] }
