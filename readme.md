@@ -129,6 +129,16 @@ libraryDependencies += "com.softwaremill.magnolia1_2" %% "magnolia" % "1.0.0-M4"
 
 For Scala 3, see the [scala3 branch](https://github.com/softwaremill/magnolia/tree/scala3).
 
+## Package and artifact naming, versioning
+
+The main magnolia package is `magnolia1`, so that magnolia 1.x can be used alongside magnolia 0.17 (which are binary-incompatible).
+Future major releases of magnolia can change the package name for the same reason.
+
+The group id for magnolia follows the naming scheme: `com.softwaremill.magnolia[major version]_[scala major version]`.
+The scala major version suffix is necessary to allow evolving and publishing versions for Scala 2 & Scala 3 independently.
+The magnolia major version is included for consistency with the package name, and so that future major releases may be
+used alongside this release.
+
 ## Contributing
 
 Contributors to Magnolia are welcome and encouraged. New contributors may like to look for issues marked
