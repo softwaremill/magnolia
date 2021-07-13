@@ -28,7 +28,8 @@ lazy val core = (projectMatrix in file("core"))
     Compile / scalacOptions --= Seq("-Ywarn-unused:params"),
     Compile / doc / scalacOptions ~= (_.filterNot(Set("-Xfatal-warnings"))),
     Compile / doc / scalacOptions --= Seq("-Xlint:doc-detached"),
-    libraryDependencies += "com.propensive" %% "mercator" % "0.2.1"
+    libraryDependencies += "com.propensive" %% "mercator" % "0.2.1",
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
   )
   .jvmPlatform(scalaVersions = scala2)
   .jsPlatform(scalaVersions = scala2)
