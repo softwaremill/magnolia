@@ -82,8 +82,8 @@ jobs:
         with:
           config-name: release-drafter.yml
           publish: true
-          name: "v${{ env.VERSION }}"
-          tag: "v${{ env.VERSION }}"
+          name: "scala3-v${{ env.VERSION }}"
+          tag: "scala3-v${{ env.VERSION }}"
           version: "v${{ env.VERSION }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
