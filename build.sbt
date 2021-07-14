@@ -2,6 +2,8 @@ import com.softwaremill.UpdateVersionInDocs
 
 val scala3 = "3.0.1"
 
+ThisBuild / dynverTagPrefix := "scala3-v" // a custom prefix is needed to differentiate tags between scala2 & scala3 versions
+
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   scalaVersion := scala3,
   organization := "com.softwaremill.magnolia1_3",

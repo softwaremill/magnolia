@@ -73,7 +73,7 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
       - name: Extract version from commit message
         run: |
-          version=${GITHUB_REF/refs\/tags\/v/}
+          version=${GITHUB_REF/refs\/tags\/scala3-v/}
           echo "VERSION=$version" >> $GITHUB_ENV
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
