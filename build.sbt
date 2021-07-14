@@ -5,6 +5,7 @@ val scala2_13 = "2.13.6"
 val scala2 = List(scala2_12, scala2_13)
 
 excludeLintKeys in Global ++= Set(ideSkipProject)
+ThisBuild / dynverTagPrefix := "scala2-v" // a custom prefix is needed to differentiate tags between scala2 & scala3 versions
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.magnolia1_2",
