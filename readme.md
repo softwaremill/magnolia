@@ -1,6 +1,6 @@
 ![Magnolia](https://github.com/softwaremill/magnolia/raw/scala3/banner.jpg)
 
-[<img alt="GitHub Workflow" src="https://img.shields.io/github/workflow/status/softwaremill/magnolia/Build/scala3?style=for-the-badge" height="24">](https://github.com/softwaremill/magnolia/actions)
+[<img alt="GitHub Workflow" src="https://img.shields.io/github/workflow/status/softwaremill/magnolia/CI/scala3?style=for-the-badge" height="24">](https://github.com/softwaremill/magnolia/actions)
 [<img src="https://img.shields.io/badge/gitter-discuss-f00762?style=for-the-badge" height="24">](https://gitter.im/softwaremill/magnolia)
 [<img src="https://img.shields.io/maven-central/v/com.softwaremill.magnolia1_3/magnolia_3?color=2465cd&style=for-the-badge" height="24">](https://search.maven.org/artifact/com.softwaremill.magnolia1_3/magnolia_3)
 
