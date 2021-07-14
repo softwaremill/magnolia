@@ -4,7 +4,7 @@ on:
     branches: ['**']
   push:
     branches: ['**']
-    tags: [v*]
+    tags: [scala3-v*]
 jobs:
   ci:
     # run on external PRs, but not on internal PRs since those will be run by push to branch
