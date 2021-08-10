@@ -217,6 +217,9 @@ sealed trait Y
 case object A extends Y
 case class B(s: String) extends Y
 
+enum Size:
+  case S, M, L
+
 class Tests extends munit.FunSuite {
 
     test("construct a Show product instance with alternative apply functions") {
@@ -498,5 +501,15 @@ class Tests extends munit.FunSuite {
     test("not find a given for semi print") {
       val res = compileErrors("""summon[SemiPrint[Y]].print(A)""")
       assert(res.nonEmpty)
+    }
+
+    test("isEnum field in SubtypeInfo should be true for enum") {
+      val derivedSubtypeInfo = SubtypeInfo.derived[Size]
+      assertEquals(derivedSubtypeInfo.isEnum, true)
+    }
+
+    test("isEnum field in SubtypeInfo should be false for sealed trait") {
+      val derivedSubtypeInfo = SubtypeInfo.derived[Sport]
+      assertEquals(derivedSubtypeInfo.isEnum, false)
     }
   }

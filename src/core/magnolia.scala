@@ -79,7 +79,7 @@ trait Derivation[TypeClass[_]] extends CommonDerivation[TypeClass]:
 
   inline def derivedMirrorSum[A](sum: Mirror.SumOf[A]): Typeclass[A] =
     val sealedTrait = SealedTrait(typeInfo[A], IArray(subtypes[A, sum.MirroredElemTypes](sum)*),
-      IArray.from(anns[A]), IArray(paramTypeAnns[A]*))
+      IArray.from(anns[A]), IArray(paramTypeAnns[A]*), isEnum[A])
     
     split(sealedTrait)
 

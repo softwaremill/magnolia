@@ -4,6 +4,7 @@ import scala.quoted.*
 
 object Macro:
   inline def isObject[T]: Boolean = ${isObject[T]}
+  inline def isEnum[T]: Boolean = ${isEnum[T]}
   inline def anns[T]: List[Any] = ${anns[T]}
   inline def typeAnns[T]: List[Any] = ${typeAnns[T]}
   inline def paramAnns[T]: List[(String, List[Any])] = ${paramAnns[T]}
@@ -23,7 +24,11 @@ object Macro:
     import quotes.reflect.*
 
     Expr(TypeRepr.of[T].typeSymbol.flags.is(Flags.Module))
-  
+
+  def isEnum[T: Type](using Quotes): Expr[Boolean] =
+    import quotes.reflect.*
+
+    Expr(TypeRepr.of[T].typeSymbol.flags.is(Flags.Enum))
 
   def paramAnns[T: Type](using Quotes): Expr[List[(String, List[Any])]] =
     import quotes.reflect.*
@@ -56,16 +61,16 @@ object Macro:
     import quotes.reflect.*
 
     val tpe = TypeRepr.of[T]
-    
+
     Expr.ofList {
       tpe.typeSymbol.annotations.filter { a =>
         a.tpe.typeSymbol.maybeOwner.isNoSymbol || a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
       }.map(_.asExpr.asInstanceOf[Expr[Any]])
     }
-  
+
   def typeAnns[T: Type](using Quotes): Expr[List[Any]] =
     import quotes.reflect.*
-    
+
     def getAnnotations(t: TypeRepr): List[Term] = t match
       case AnnotatedType(inner, ann) => ann :: getAnnotations(inner)
       case _                         => Nil
@@ -90,15 +95,15 @@ object Macro:
 
   def isValueClass[T: Type](using Quotes): Expr[Boolean] =
     import quotes.reflect.*
-    
+
     Expr(TypeRepr.of[T].baseClasses.contains(Symbol.classSymbol("scala.AnyVal")))
-  
+
   def defaultValue[T: Type](using Quotes): Expr[List[(String, Option[Any])]] =
     import quotes.reflect._
 
     // TODO: Implement RHS
     Expr.ofList(TypeRepr.of[T].typeSymbol.caseFields.map { case s => Expr(s.name -> None) })
-  
+
   def paramTypeAnns[T: Type](using Quotes): Expr[List[(String, List[Any])]] =
     import quotes.reflect._
 
@@ -111,17 +116,17 @@ object Macro:
         val tpeRepr = field.tree match
           case v: ValDef => v.tpt.tpe
           case d: DefDef => d.returnTpt.tpe
-        
+
         Expr(field.name) -> getAnnotations(tpeRepr).filter { a =>
           a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
               a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
           }.map(_.asExpr.asInstanceOf[Expr[Any]])
       }.filter(_._2.nonEmpty).map { (name, annots) => Expr.ofTuple(name, Expr.ofList(annots)) }
     }
-  
+
   def repeated[T: Type](using Quotes): Expr[List[(String, Boolean)]] =
     import quotes.reflect.*
-    
+
     def isRepeated[T](tpeRepr: TypeRepr): Boolean = tpeRepr match
       case a: AnnotatedType =>
         a.annotation.tpe match
@@ -132,13 +137,13 @@ object Macro:
     val tr = TypeRepr.of[T]
     val symbol = tr.typeSymbol
     val constr = symbol.primaryConstructor.tree.asInstanceOf[DefDef]
-    
+
     val areRepeated = constr.paramss.flatMap(_.params.flatMap {
         case ValDef(name, tpeTree, _) => Some(name -> isRepeated(tpeTree.tpe))
         case _                        => None
       }
     )
-    
+
     Expr(areRepeated)
 
   def typeInfo[T: Type](using Quotes): Expr[TypeInfo] =
