@@ -62,7 +62,7 @@ case class SealedTrait[Typeclass[_], Type]
                        subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
                        annotations: IArray[Any],
                        typeAnnotations: IArray[Any],
-                       isEnum: Boolean = false) extends Serializable:
+                       isEnum: Boolean) extends Serializable:
 
   type Subtype[S] = SealedTrait.SubtypeValue[Typeclass, Type, S]
 
