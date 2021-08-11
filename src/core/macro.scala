@@ -5,6 +5,7 @@ import scala.quoted.*
 object Macro:
   inline def isObject[T]: Boolean = ${isObject[T]}
   inline def isEnum[T]: Boolean = ${isEnum[T]}
+  inline def isOpaqueType[T]: Boolean = ${isOpaqueType[T]}
   inline def anns[T]: List[Any] = ${anns[T]}
   inline def typeAnns[T]: List[Any] = ${typeAnns[T]}
   inline def paramAnns[T]: List[(String, List[Any])] = ${paramAnns[T]}
@@ -29,6 +30,11 @@ object Macro:
     import quotes.reflect.*
 
     Expr(TypeRepr.of[T].typeSymbol.flags.is(Flags.Enum))
+
+  def isOpaqueType[T: Type](using Quotes): Expr[Boolean] =
+    import quotes.reflect.*
+
+    Expr(TypeRepr.of[T].typeSymbol.flags.is(Flags.Opaque))
 
   def paramAnns[T: Type](using Quotes): Expr[List[(String, List[Any])]] =
     import quotes.reflect.*
