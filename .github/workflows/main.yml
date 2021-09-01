@@ -28,9 +28,11 @@ jobs:
             ~/.coursier
           key: sbt-cache-${{ runner.os }}-${{ hashFiles('project/build.properties') }}
       - name: Compile
-        run: sbt -v compile
+        run: sbt -v --client compile
+      - name: MiMa
+        run: sbt -v --client core/mimaReportBinaryIssues
       - name: Test
-        run: sbt -v test
+        run: sbt -v --client test
       - name: Cleanup
         run: |
           rm -rf "$HOME/.ivy2/local" || true
@@ -62,9 +64,9 @@ jobs:
             ~/.coursier
           key: sbt-cache-release-${{ runner.os }}-${{ hashFiles('project/build.properties') }}
       - name: Compile
-        run: sbt compile
+        run: sbt --client compile
       - name: Publish artifacts
-        run: sbt ci-release
+        run: sbt --client ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}

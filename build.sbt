@@ -1,6 +1,6 @@
 import com.softwaremill.UpdateVersionInDocs
 
-val scala2_12 = "2.12.13"
+val scala2_12 = "2.12.14"
 val scala2_13 = "2.13.6"
 val scala2 = List(scala2_12, scala2_13)
 
@@ -29,8 +29,9 @@ lazy val core = (projectMatrix in file("core"))
     Compile / scalacOptions --= Seq("-Ywarn-unused:params"),
     Compile / doc / scalacOptions ~= (_.filterNot(Set("-Xfatal-warnings"))),
     Compile / doc / scalacOptions --= Seq("-Xlint:doc-detached"),
-    libraryDependencies += "com.propensive" %% "mercator" % "0.2.1",
-    libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
+    libraryDependencies += "com.propensive" %% "mercator-core" % "0.6.0",
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided,
+    mimaPreviousArtifacts := Set(organization.value %% moduleName.value % "1.0.0-M5")
   )
   .jvmPlatform(scalaVersions = scala2)
   .jsPlatform(scalaVersions = scala2)
@@ -43,7 +44,8 @@ lazy val examples = (projectMatrix in file("examples"))
     name := "magnolia-examples",
     Compile / scalacOptions ++= Seq("-Ywarn-macros:after"),
     Compile / scalacOptions --= Seq("-Ywarn-unused:params"),
-    publishArtifact := false
+    publishArtifact := false,
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
   )
   .dependsOn(core)
   .jvmPlatform(scalaVersions = scala2)
@@ -56,7 +58,7 @@ lazy val test = (projectMatrix in file("test"))
     name := "magnolia-test",
     Test / scalacOptions += "-Ywarn-macros:after",
     Test / scalacOptions --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
-    libraryDependencies += "org.scalameta" %% "munit" % "0.7.26" % Test,
+    libraryDependencies += "org.scalameta" %% "munit" % "0.7.28" % Test,
     publishArtifact := false
   )
   .jvmPlatform(scalaVersions = scala2)
