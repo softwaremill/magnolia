@@ -1,6 +1,6 @@
 import com.softwaremill.UpdateVersionInDocs
 
-val scala3 = "3.0.1"
+val scala3 = "3.0.2"
 
 ThisBuild / dynverTagPrefix := "scala3-v" // a custom prefix is needed to differentiate tags between scala2 & scala3 versions
 
