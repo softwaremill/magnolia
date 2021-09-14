@@ -49,15 +49,15 @@ import language.experimental.macros, magnolia1._
 object ShowDerivation {
   type Typeclass[T] = Show[T]
   
-  def combine[T](ctx: CaseClass[Show, T]): Show[T] = new Show[T] {
+  def join[T](ctx: CaseClass[Show, T]): Show[T] = new Show[T] {
     def show(value: T): String = ctx.parameters.map { p =>
       s"${p.label}=${p.typeclass.show(p.dereference(value))}"
     }.mkString("{", ",", "}")
   }
 
-  def dispatch[T](ctx: SealedTrait[Show, T]): Show[T] =
+  def split[T](ctx: SealedTrait[Show, T]): Show[T] =
     new Show[T] {
-      def show(value: T): String = ctx.dispatch(value) { sub =>
+      def show(value: T): String = ctx.split(value) { sub =>
         sub.typeclass.show(sub.cast(value))
       }
     }
@@ -70,7 +70,7 @@ The `gen` method will attempt to construct a typeclass for the type passed to
 it. Importing `ShowDerivation.gen` from the example above will make generic
 derivation for `Show` typeclasses available in the scope of the import. The
 `macro Magnolia.gen[T]` binding must be made in a static object, and the type
-constructor, `Typeclass`, and the methods `combine` and `dispatch` must be
+constructor, `Typeclass`, and the methods `join` and `split` must be
 defined in the same object.
 
 If you control the typeclass you are deriving for, the companion object of the
