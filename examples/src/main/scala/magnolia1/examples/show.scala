@@ -61,8 +61,8 @@ trait GenericShow[Out] {
   /** choose which typeclass to use based on the subtype of the sealed trait
     * and prefix with the annotations as discovered on the subtype.
     */
-  def dispatch[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
-    ctx.dispatch(value) { sub =>
+  def split[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
+    ctx.split(value) { sub =>
       val anns = sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 

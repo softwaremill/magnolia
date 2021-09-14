@@ -12,8 +12,8 @@ object NoCombine {
   type Typeclass[T] = NoCombine[T]
   implicit def gen[T]: NoCombine[T] = macro Magnolia.gen[T]
 
-  def dispatch[T](ctx: SealedTrait[NoCombine, T]): NoCombine[T] = instance { value =>
-    ctx.dispatch(value)(sub => sub.typeclass.nameOf(sub.cast(value)))
+  def split[T](ctx: SealedTrait[NoCombine, T]): NoCombine[T] = instance { value =>
+    ctx.split(value)(sub => sub.typeclass.nameOf(sub.cast(value)))
   }
 
   def instance[T](name: T => String): NoCombine[T] = new Typeclass[T] {

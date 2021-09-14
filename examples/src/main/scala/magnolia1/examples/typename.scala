@@ -19,7 +19,7 @@ object TypeNameInfo {
       def subtypeNames: Seq[TypeName] = Nil
     }
 
-  def dispatch[T](ctx: SealedTrait[TypeNameInfo, T]): TypeNameInfo[T] =
+  def split[T](ctx: SealedTrait[TypeNameInfo, T]): TypeNameInfo[T] =
     new TypeNameInfo[T] {
       def name: TypeName = ctx.typeName
 

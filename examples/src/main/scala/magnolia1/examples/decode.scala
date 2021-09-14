@@ -31,7 +31,7 @@ object Decoder {
   }
 
   /** defines how to choose which subtype of the sealed trait to use for decoding */
-  def dispatch[T](ctx: SealedTrait[Decoder, T]): Decoder[T] = param => {
+  def split[T](ctx: SealedTrait[Decoder, T]): Decoder[T] = param => {
     val (name, _) = parse(param)
     val subtype = ctx.subtypes.find(_.typeName.full == name).get
     subtype.typeclass.decode(param)

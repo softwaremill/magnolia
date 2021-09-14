@@ -15,7 +15,7 @@ object SemiDefault {
   def combine[T](ctx: CaseClass[SemiDefault, T]): SemiDefault[T] = new SemiDefault[T] {
     def default = ctx.construct(p => p.default.getOrElse(p.typeclass.default))
   }
-  def dispatch[T](ctx: SealedTrait[SemiDefault, T])(): SemiDefault[T] = new SemiDefault[T] {
+  def split[T](ctx: SealedTrait[SemiDefault, T])(): SemiDefault[T] = new SemiDefault[T] {
     def default = ctx.subtypes.head.typeclass.default
   }
   implicit val string: SemiDefault[String] = new SemiDefault[String] { def default = "" }

@@ -26,7 +26,7 @@ object HasDefault {
   }
 
   /** chooses which subtype to delegate to */
-  def dispatch[T](ctx: SealedTrait[HasDefault, T])(): HasDefault[T] = new HasDefault[T] {
+  def split[T](ctx: SealedTrait[HasDefault, T])(): HasDefault[T] = new HasDefault[T] {
     def defaultValue = ctx.subtypes.headOption match {
       case Some(sub) => sub.typeclass.defaultValue
       case None      => Left("no subtypes")
