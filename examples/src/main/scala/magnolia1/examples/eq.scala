@@ -14,7 +14,7 @@ object Eq {
   type Typeclass[T] = Eq[T]
 
   /** defines equality for this case class in terms of equality for all its parameters */
-  def combine[T](ctx: CaseClass[Eq, T]): Eq[T] = new Eq[T] {
+  def join[T](ctx: CaseClass[Eq, T]): Eq[T] = new Eq[T] {
     def equal(value1: T, value2: T) = ctx.parameters.forall { param =>
       param.typeclass.equal(param.dereference(value1), param.dereference(value2))
     }

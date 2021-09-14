@@ -12,7 +12,7 @@ trait TypeNameInfo[T] {
 
 object TypeNameInfo {
   type Typeclass[T] = TypeNameInfo[T]
-  def combine[T](ctx: CaseClass[TypeNameInfo, T]): TypeNameInfo[T] =
+  def join[T](ctx: CaseClass[TypeNameInfo, T]): TypeNameInfo[T] =
     new TypeNameInfo[T] {
       def name: TypeName = ctx.typeName
 

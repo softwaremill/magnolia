@@ -12,7 +12,7 @@ trait Print[T] {
 trait GenericPrint {
   type Typeclass[T] = Print[T]
 
-  def combine[T](ctx: ReadOnlyCaseClass[Typeclass, T]): Print[T] = { value =>
+  def join[T](ctx: ReadOnlyCaseClass[Typeclass, T]): Print[T] = { value =>
     if (ctx.isValueClass) {
       val param = ctx.parameters.head
       param.typeclass.print(param.dereference(value))

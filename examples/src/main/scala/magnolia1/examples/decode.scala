@@ -23,7 +23,7 @@ object Decoder {
   type Typeclass[T] = Decoder[T]
 
   /** defines how new [[Decoder]]s for case classes should be constructed */
-  def combine[T](ctx: CaseClass[Decoder, T]): Decoder[T] = value => {
+  def join[T](ctx: CaseClass[Decoder, T]): Decoder[T] = value => {
     val (_, values) = parse(value)
     ctx.construct { param =>
       param.typeclass.decode(values(param.label))

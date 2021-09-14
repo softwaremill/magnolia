@@ -24,7 +24,7 @@ object Patcher extends LowerPriorityPatcher {
 
   type Typeclass[T] = Patcher[T]
 
-  def combine[T](ctx: CaseClass[Patcher, T]): Patcher[T] =
+  def join[T](ctx: CaseClass[Patcher, T]): Patcher[T] =
     new Patcher[T] {
       def patch(value: T, fieldValues: Seq[Any]): T = {
         if (fieldValues.lengthCompare(ctx.parameters.size) != 0) {

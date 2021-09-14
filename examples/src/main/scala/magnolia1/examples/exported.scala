@@ -9,7 +9,7 @@ class ExportedTypeclass[T]()
 object ExportedTypeclass {
   type Typeclass[T] = ExportedTypeclass[T]
   case class Exported[T]() extends ExportedTypeclass[T]
-  def combine[T](ctx: CaseClass[Typeclass, T]): Exported[T] = Exported()
+  def join[T](ctx: CaseClass[Typeclass, T]): Exported[T] = Exported()
   def split[T](ctx: SealedTrait[Typeclass, T]): Exported[T] = Exported()
 
   implicit val intInstance: Typeclass[Int] = new ExportedTypeclass()

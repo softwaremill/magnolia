@@ -26,7 +26,7 @@ object DecoderSafe {
   type Typeclass[T] = DecoderSafe[T]
 
   /** defines how new [[DecoderSafe]]s for case classes should be constructed */
-  def combine[T](ctx: CaseClass[DecoderSafe, T]): DecoderSafe[T] = value => {
+  def join[T](ctx: CaseClass[DecoderSafe, T]): DecoderSafe[T] = value => {
     val (_, values) = parse(value)
     ctx
       .constructEither { param =>

@@ -786,7 +786,7 @@ class Tests extends munit.FunSuite {
       assert(error contains "magnolia: child class Dewey of trait GoodChild is neither final nor a case class")
     }
 
-    test("support split without combine") {
+    test("support split without join") {
       val res = implicitly[NoCombine[Halfy]].nameOf(Righty())
       assertEquals(res, "Righty")
     }

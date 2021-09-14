@@ -16,7 +16,7 @@ object HasDefault {
   /** constructs a default for each parameter, using the constructor default (if provided),
     *  otherwise using a typeclass-provided default
     */
-  def combine[T](ctx: CaseClass[HasDefault, T]): HasDefault[T] = new HasDefault[T] {
+  def join[T](ctx: CaseClass[HasDefault, T]): HasDefault[T] = new HasDefault[T] {
     def defaultValue = ctx.constructMonadic { param =>
       param.default match {
         case Some(arg) => Right(arg)
