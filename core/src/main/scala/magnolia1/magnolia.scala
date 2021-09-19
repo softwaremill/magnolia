@@ -107,7 +107,7 @@ object Magnolia {
     val JavaAnnotationTpe = typeOf[java.lang.annotation.Annotation]
     val LeftObj = reify(Left).tree
     val MagnoliaUtilObj = reify(MagnoliaUtil).tree
-    val MercatorOpsSym = symbolOf[Ops[Any, Any]]
+    val MagnoliaMonadicOpsSym = symbolOf[Ops[Any, Any]]
     val MonadicSym = symbolOf[Monadic[Any]]
     val NoneObj = reify(None).tree
     val ParamObj = reify(Param).tree
@@ -515,7 +515,7 @@ object Magnolia {
               val p = TermName(s"p$idx")
               (
                 if (typeclass.repeated) q"$p: _*" else q"$p",
-                fq"$p <- new $MercatorOpsSym(makeParam($paramsVal($idx)).asInstanceOf[$f[${typeclass.paramType}]])"
+                fq"$p <- new $MagnoliaMonadicOpsSym(makeParam($paramsVal($idx)).asInstanceOf[$f[${typeclass.paramType}]])"
               )
             }
 
