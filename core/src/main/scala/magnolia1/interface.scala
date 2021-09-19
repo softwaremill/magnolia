@@ -1,7 +1,5 @@
 package magnolia1
 
-import mercator._
-
 import scala.annotation.tailrec
 import scala.language.higherKinds
 

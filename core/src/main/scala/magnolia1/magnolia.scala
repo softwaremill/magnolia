@@ -1,5 +1,7 @@
 package magnolia1
 
+import magnolia1.Monadic.Ops
+
 import scala.annotation.compileTimeOnly
 import scala.collection.mutable
 import scala.language.higherKinds
@@ -105,8 +107,8 @@ object Magnolia {
     val JavaAnnotationTpe = typeOf[java.lang.annotation.Annotation]
     val LeftObj = reify(Left).tree
     val MagnoliaUtilObj = reify(MagnoliaUtil).tree
-    val MercatorOpsSym = symbolOf[mercator.Ops[Any, Any]]
-    val MonadicSym = symbolOf[mercator.Monadic[Any]]
+    val MercatorOpsSym = symbolOf[Ops[Any, Any]]
+    val MonadicSym = symbolOf[Monadic[Any]]
     val NoneObj = reify(None).tree
     val ParamObj = reify(Param).tree
     val ParamSym = symbolOf[Param[Any, Any]]

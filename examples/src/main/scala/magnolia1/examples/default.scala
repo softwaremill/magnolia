@@ -1,7 +1,6 @@
 package magnolia1.examples
 
 import magnolia1.{CaseClass, Magnolia, SealedTrait}
-import mercator._
 
 import scala.language.experimental.macros
 
