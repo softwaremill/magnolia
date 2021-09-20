@@ -11,15 +11,15 @@ trait Csv[A] {
 object Csv {
   type Typeclass[A] = Csv[A]
 
-  def combine[A](ctx: CaseClass[Csv, A]): Csv[A] = new Csv[A] {
+  def join[A](ctx: CaseClass[Csv, A]): Csv[A] = new Csv[A] {
     def apply(a: A): List[String] =
       ctx.parameters.foldLeft(List[String]()) { (acc, p) =>
         acc ++ p.typeclass(p.dereference(a))
       }
   }
 
-  def dispatch[A](ctx: SealedTrait[Csv, A]): Csv[A] = new Csv[A] {
-    def apply(a: A): List[String] = ctx.dispatch(a)(sub => sub.typeclass(sub.cast(a)))
+  def split[A](ctx: SealedTrait[Csv, A]): Csv[A] = new Csv[A] {
+    def apply(a: A): List[String] = ctx.split(a)(sub => sub.typeclass(sub.cast(a)))
   }
 
   implicit def deriveCsv[A]: Csv[A] = macro Magnolia.gen[A]

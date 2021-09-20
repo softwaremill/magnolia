@@ -12,7 +12,7 @@ trait Print[T] {
 trait GenericPrint {
   type Typeclass[T] = Print[T]
 
-  def combine[T](ctx: ReadOnlyCaseClass[Typeclass, T]): Print[T] = { value =>
+  def join[T](ctx: ReadOnlyCaseClass[Typeclass, T]): Print[T] = { value =>
     if (ctx.isValueClass) {
       val param = ctx.parameters.head
       param.typeclass.print(param.dereference(value))
@@ -25,8 +25,8 @@ trait GenericPrint {
     }
   }
 
-  def dispatch[T](ctx: SealedTrait[Print, T])(): Print[T] = { value =>
-    ctx.dispatch(value) { sub =>
+  def split[T](ctx: SealedTrait[Print, T])(): Print[T] = { value =>
+    ctx.split(value) { sub =>
       sub.typeclass.print(sub.cast(value))
     }
   }

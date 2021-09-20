@@ -424,7 +424,7 @@ final class SealedTrait[Typeclass[_], Type](
     *  @return  the result of applying the `handle` lambda to subtype of the sealed trait which
     *           matches the parameter `value`
     */
-  def dispatch[Return](value: Type)(handle: Subtype[Typeclass, Type] => Return): Return = {
+  def split[Return](value: Type)(handle: Subtype[Typeclass, Type] => Return): Return = {
     @tailrec def rec(ix: Int): Return =
       if (ix < subtypesArray.length) {
         val sub = subtypesArray(ix)

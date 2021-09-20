@@ -12,7 +12,7 @@ object Magnolia {
   /** derives a generic typeclass instance for the type `T`
     *
     *  This is a macro definition method which should be bound to a method defined inside a Magnolia
-    *  generic derivation object, that is, one which defines the methods `combine`, `dispatch` and
+    *  generic derivation object, that is, one which defines the methods `join`, `split` and
     *  the type constructor, `Typeclass[_]`. This will typically look like,
     *  <pre>
     *  object Derivation {
@@ -39,32 +39,32 @@ object Magnolia {
     *  method.
     *
     *  Specifically, for deriving case classes (product types), the macro will attempt to call the
-    *  `combine` method with an instance of [[CaseClass]], like so,
+    *  `join` method with an instance of [[CaseClass]], like so,
     *  <pre>
-    *    &lt;derivation&gt;.combine(&lt;caseClass&gt;): Typeclass[T]
+    *    &lt;derivation&gt;.join(&lt;caseClass&gt;): Typeclass[T]
     *  </pre>
-    *  That is to say, the macro expects there to exist a method called `combine` on the derivation
+    *  That is to say, the macro expects there to exist a method called `join` on the derivation
     *  object, which may be called with the code above, and for it to return a type which conforms
-    *  to the type `Typeclass[T]`. The implementation of `combine` will therefore typically look
+    *  to the type `Typeclass[T]`. The implementation of `join` will therefore typically look
     *  like this,
     *  <pre>
-    *    def combine[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T] = ...
+    *    def join[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T] = ...
     *  </pre>
     *  however, there is the flexibility to provide additional type parameters or additional
     *  implicit parameters to the definition, provided these do not affect its ability to be invoked
     *  as described above.
     *
     *  Likewise, for deriving sealed traits (coproduct or sum types), the macro will attempt to call
-    *  the `dispatch` method with an instance of [[SealedTrait]], like so,
+    *  the `split` method with an instance of [[SealedTrait]], like so,
     *  <pre>
-    *    &lt;derivation&gt;.dispatch(&lt;sealedTrait&gt;): Typeclass[T]
+    *    &lt;derivation&gt;.split(&lt;sealedTrait&gt;): Typeclass[T]
     *  </pre>
     *  so a definition such as,
     *  <pre>
-    *    def dispatch[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T] = ...
+    *    def split[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T] = ...
     *  </pre>
     *  will suffice, however the qualifications regarding additional type parameters and implicit
-    *  parameters apply equally to `dispatch` as to `combine`.
+    *  parameters apply equally to `split` as to `join`.
     */
   def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = Stack.withContext(c) { (stack, depth) =>
     import c.internal._
@@ -243,10 +243,10 @@ object Magnolia {
     }
 
     lazy val (isReadOnly, caseClassSymbol, paramSymbol) =
-      extractParameterBlockFor("combine", "case classes").headOption.map(_.typeSignature.typeSymbol) match {
+      extractParameterBlockFor("join", "case classes").headOption.map(_.typeSignature.typeSymbol) match {
         case Some(ReadOnlyCaseClassSym) => (true, ReadOnlyCaseClassSym, ReadOnlyParamSym)
         case Some(CaseClassSym)         => (false, CaseClassSym, ParamSym)
-        case _                          => error("Parameter for `combine` needs be either magnolia1.CaseClass or magnolia1.ReadOnlyCaseClass")
+        case _                          => error("Parameter for `join` needs be either magnolia1.CaseClass or magnolia1.ReadOnlyCaseClass")
       }
 
     // fullAuto means we should directly infer everything, including external
@@ -388,7 +388,7 @@ object Magnolia {
 
         val impl = q"""
           $typeNameDef
-          ${c.prefix}.combine(new $caseClassType(
+          ${c.prefix}.join(new $caseClassType(
             $typeName,
             true,
             false,
@@ -566,7 +566,7 @@ object Magnolia {
             val $paramsVal = new $ArrayClass[$paramType](${assignments.length})
             ..$assignments
             $typeNameDef
-            ${c.prefix}.combine(new $caseClassType(
+            ${c.prefix}.join(new $caseClassType(
               $typeName,
               false,
               $isValueClass,
@@ -578,7 +578,7 @@ object Magnolia {
             })
           }""")
       } else if (isSealedTrait) {
-        checkMethod("dispatch", "sealed traits", "SealedTrait[Typeclass, _]")
+        checkMethod("split", "sealed traits", "SealedTrait[Typeclass, _]")
         val genericSubtypes = knownSubclassesOf(classType.get).toList.sortBy(_.fullName)
         val subtypes = genericSubtypes.flatMap { sub =>
           val subType = sub.asType.toType // FIXME: Broken for path dependent types
@@ -623,7 +623,7 @@ object Magnolia {
           val $subtypesVal = new $ArrayClass[$subType](${assignments.size})
           ..$assignments
           $typeNameDef
-          ${c.prefix}.dispatch(new $SealedTraitSym(
+          ${c.prefix}.split(new $SealedTraitSym(
             $typeName,
             $subtypesVal: $ArrayClass[$subType],
             $ArrayObj(..$classAnnotationTrees),

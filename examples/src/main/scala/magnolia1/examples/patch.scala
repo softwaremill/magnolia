@@ -24,7 +24,7 @@ object Patcher extends LowerPriorityPatcher {
 
   type Typeclass[T] = Patcher[T]
 
-  def combine[T](ctx: CaseClass[Patcher, T]): Patcher[T] =
+  def join[T](ctx: CaseClass[Patcher, T]): Patcher[T] =
     new Patcher[T] {
       def patch(value: T, fieldValues: Seq[Any]): T = {
         if (fieldValues.lengthCompare(ctx.parameters.size) != 0) {
@@ -39,10 +39,10 @@ object Patcher extends LowerPriorityPatcher {
       }
     }
 
-  def dispatch[T](ctx: SealedTrait[Patcher, T]): Patcher[T] =
+  def split[T](ctx: SealedTrait[Patcher, T]): Patcher[T] =
     new Patcher[T] {
       def patch(value: T, fieldValues: Seq[Any]): T =
-        ctx.dispatch(value)(sub => sub.typeclass.patch(sub cast value, fieldValues))
+        ctx.split(value)(sub => sub.typeclass.patch(sub cast value, fieldValues))
     }
 
   implicit def gen[T]: Patcher[T] = macro Magnolia.gen[T]

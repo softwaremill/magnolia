@@ -10,7 +10,7 @@ object WeakHash {
 
   type Typeclass[T] = WeakHash[T]
 
-  def combine[T](ctx: CaseClass[WeakHash, T]): WeakHash[T] = new WeakHash[T] {
+  def join[T](ctx: CaseClass[WeakHash, T]): WeakHash[T] = new WeakHash[T] {
     def hash(value: T): Int = ctx.parameters
       .map { param =>
         param.typeclass.hash(param.dereference(value))

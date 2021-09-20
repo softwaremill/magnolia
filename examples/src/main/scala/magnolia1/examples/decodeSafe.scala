@@ -26,7 +26,7 @@ object DecoderSafe {
   type Typeclass[T] = DecoderSafe[T]
 
   /** defines how new [[DecoderSafe]]s for case classes should be constructed */
-  def combine[T](ctx: CaseClass[DecoderSafe, T]): DecoderSafe[T] = value => {
+  def join[T](ctx: CaseClass[DecoderSafe, T]): DecoderSafe[T] = value => {
     val (_, values) = parse(value)
     ctx
       .constructEither { param =>
@@ -37,7 +37,7 @@ object DecoderSafe {
   }
 
   /** defines how to choose which subtype of the sealed trait to use for decoding */
-  def dispatch[T](ctx: SealedTrait[DecoderSafe, T]): DecoderSafe[T] = param => {
+  def split[T](ctx: SealedTrait[DecoderSafe, T]): DecoderSafe[T] = param => {
     val (name, _) = parse(param)
     val subtype = ctx.subtypes.find(_.typeName.full == name).get
     subtype.typeclass.decode(param)

@@ -688,9 +688,9 @@ class Tests extends munit.FunSuite {
       assert(error.isEmpty)
     }
 
-    test("disallow coproduct derivations without dispatch method") {
+    test("disallow coproduct derivations without split method") {
       val error = compileErrors("WeakHash.gen[Entity]")
-      assert(error contains "magnolia: the method `dispatch` must be defined on the derivation object WeakHash to derive typeclasses for sealed traits")
+      assert(error contains "magnolia: the method `split` must be defined on the derivation object WeakHash to derive typeclasses for sealed traits")
     }
 
     test("equality of Wrapper") {
@@ -786,7 +786,7 @@ class Tests extends munit.FunSuite {
       assert(error contains "magnolia: child class Dewey of trait GoodChild is neither final nor a case class")
     }
 
-    test("support dispatch without combine") {
+    test("support split without join") {
       val res = implicitly[NoCombine[Halfy]].nameOf(Righty())
       assertEquals(res, "Righty")
     }

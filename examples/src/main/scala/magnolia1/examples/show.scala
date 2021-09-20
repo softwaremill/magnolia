@@ -19,13 +19,13 @@ trait GenericShow[Out] {
     */
   type Typeclass[T] = Show[Out, T]
 
-  def join(typeName: String, strings: Seq[String]): Out
+  def joinElems(typeName: String, strings: Seq[String]): Out
   def prefix(s: String, out: Out): Out
 
   /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of
     *  showing each parameter, and prefixing it with the class name
     */
-  def combine[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = { value =>
+  def join[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = { value =>
     if (ctx.isValueClass) {
       val param = ctx.parameters.head
       param.typeclass.show(param.dereference(value))
@@ -54,15 +54,15 @@ trait GenericShow[Out] {
         if (typeName.typeArguments.isEmpty) ""
         else typeName.typeArguments.map(arg => s"${arg.short}${typeArgsString(arg)}").mkString("[", ",", "]")
 
-      join(ctx.typeName.short + typeArgsString(ctx.typeName) + annotationStr + typeAnnotationStr, paramStrings)
+      joinElems(ctx.typeName.short + typeArgsString(ctx.typeName) + annotationStr + typeAnnotationStr, paramStrings)
     }
   }
 
   /** choose which typeclass to use based on the subtype of the sealed trait
     * and prefix with the annotations as discovered on the subtype.
     */
-  def dispatch[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
-    ctx.dispatch(value) { sub =>
+  def split[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
+    ctx.split(value) { sub =>
       val anns = sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
@@ -77,7 +77,7 @@ trait GenericShow[Out] {
 object Show extends GenericShow[String] {
 
   def prefix(s: String, out: String): String = s + out
-  def join(typeName: String, params: Seq[String]): String =
+  def joinElems(typeName: String, params: Seq[String]): String =
     params.mkString(s"$typeName(", ",", ")")
 
   implicit val string: Show[String, String] = identity
