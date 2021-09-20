@@ -3,13 +3,10 @@ package magnolia1
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Success, Try}
 
-trait Functor[F[_]] {
+trait Monadic[F[_]] {
   type Apply[X] = F[X]
   def point[A](value: A): F[A]
   def map[A, B](from: F[A])(fn: A => B): F[B]
-}
-
-trait Monadic[F[_]] extends Functor[F] {
   def flatMap[A, B](from: F[A])(fn: A => F[B]): F[B]
 }
 
@@ -51,6 +48,6 @@ object Monadic {
 
   final implicit class Ops[F[_], A](val fv:F[A]) extends AnyVal {
     def flatMap[B](f: A => F[B])(implicit monadic: Monadic[F]): F[B] = monadic.flatMap(fv)(f)
-    def map[B](f: A => B)(implicit functor: Functor[F]): F[B] = functor.map(fv)(f)
+    def map[B](f: A => B)(implicit monadic: Monadic[F]): F[B] = monadic.map(fv)(f)
   }
 }
