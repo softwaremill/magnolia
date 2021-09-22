@@ -3,12 +3,10 @@ package magnolia1
 import scala.concurrent.{Future, ExecutionContext}
 import scala.util.{Try, Success}
 
-trait Functor[F[_]]:
+trait Monadic[F[_]]:
   type Apply[X] = F[X]
   def point[A](value: A): F[A]
   def map[A, B](from: F[A])(fn: A => B): F[B]
-
-trait Monadic[F[_]] extends Functor[F]:
   def flatMap[A, B](from: F[A])(fn: A => F[B]): F[B]
 
 object Monadic:
@@ -37,7 +35,6 @@ object Monadic:
     def map[A, B](from: Try[A])(fn: A => B): Try[B] = from.map(fn)
     def flatMap[A, B](from: Try[A])(fn: A => Try[B]): Try[B] = from.flatMap(fn)
 
-  extension [F[_], A, B](fv: F[A])(using functor: Functor[F]) def map(f: A => B): F[B] = functor.map(fv)(f)
-
   extension [F[_], A, B](fv: F[A])(using monadic: Monadic[F])
+    def map(f: A => B): F[B] = monadic.map(fv)(f)
     def flatMap(f: A => F[B]): F[B] = monadic.flatMap(fv)(f)
