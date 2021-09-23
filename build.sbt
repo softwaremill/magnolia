@@ -29,7 +29,6 @@ lazy val core = (projectMatrix in file("core"))
     Compile / scalacOptions --= Seq("-Ywarn-unused:params"),
     Compile / doc / scalacOptions ~= (_.filterNot(Set("-Xfatal-warnings"))),
     Compile / doc / scalacOptions --= Seq("-Xlint:doc-detached"),
-    libraryDependencies += "com.propensive" %% "mercator-core" % "0.6.0",
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided,
     mimaPreviousArtifacts := Set(organization.value %% moduleName.value % "1.0.0-M5")
   )
