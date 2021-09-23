@@ -12,9 +12,12 @@ trait GenericPrint extends AutoDerivation[Print]:
     if ctx.isValueClass then
       val param = ctx.params.head
       param.typeclass.print(param.deref(value))
-    else ctx.params.map { param =>
-      param.typeclass.print(param.deref(value))
-    }.mkString(s"${ctx.typeInfo.short}(", ",", ")")
+    else
+      ctx.params
+        .map { param =>
+          param.typeclass.print(param.deref(value))
+        }
+        .mkString(s"${ctx.typeInfo.short}(", ",", ")")
 
   override def split[T](ctx: SealedTrait[Print, T]): Print[T] =
     ctx.choose(_) { sub => sub.typeclass.print(sub.value) }
@@ -22,4 +25,5 @@ trait GenericPrint extends AutoDerivation[Print]:
 object Print extends GenericPrint:
   given Print[String] = identity(_)
   given Print[Int] = _.toString
-  given seq[T](using printT: Print[T]): Print[Seq[T]] = _.map(printT.print).mkString("[", ",", "]")
+  given seq[T](using printT: Print[T]): Print[Seq[T]] =
+    _.map(printT.print).mkString("[", ",", "]")

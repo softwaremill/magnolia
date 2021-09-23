@@ -9,22 +9,25 @@ trait HasDefault[T]:
 /** companion object and derivation object for [[HasDefault]] */
 object HasDefault extends AutoDerivation[HasDefault]:
 
-  /** constructs a default for each parameter, using the constructor default (if provided),
-    *  otherwise using a typeclass-provided default */
-  def join[T](ctx: CaseClass[HasDefault, T]): HasDefault[T] = new HasDefault[T] {
-    def defaultValue = ctx.constructMonadic { param =>
-      param.default match {
-        case Some(arg) => Right(arg)
-        case None => param.typeclass.defaultValue
+  /** constructs a default for each parameter, using the constructor default (if
+    * provided), otherwise using a typeclass-provided default
+    */
+  def join[T](ctx: CaseClass[HasDefault, T]): HasDefault[T] =
+    new HasDefault[T] {
+      def defaultValue = ctx.constructMonadic { param =>
+        param.default match {
+          case Some(arg) => Right(arg)
+          case None      => param.typeclass.defaultValue
+        }
       }
     }
-  }
 
   /** chooses which subtype to delegate to */
-  override def split[T](ctx: SealedTrait[HasDefault, T]): HasDefault[T] = new HasDefault[T]:
-    def defaultValue = ctx.subtypes.headOption match
-      case Some(sub) => sub.typeclass.defaultValue
-      case None => Left("no subtypes")
+  override def split[T](ctx: SealedTrait[HasDefault, T]): HasDefault[T] =
+    new HasDefault[T]:
+      def defaultValue = ctx.subtypes.headOption match
+        case Some(sub) => sub.typeclass.defaultValue
+        case None      => Left("no subtypes")
 
   /** default value for a string; the empty string */
   given string: HasDefault[String] with

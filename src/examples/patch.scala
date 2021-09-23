@@ -2,20 +2,18 @@ package magnolia1.examples
 
 import magnolia1._
 
-/**
-  * Type class for copying an instance of some type `T`,
-  * thereby replacing certain fields with other values.
+/** Type class for copying an instance of some type `T`, thereby replacing
+  * certain fields with other values.
   */
 sealed abstract class Patcher[T]:
 
-  /**
-    * Returns a copy of `value` whereby all non-null elements of `fieldValues`
-    * replace the respective fields of `value`.
-    * For all null elements of `fieldValues` the original value of the
-    * respective field of `value` is maintained.
+  /** Returns a copy of `value` whereby all non-null elements of `fieldValues`
+    * replace the respective fields of `value`. For all null elements of
+    * `fieldValues` the original value of the respective field of `value` is
+    * maintained.
     *
-    * If the size of `fieldValues` doesn't exactly correspond to the
-    * number of fields of `value` an [[IllegalArgumentException]] is thrown.
+    * If the size of `fieldValues` doesn't exactly correspond to the number of
+    * fields of `value` an [[IllegalArgumentException]] is thrown.
     */
   def patch(value: T, fieldValues: Seq[Any]): T
 
@@ -27,15 +25,15 @@ object Patcher extends LowerPriorityPatcher with Derivation[Patcher]:
           throw new IllegalArgumentException(
             s"Cannot patch value `$value`, expected ${ctx.params.size} fields but got ${fieldValues.size}"
           )
-        
-        val effectiveFields = ctx.params.zip(fieldValues).map {
-          (param, x) => if (x.asInstanceOf[AnyRef] ne null) x else param.deref(value)
+
+        val effectiveFields = ctx.params.zip(fieldValues).map { (param, x) =>
+          if (x.asInstanceOf[AnyRef] ne null) x else param.deref(value)
         }
 
         ctx.rawConstruct(effectiveFields)
 
   def split[T](ctx: SealedTrait[Patcher, T]): Patcher[T] = new Patcher[T]:
-    def patch(value: T, fieldValues: Seq[Any]): T  =
+    def patch(value: T, fieldValues: Seq[Any]): T =
       ctx.choose(value)(sub => sub.typeclass.patch(sub.value, fieldValues))
 
 sealed abstract class LowerPriorityPatcher:

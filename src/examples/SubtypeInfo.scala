@@ -21,7 +21,8 @@ object SubtypeInfo extends Derivation[SubtypeInfo]:
     new SubtypeInfo[T]:
       def subtypeIsObject: Seq[Boolean] = ctx.subtypes.map(_.isObject)
       def traitAnnotations: Seq[Any] = ctx.annotations
-      def subtypeAnnotations: Seq[Seq[Any]] = ctx.subtypes.map(_.annotations.toList).toList
+      def subtypeAnnotations: Seq[Seq[Any]] =
+        ctx.subtypes.map(_.annotations.toList).toList
       def isEnum: Boolean = ctx.isEnum
 
   given fallback[T]: SubtypeInfo[T] =

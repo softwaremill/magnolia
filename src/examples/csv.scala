@@ -9,9 +9,12 @@ trait Csv[A]:
 
 object Csv extends Derivation[Csv]:
   def join[A](ctx: CaseClass[Csv, A]): Csv[A] = a =>
-    ctx.params.foldLeft(List[String]()) { (acc, p) => acc ++ p.typeclass(p.deref(a)) }
+    ctx.params.foldLeft(List[String]()) { (acc, p) =>
+      acc ++ p.typeclass(p.deref(a))
+    }
 
-  def split[A](ctx: SealedTrait[Csv, A]): Csv[A] = a => ctx.choose(a) { sub => sub.typeclass(sub.value) }
+  def split[A](ctx: SealedTrait[Csv, A]): Csv[A] = a =>
+    ctx.choose(a) { sub => sub.typeclass(sub.value) }
 
   given Csv[String] = List(_)
   given Csv[Int] = i => List(i.toString)
