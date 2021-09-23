@@ -13,7 +13,7 @@ trait CommonDerivation[TypeClass[_]]:
     val parameters = IArray(getParams[A, product.MirroredElemLabels, product.MirroredElemTypes](
         paramAnns[A].to(Map), paramTypeAnns[A].to(Map), repeated[A].to(Map))*)
     
-    val caseClass = new CaseClass[Typeclass, A](typeInfo[A], isObject[A], isValueClass[A], parameters,
+    val caseClass = new CaseClass[Typeclass, A](typeInfo[A], isObject[A], isValueClass[A], isOpaqueType[A], parameters,
         IArray(anns[A]*), IArray[Any](typeAnns[A]*)):
       
       def construct[PType](makeParam: Param => PType)(using ClassTag[PType]): A =

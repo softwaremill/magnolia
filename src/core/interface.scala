@@ -35,6 +35,7 @@ abstract class CaseClass[Typeclass[_], Type]
                         (val typeInfo: TypeInfo,
                          val isObject: Boolean,
                          val isValueClass: Boolean,
+                         val isOpaqueType: Boolean,
                          val params: IArray[CaseClass.Param[Typeclass, Type]],
                          val annotations: IArray[Any],
                          val typeAnnotations: IArray[Any]) extends Serializable:
