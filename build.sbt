@@ -30,7 +30,14 @@ lazy val core = (projectMatrix in file("core"))
     Compile / doc / scalacOptions ~= (_.filterNot(Set("-Xfatal-warnings"))),
     Compile / doc / scalacOptions --= Seq("-Xlint:doc-detached"),
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided,
-    mimaPreviousArtifacts := Set(organization.value %% moduleName.value % "1.0.0-M5")
+    mimaPreviousArtifacts := {
+      val minorUnchanged = previousStableVersion.value.flatMap(CrossVersion.partialVersion) == CrossVersion.partialVersion(version.value)
+      val isRcOrMilestone = version.value.contains("M") || version.value.contains("RC")
+      if (minorUnchanged && !isRcOrMilestone)
+        previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
+      else
+        Set.empty
+    }
   )
   .jvmPlatform(scalaVersions = scala2)
   .jsPlatform(scalaVersions = scala2)
