@@ -1,4 +1,6 @@
 import com.softwaremill.UpdateVersionInDocs
+import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
+import com.softwaremill.Publish.{updateDocs, ossPublishSettings}
 
 val scala3 = "3.0.2"
 
