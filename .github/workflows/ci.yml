@@ -32,7 +32,7 @@ jobs:
       - name: Test
         run: sbt -v test
       - name: MiMa
-        run: sbt -v --client core/mimaReportBinaryIssues
+        run: sbt -v --client core3/mimaReportBinaryIssues
       - name: Cleanup
         run: |
           rm -rf "$HOME/.ivy2/local" || true
