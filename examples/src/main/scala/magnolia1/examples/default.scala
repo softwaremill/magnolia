@@ -12,8 +12,7 @@ object HasDefault {
 
   type Typeclass[T] = HasDefault[T]
 
-  /** constructs a default for each parameter, using the constructor default (if provided),
-    *  otherwise using a typeclass-provided default
+  /** constructs a default for each parameter, using the constructor default (if provided), otherwise using a typeclass-provided default
     */
   def join[T](ctx: CaseClass[HasDefault, T]): HasDefault[T] = new HasDefault[T] {
     def defaultValue = ctx.constructMonadic { param =>

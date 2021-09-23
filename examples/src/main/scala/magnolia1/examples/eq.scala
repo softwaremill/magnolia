@@ -22,8 +22,8 @@ object Eq {
 
   /** choose which equality subtype to defer to
     *
-    *  Note that in addition to dispatching based on the type of the first parameter to the `equal`
-    *  method, we check that the second parameter is the same type.
+    * Note that in addition to dispatching based on the type of the first parameter to the `equal` method, we check that the second
+    * parameter is the same type.
     */
   def split[T](ctx: SealedTrait[Eq, T]): Eq[T] = new Eq[T] {
     def equal(value1: T, value2: T): Boolean = ctx.split(value1) { case sub =>

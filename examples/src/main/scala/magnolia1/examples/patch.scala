@@ -4,18 +4,14 @@ import magnolia1.{CaseClass, Magnolia, SealedTrait}
 
 import scala.language.experimental.macros
 
-/** Type class for copying an instance of some type `T`,
-  * thereby replacing certain fields with other values.
+/** Type class for copying an instance of some type `T`, thereby replacing certain fields with other values.
   */
 sealed abstract class Patcher[T] {
 
-  /** Returns a copy of `value` whereby all non-null elements of `fieldValues`
-    * replace the respective fields of `value`.
-    * For all null elements of `fieldValues` the original value of the
-    * respective field of `value` is maintained.
+  /** Returns a copy of `value` whereby all non-null elements of `fieldValues` replace the respective fields of `value`. For all null
+    * elements of `fieldValues` the original value of the respective field of `value` is maintained.
     *
-    * If the size of `fieldValues` doesn't exactly correspond to the
-    * number of fields of `value` an `IllegalArgumentException` is thrown.
+    * If the size of `fieldValues` doesn't exactly correspond to the number of fields of `value` an `IllegalArgumentException` is thrown.
     */
   def patch(value: T, fieldValues: Seq[Any]): T
 }

@@ -13,60 +13,34 @@ object Magnolia {
 
   /** derives a generic typeclass instance for the type `T`
     *
-    *  This is a macro definition method which should be bound to a method defined inside a Magnolia
-    *  generic derivation object, that is, one which defines the methods `join`, `split` and
-    *  the type constructor, `Typeclass[_]`. This will typically look like,
-    *  <pre>
-    *  object Derivation {
-    *    // other definitions
-    *    implicit def gen[T]: Typeclass[T] = Magnolia.gen[T]
-    *  }
-    *  </pre>
-    *  which would support automatic derivation of typeclass instances by calling
-    *  `Derivation.gen[T]` or with `implicitly[Typeclass[T]]`, if the implicit method is imported
-    *  into the current scope.
+    * This is a macro definition method which should be bound to a method defined inside a Magnolia generic derivation object, that is, one
+    * which defines the methods `join`, `split` and the type constructor, `Typeclass[_]`. This will typically look like, <pre> object
+    * Derivation { // other definitions implicit def gen[T]: Typeclass[T] = Magnolia.gen[T] } </pre> which would support automatic
+    * derivation of typeclass instances by calling `Derivation.gen[T]` or with `implicitly[Typeclass[T]]`, if the implicit method is
+    * imported into the current scope.
     *
-    *  If the `gen` is not `implicit`, semi-auto derivation is used instead, whereby implicits will
-    *  not be generated outside of this ADT.
+    * If the `gen` is not `implicit`, semi-auto derivation is used instead, whereby implicits will not be generated outside of this ADT.
     *
-    *  The definition expects a type constructor called `Typeclass`, taking one *-kinded type
-    *  parameter to be defined on the same object as a means of determining how the typeclass should
-    *  be genericized. While this may be obvious for typeclasses like `Show[T]` which take only a
-    *  single type parameter, Magnolia can also derive typeclass instances for types such as
-    *  `Decoder[Format, Type]` which would typically fix the `Format` parameter while varying the
-    *  `Type` parameter.
+    * The definition expects a type constructor called `Typeclass`, taking one *-kinded type parameter to be defined on the same object as a
+    * means of determining how the typeclass should be genericized. While this may be obvious for typeclasses like `Show[T]` which take only
+    * a single type parameter, Magnolia can also derive typeclass instances for types such as `Decoder[Format, Type]` which would typically
+    * fix the `Format` parameter while varying the `Type` parameter.
     *
-    *  While there is no "interface" for a derivation, in the object-oriented sense, the Magnolia
-    *  macro expects to be able to call certain methods on the object within which it is bound to a
-    *  method.
+    * While there is no "interface" for a derivation, in the object-oriented sense, the Magnolia macro expects to be able to call certain
+    * methods on the object within which it is bound to a method.
     *
-    *  Specifically, for deriving case classes (product types), the macro will attempt to call the
-    *  `join` method with an instance of [[CaseClass]], like so,
-    *  <pre>
-    *    &lt;derivation&gt;.join(&lt;caseClass&gt;): Typeclass[T]
-    *  </pre>
-    *  That is to say, the macro expects there to exist a method called `join` on the derivation
-    *  object, which may be called with the code above, and for it to return a type which conforms
-    *  to the type `Typeclass[T]`. The implementation of `join` will therefore typically look
-    *  like this,
-    *  <pre>
-    *    def join[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T] = ...
-    *  </pre>
-    *  however, there is the flexibility to provide additional type parameters or additional
-    *  implicit parameters to the definition, provided these do not affect its ability to be invoked
-    *  as described above.
+    * Specifically, for deriving case classes (product types), the macro will attempt to call the `join` method with an instance of
+    * [[CaseClass]], like so, <pre> &lt;derivation&gt;.join(&lt;caseClass&gt;): Typeclass[T] </pre> That is to say, the macro expects there
+    * to exist a method called `join` on the derivation object, which may be called with the code above, and for it to return a type which
+    * conforms to the type `Typeclass[T]`. The implementation of `join` will therefore typically look like this, <pre> def
+    * join[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T] = ... </pre> however, there is the flexibility to provide additional type
+    * parameters or additional implicit parameters to the definition, provided these do not affect its ability to be invoked as described
+    * above.
     *
-    *  Likewise, for deriving sealed traits (coproduct or sum types), the macro will attempt to call
-    *  the `split` method with an instance of [[SealedTrait]], like so,
-    *  <pre>
-    *    &lt;derivation&gt;.split(&lt;sealedTrait&gt;): Typeclass[T]
-    *  </pre>
-    *  so a definition such as,
-    *  <pre>
-    *    def split[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T] = ...
-    *  </pre>
-    *  will suffice, however the qualifications regarding additional type parameters and implicit
-    *  parameters apply equally to `split` as to `join`.
+    * Likewise, for deriving sealed traits (coproduct or sum types), the macro will attempt to call the `split` method with an instance of
+    * [[SealedTrait]], like so, <pre> &lt;derivation&gt;.split(&lt;sealedTrait&gt;): Typeclass[T] </pre> so a definition such as, <pre> def
+    * split[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T] = ... </pre> will suffice, however the qualifications regarding
+    * additional type parameters and implicit parameters apply equally to `split` as to `join`.
     */
   def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = Stack.withContext(c) { (stack, depth) =>
     import c.internal._
@@ -128,7 +102,7 @@ object Magnolia {
       .flatMap(_.tree.children.tail.collectFirst {
         case Literal(Constant(arg: String))                            => arg
         case tree if DebugTpe.companion.decls.exists(_ == tree.symbol) => "" // Default constructor, i.e. @debug or @debug()
-        case other                                                     => error(s"Invalid argument $other in @debug annotation. Only string literals or empty constructor supported")
+        case other => error(s"Invalid argument $other in @debug annotation. Only string literals or empty constructor supported")
       })
 
     object DeferredRef {
@@ -143,21 +117,22 @@ object Magnolia {
       }
     }
 
-    /** Returns the chain of owners of `symbol` up to the root package in reverse order.
-      * The owner of a symbol is the enclosing package/trait/class/object/method/val/var where it is defined.
-      * More efficient than [[ownerChainOf]] because it does not materialize the owner chain.
+    /** Returns the chain of owners of `symbol` up to the root package in reverse order. The owner of a symbol is the enclosing
+      * package/trait/class/object/method/val/var where it is defined. More efficient than [[ownerChainOf]] because it does not materialize
+      * the owner chain.
       */
     def reverseOwnerChainOf(symbol: Symbol): Iterator[Symbol] =
       Iterator.iterate(symbol)(_.owner).takeWhile(owner => owner != null && owner != NoSymbol)
 
     /** Returns the chain of owners of `symbol` up to the root package.
-      * @see [[reverseOwnerChainOf]]
+      * @see
+      *   [[reverseOwnerChainOf]]
       */
     def ownerChainOf(symbol: Symbol): Iterator[Symbol] =
       reverseOwnerChainOf(symbol).toVector.reverseIterator
 
-    /** Returns a type-checked reference to the companion object of `clazz` if any.
-      * Unlike `clazz.companion` works also for local classes nested in methods/vals/vars.
+    /** Returns a type-checked reference to the companion object of `clazz` if any. Unlike `clazz.companion` works also for local classes
+      * nested in methods/vals/vars.
       */
     def companionOf(clazz: ClassSymbol): Option[Tree] = {
       val fastCompanion = clazz.companion
@@ -703,8 +678,8 @@ object Magnolia {
 
   /** constructs a new [[Param]] instance
     *
-    *  This method is intended to be called only from code generated by the Magnolia macro, and
-    *  should not be called directly from users' code.
+    * This method is intended to be called only from code generated by the Magnolia macro, and should not be called directly from users'
+    * code.
     */
   private[Magnolia] def param[Tc[_], T, P](
       name: String,

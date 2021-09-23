@@ -6,8 +6,7 @@ import scala.language.experimental.macros
 
 /** shows one type as another, often as a string
   *
-  *  Note that this is a more general form of `Show` than is usual, as it permits the return type to
-  *  be something other than a string.
+  * Note that this is a more general form of `Show` than is usual, as it permits the return type to be something other than a string.
   */
 trait Show[Out, T] { def show(value: T): Out }
 
@@ -15,15 +14,15 @@ trait GenericShow[Out] {
 
   /** the type constructor for new [[Show]] instances
     *
-    *  The first parameter is fixed as `String`, and the second parameter varies generically.
+    * The first parameter is fixed as `String`, and the second parameter varies generically.
     */
   type Typeclass[T] = Show[Out, T]
 
   def joinElems(typeName: String, strings: Seq[String]): Out
   def prefix(s: String, out: Out): Out
 
-  /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of
-    *  showing each parameter, and prefixing it with the class name
+  /** creates a new [[Show]] instance by labelling and joining (with `mkString`) the result of showing each parameter, and prefixing it with
+    * the class name
     */
   def join[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = { value =>
     if (ctx.isValueClass) {
@@ -58,8 +57,7 @@ trait GenericShow[Out] {
     }
   }
 
-  /** choose which typeclass to use based on the subtype of the sealed trait
-    * and prefix with the annotations as discovered on the subtype.
+  /** choose which typeclass to use based on the subtype of the sealed trait and prefix with the annotations as discovered on the subtype.
     */
   def split[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
     ctx.split(value) { sub =>
