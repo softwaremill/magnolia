@@ -8,7 +8,12 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   scalaVersion := scala3,
   organization := "com.softwaremill.magnolia1_3",
   description := "Fast, easy and transparent typeclass derivation for Scala 3",
-  updateDocs := UpdateVersionInDocs(sLog.value, organization.value, version.value, List(file("readme.md")))
+  updateDocs := UpdateVersionInDocs(
+    sLog.value,
+    organization.value,
+    version.value,
+    List(file("readme.md"))
+  )
 )
 
 lazy val root =
@@ -16,13 +21,28 @@ lazy val root =
     .in(file("."))
     .settings(commonSettings)
     .settings(name := "magnolia-root", publishArtifact := false)
-    .aggregate((core.projectRefs ++ examples.projectRefs ++ test.projectRefs): _*)
+    .aggregate(
+      (core.projectRefs ++ examples.projectRefs ++ test.projectRefs): _*
+    )
 
 lazy val core = (projectMatrix in file(".core"))
   .settings(commonSettings)
   .settings(
     name := "magnolia",
     Compile / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "core",
+    mimaPreviousArtifacts := {
+      val minorUnchanged = previousStableVersion.value.flatMap(
+        CrossVersion.partialVersion
+      ) == CrossVersion.partialVersion(version.value)
+      val isRcOrMilestone =
+        version.value.contains("M") || version.value.contains("RC")
+      if (minorUnchanged && !isRcOrMilestone)
+        previousStableVersion.value
+          .map(organization.value %% moduleName.value % _)
+          .toSet
+      else
+        Set.empty
+    }
   )
   .jvmPlatform(scalaVersions = List(scala3))
   .jsPlatform(scalaVersions = List(scala3))
@@ -48,7 +68,7 @@ lazy val test = (projectMatrix in file(".test"))
     ),
     testFrameworks += new TestFramework("munit.Framework"),
     Test / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "test",
-    publishArtifact := false,
+    publishArtifact := false
   )
   .jvmPlatform(scalaVersions = List(scala3))
   .jsPlatform(scalaVersions = List(scala3))
