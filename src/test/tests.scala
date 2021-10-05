@@ -578,4 +578,9 @@ class Tests extends munit.FunSuite {
     val derivedSubtypeInfo = SubtypeInfo.derived[Sport]
     assertEquals(derivedSubtypeInfo.isEnum, false)
   }
+
+  test("construct a Show instance for an enum") {
+    val res = Show.derived[Size].show(Size.S)
+    assertEquals(res, "S()")
+  }
 }
