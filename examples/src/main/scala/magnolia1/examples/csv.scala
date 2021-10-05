@@ -1,11 +1,21 @@
 package magnolia1.examples
 
-import magnolia1.{CaseClass, Magnolia, SealedTrait}
+import magnolia1.{CaseClass, Config, Magnolia, SealedTrait}
 
 import scala.language.experimental.macros
 
 trait Csv[A] {
   def apply(a: A): List[String]
+}
+
+object CsvConfig extends Config {
+  type Proxy = Csv.type
+  type Ignore = transient
+  final val readOnly = true
+  final val minFields = 0
+  final val maxFields = -1
+  final val minCases = 0
+  final val maxCases = -1
 }
 
 object Csv {
@@ -22,9 +32,13 @@ object Csv {
     def apply(a: A): List[String] = ctx.split(a)(sub => sub.typeclass(sub.cast(a)))
   }
 
-  implicit def deriveCsv[A]: Csv[A] = macro Magnolia.gen[A]
+  @transient
+  val ignoreMe: String = "ignored value"
+
+  implicit def deriveCsv[A]: Csv[A] = macro Magnolia.genWith[A, CsvConfig.type]
 
   implicit val csvStr: Csv[String] = new Csv[String] {
     def apply(a: String): List[String] = List(a)
   }
+
 }

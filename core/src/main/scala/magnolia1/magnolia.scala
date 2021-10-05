@@ -7,6 +7,16 @@ import scala.collection.mutable
 import scala.language.higherKinds
 import scala.reflect.macros._
 
+private case class MagnoliaConfig[ProxyType, IgnoreType](
+  proxyType: ProxyType,
+  ignoreType: IgnoreType,
+  readOnly: Boolean = false,
+  minFields: Int = -1,
+  maxFields: Int = Int.MaxValue,
+  minCases: Int = -1,
+  maxCases: Int = Int.MaxValue
+)
+
 /** the object which defines the Magnolia macro */
 object Magnolia {
   import CompileTimeState._
@@ -42,12 +52,32 @@ object Magnolia {
     * split[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T] = ... </pre> will suffice, however the qualifications regarding
     * additional type parameters and implicit parameters apply equally to `split` as to `join`.
     */
-  def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = Stack.withContext(c) { (stack, depth) =>
+   def genWith[T: c.WeakTypeTag, C <: Config with Singleton: c.WeakTypeTag](c: whitebox.Context): c.Tree = {
+     import c.universe._
+
+     val weakConfig = weakTypeOf[C]
+     val proxyType: c.Type = weakConfig.decl(TypeName("Proxy")).info
+     val ignoreType: c.Type = weakConfig.decl(TypeName("Ignore")).info
+     val NullaryMethodType(ConstantType(Constant(readOnly: Boolean))) = weakConfig.decl(TermName("readOnly")).info
+     val NullaryMethodType(ConstantType(Constant(minFields: Int))) = weakConfig.decl(TermName("minFields")).info
+     val NullaryMethodType(ConstantType(Constant(maxFields: Int))) = weakConfig.decl(TermName("maxFields")).info
+     val NullaryMethodType(ConstantType(Constant(minCases: Int))) = weakConfig.decl(TermName("minCases")).info
+     val NullaryMethodType(ConstantType(Constant(maxCases: Int))) = weakConfig.decl(TermName("maxCases")).info
+
+     genMacro[T, c.Type, c.Type](c, Some(MagnoliaConfig(proxyType, ignoreType, readOnly, minFields, maxFields, minCases, maxCases)))
+   }
+
+  def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = {
+    genMacro(c, None)
+  }
+
+  private def genMacro[T: c.WeakTypeTag, ProxyType, IgnoreType](c: whitebox.Context, config: Option[MagnoliaConfig[ProxyType, IgnoreType]]): c.Tree = Stack.withContext(c) { (stack, depth) =>
     import c.internal._
     import c.universe._
     import definitions._
 
     val genericType = weakTypeOf[T]
+
     val genericSymbol = genericType.typeSymbol
 
     def error(message: => String): Nothing = c.abort(c.enclosingPosition, if (depth > 1) "" else s"magnolia: $message")
@@ -318,6 +348,12 @@ object Magnolia {
       val resultType = appliedType(typeConstructor, genericType)
       val typeName = c.freshName(TermName("typeName"))
 
+      def isIgnored(termSymbol: c.universe.TermSymbol): Boolean = {
+        config.map(_.ignoreType).exists { ignoreType =>
+          termSymbol.annotations.map(_.tree.symbol).contains(ignoreType)
+        }
+      }
+
       def typeNameOf(tpe: Type): Tree = {
         val symbol = tpe.typeSymbol
         val typeArgNames = for (typeArg <- tpe.typeArgs) yield typeNameOf(typeArg)
@@ -383,8 +419,11 @@ object Magnolia {
           .map(_.map(_.asTerm))
 
         val caseClassParameters = genericType.decls.sorted.collect(
-          if (isValueClass) { case p: TermSymbol if p.isParamAccessor && p.isMethod => p }
-          else { case p: TermSymbol if p.isCaseAccessor && !p.isMethod => p }
+          if (isValueClass) {
+            case p: TermSymbol if p.isParamAccessor && p.isMethod => p
+          } else {
+            case p: TermSymbol if p.isCaseAccessor && !p.isMethod && !isIgnored(p) => p
+          }
         )
 
         val (factoryObject, factoryMethod) = {
