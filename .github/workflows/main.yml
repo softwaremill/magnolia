@@ -63,9 +63,9 @@ jobs:
             ~/.coursier
           key: sbt-cache-release-${{ runner.os }}-${{ hashFiles('project/build.properties') }}
       - name: Compile
-        run: sbt --client compile
+        run: sbt compile
       - name: Publish artifacts
-        run: sbt --client ci-release
+        run: sbt ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
