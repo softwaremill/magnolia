@@ -1,6 +1,8 @@
+import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
+import com.softwaremill.Publish.{updateDocs, ossPublishSettings}
 import com.softwaremill.UpdateVersionInDocs
 
-val scala2_12 = "2.12.14"
+val scala2_12 = "2.12.15"
 val scala2_13 = "2.13.6"
 val scala2 = List(scala2_12, scala2_13)
 
@@ -64,7 +66,7 @@ lazy val test = (projectMatrix in file("test"))
     name := "magnolia-test",
     Test / scalacOptions += "-Ywarn-macros:after",
     Test / scalacOptions --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings"),
-    libraryDependencies += "org.scalameta" %% "munit" % "0.7.28" % Test,
+    libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test,
     publishArtifact := false
   )
   .jvmPlatform(scalaVersions = scala2)
