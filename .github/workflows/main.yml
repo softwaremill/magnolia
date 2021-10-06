@@ -46,7 +46,6 @@ jobs:
     if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/scala2-v'))
     runs-on: ubuntu-20.04
     env:
-      STTP_NATIVE: 1
       JAVA_OPTS: -Xmx4G
     steps:
       - name: Checkout
