@@ -8,5 +8,5 @@ addSbtPlugin(
   "com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-publish" % sbtSoftwareMillVersion
 )
 
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.7.0")
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.7.1")
 addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.0.1")
