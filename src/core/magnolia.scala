@@ -124,10 +124,10 @@ trait Derivation[TypeClass[_]] extends CommonDerivation[TypeClass]:
           IArray.from(paramTypeAnns[T]),
           isObject[s],
           idx,
-          CallByNeed(
-            summonOption[Typeclass[s]]
-              .getOrElse(derived[s](using summonInline[Mirror.Of[s]]))
-          ),
+          CallByNeed(summonFrom {
+            case tc: Typeclass[`s`] => tc
+            case _ => derived(using summonInline[Mirror.Of[s]])
+          }),
           x => m.ordinal(x) == idx,
           _.asInstanceOf[s & T]
         ) :: subtypes[T, tail](m, idx + 1)
