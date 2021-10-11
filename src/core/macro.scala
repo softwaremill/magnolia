@@ -13,12 +13,6 @@ object Macro:
   inline def paramTypeAnns[T]: List[(String, List[Any])] = ${ paramTypeAnns[T] }
   inline def repeated[T]: List[(String, Boolean)] = ${ repeated[T] }
   inline def typeInfo[T]: TypeInfo = ${ typeInfo[T] }
-  inline def summonOption[T]: Option[T] = ${ summonOptionImpl[T] }
-
-  def summonOptionImpl[T: Type](using Quotes): Expr[Option[T]] =
-    Expr.summon[T] match
-      case None    => Expr(None)
-      case Some(e) => '{ Some($e) }
 
   def isObject[T: Type](using Quotes): Expr[Boolean] =
     import quotes.reflect.*
