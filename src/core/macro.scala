@@ -161,11 +161,13 @@ object Macro:
   def typeInfo[T: Type](using Quotes): Expr[TypeInfo] =
     import quotes.reflect._
 
-    def normalizedName(s: Symbol): String = if s.flags.is(Flags.Module) then s.name.stripSuffix("$") else s.name
+    def normalizedName(s: Symbol): String =
+      if s.flags.is(Flags.Module) then s.name.stripSuffix("$") else s.name
     def name(tpe: TypeRepr): Expr[String] = tpe match
-      case TermRef(typeRepr, name) if tpe.typeSymbol.flags.is(Flags.Module) => Expr(name.stripSuffix("$"))
+      case TermRef(typeRepr, name) if tpe.typeSymbol.flags.is(Flags.Module) =>
+        Expr(name.stripSuffix("$"))
       case TermRef(typeRepr, name) => Expr(name)
-      case _ => Expr(normalizedName(tpe.typeSymbol))
+      case _                       => Expr(normalizedName(tpe.typeSymbol))
 
     def ownerNameChain(sym: Symbol): List[String] =
       if sym.isNoSymbol then List.empty
