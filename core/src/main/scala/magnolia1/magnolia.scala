@@ -56,7 +56,7 @@ object Magnolia {
      import c.universe._
 
      val weakConfig = weakTypeOf[C]
-     val proxyType: c.Type = weakConfig.decl(TypeName("Proxy")).info
+     val proxyType: c.Symbol = weakConfig.decl(TypeName("Proxy"))
      val ignoreType: c.Type = weakConfig.decl(TypeName("Ignore")).info
      val NullaryMethodType(ConstantType(Constant(readOnly: Boolean))) = weakConfig.decl(TermName("readOnly")).info
      val NullaryMethodType(ConstantType(Constant(minFields: Int))) = weakConfig.decl(TermName("minFields")).info
@@ -64,7 +64,7 @@ object Magnolia {
      val NullaryMethodType(ConstantType(Constant(minCases: Int))) = weakConfig.decl(TermName("minCases")).info
      val NullaryMethodType(ConstantType(Constant(maxCases: Int))) = weakConfig.decl(TermName("maxCases")).info
 
-     genMacro[T, c.Type, c.Type](c, Some(MagnoliaConfig(proxyType, ignoreType, readOnly, minFields, maxFields, minCases, maxCases)))
+     genMacro[T, c.Symbol, c.Type](c, Some(MagnoliaConfig(proxyType, ignoreType, readOnly, minFields, maxFields, minCases, maxCases)))
    }
 
   def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = {
@@ -84,7 +84,7 @@ object Magnolia {
     def warning(message: String): Unit = c.warning(c.enclosingPosition, s"magnolia: $message")
 
     val prefixType = c.prefix.tree.tpe
-    val prefixObject = prefixType.typeSymbol
+    val prefixObject = config.map(_.proxyType.asInstanceOf[c.Symbol]).getOrElse(prefixType.typeSymbol)
     val prefixName = prefixObject.name.decodedName
 
     val TypeClassNme = TypeName("Typeclass")
