@@ -412,10 +412,10 @@ class Tests extends munit.FunSuite {
     )
   }
 
-  //test("patch a Person via a Patcher[Entity]") {
+  // test("patch a Person via a Patcher[Entity]") {
   //  val person = Person("Bob", 42)
   //  summon[Patcher[Entity]].patch(person, Seq(null, 21))
-  //}.assert(_ == Person("Bob", 21))
+  // }.assert(_ == Person("Bob", 21))
 
   test("show an Account") {
     val res = Show
@@ -451,7 +451,7 @@ class Tests extends munit.FunSuite {
   //   given [T: [X] =>> Show[String, X]] : Show[String, List[T]] = Show.derived
 
   //   Show.derived[List[Int]].show(List(1, 2, 3))
-  //.assert(_ == "::[Int](head=1,tl=::[Int](head=2,tl=::[Int](head=3,tl=Nil())))")
+  // .assert(_ == "::[Int](head=1,tl=::[Int](head=2,tl=::[Int](head=3,tl=Nil())))")
   // }
 
   test("sealed trait typeName should be complete and unchanged") {
