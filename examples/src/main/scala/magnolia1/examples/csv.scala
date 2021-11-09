@@ -1,6 +1,6 @@
 package magnolia1.examples
 
-import magnolia1.{CaseClass, Config, Magnolia, SealedTrait}
+import magnolia1._
 
 import scala.language.experimental.macros
 
@@ -12,9 +12,9 @@ object CsvConfig extends Config {
   type Proxy = Csv.type
   type Ignore = transient
   final val readOnly = true
-  final val minFields = 0
+  final val minFields = -1
   final val maxFields = -1
-  final val minCases = 0
+  final val minCases = -1
   final val maxCases = -1
 }
 

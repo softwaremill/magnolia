@@ -127,6 +127,20 @@ object Magnolia {
     val SubtypeTpe = typeOf[Subtype[Any, Any]].typeConstructor
     val TypeNameObj = reify(magnolia1.TypeName).tree
 
+    def assertFieldsLimits(caseClassParameters: List[TermSymbol]): Unit = {
+      val minLimit = config.map(_.minFields).getOrElse(-1)
+      val maxLimit = config.map(_.maxFields).getOrElse(-1)
+      val fieldsNumber = caseClassParameters.size
+
+      if (minLimit > -1 && fieldsNumber < minLimit) {
+        error(s"Case class ${genericSymbol.name} has $fieldsNumber fields which is less than required minimum: $minLimit")
+      }
+
+      if (maxLimit > -1 && fieldsNumber > maxLimit) {
+        error(s"Case class ${genericSymbol.name} has $fieldsNumber fields which is above the required maximum: $maxLimit")
+      }
+    }
+
     val debug = c.macroApplication.symbol.annotations
       .find(_.tree.tpe <:< DebugTpe)
       .flatMap(_.tree.children.tail.collectFirst {
@@ -425,6 +439,8 @@ object Magnolia {
             case p: TermSymbol if p.isCaseAccessor && !p.isMethod && !isIgnored(p) => p
           }
         )
+
+        assertFieldsLimits(caseClassParameters)
 
         val (factoryObject, factoryMethod) = {
           if (isReadOnly && isValueClass) ReadOnlyParamObj -> TermName("valueParam")
