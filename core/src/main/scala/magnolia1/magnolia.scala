@@ -141,6 +141,20 @@ object Magnolia {
       }
     }
 
+    def assertCasesLimits(subtypes: List[Type]): Unit = {
+      val minLimit = config.map(_.minCases).getOrElse(-1)
+      val maxLimit = config.map(_.maxCases).getOrElse(-1)
+      val casesNumber = subtypes.size
+
+      if (minLimit > -1 && casesNumber < minLimit) {
+        error(s"Sealed trait ${genericSymbol.name} has $casesNumber subtypes which is less than required minimum: $minLimit")
+      }
+
+      if (maxLimit > -1 && casesNumber > maxLimit) {
+        error(s"Sealed trait ${genericSymbol.name} has $casesNumber fields which is above the required maximum: $maxLimit")
+      }
+    }
+
     val debug = c.macroApplication.symbol.annotations
       .find(_.tree.tpe <:< DebugTpe)
       .flatMap(_.tree.children.tail.collectFirst {
@@ -621,6 +635,8 @@ object Magnolia {
           val applied = appliedType(subType.typeConstructor, newTypeArgs)
           if (applied <:< genericType) existentialAbstraction(typeParams, applied) :: Nil else Nil
         }
+
+        assertCasesLimits(subtypes)
 
         if (subtypes.isEmpty) {
           error(s"could not find any direct subtypes of $typeSymbol")
