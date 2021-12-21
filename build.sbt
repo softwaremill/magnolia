@@ -49,7 +49,8 @@ lazy val core = (projectMatrix in file(".core"))
         )
         Set.empty
       }
-    }
+    },
+    versionScheme := Some("early-semver")
   )
   .jvmPlatform(scalaVersions = List(scala3))
   .jsPlatform(scalaVersions = List(scala3))
