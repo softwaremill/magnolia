@@ -33,17 +33,22 @@ lazy val core = (projectMatrix in file(".core"))
     name := "magnolia",
     Compile / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "core",
     mimaPreviousArtifacts := {
-      val minorUnchanged = previousStableVersion.value.flatMap(
-        CrossVersion.partialVersion
-      ) == CrossVersion.partialVersion(version.value)
-      val isRcOrMilestone =
-        version.value.contains("M") || version.value.contains("RC")
-      if (minorUnchanged && !isRcOrMilestone)
+      val current = version.value
+      val isRcOrMilestone = current.contains("M") || current.contains("RC")
+      if (!isRcOrMilestone) {
+        val previous = previousStableVersion.value
+        println(
+          s"[info] Not a M or RC version, using previous version for MiMa check: $previous"
+        )
         previousStableVersion.value
           .map(organization.value %% moduleName.value % _)
           .toSet
-      else
+      } else {
+        println(
+          s"[info] $current is an M or RC version, no previous version to check with MiMa"
+        )
         Set.empty
+      }
     }
   )
   .jvmPlatform(scalaVersions = List(scala3))
