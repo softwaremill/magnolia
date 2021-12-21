@@ -43,7 +43,8 @@ lazy val core = (projectMatrix in file("core"))
         println(s"[info] $current is an M or RC version, no previous version to check with MiMa")
         Set.empty
       }
-    }
+    },
+    versionScheme := Some("early-semver")
   )
   .jvmPlatform(scalaVersions = scala2)
   .jsPlatform(scalaVersions = scala2)
