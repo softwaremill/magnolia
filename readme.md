@@ -120,11 +120,11 @@ shown.
 
 For Scala 2:
 
-A binary is available on Maven Central as `com.softwaremill.magnolia1_2:magnolia_<scala-version>:1.0.0-M8`. This may be added
+A binary is available on Maven Central as `com.softwaremill.magnolia1_2:magnolia_<scala-version>:1.0.0`. This may be added
 to an [sbt](https://www.scala-sbt.org/) build with:
 
 ```
-libraryDependencies += "com.softwaremill.magnolia1_2" %% "magnolia" % "1.0.0-M8"
+libraryDependencies += "com.softwaremill.magnolia1_2" %% "magnolia" % "1.0.0"
 ```
 
 For Scala 3, see the [scala3 branch](https://github.com/softwaremill/magnolia/tree/scala3).
