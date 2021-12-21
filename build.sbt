@@ -3,7 +3,7 @@ import com.softwaremill.Publish.{updateDocs, ossPublishSettings}
 import com.softwaremill.UpdateVersionInDocs
 
 val scala2_12 = "2.12.15"
-val scala2_13 = "2.13.6"
+val scala2_13 = "2.13.7"
 val scala2 = List(scala2_12, scala2_13)
 
 excludeLintKeys in Global ++= Set(ideSkipProject)
