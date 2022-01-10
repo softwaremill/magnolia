@@ -20,24 +20,13 @@ jobs:
         with:
           java-version: 11
       - name: Cache sbt
-        uses: actions/cache@v2
+        uses: coursier/cache-action@v6
         with:
-          path: |
-            ~/.sbt
-            ~/.ivy2/cache
-            ~/.coursier
-          key: sbt-cache-${{ runner.os }}-${{ hashFiles('project/build.properties') }}
+          extraKey: sbt-cache-${{ runner.os }}
       - name: Compile
         run: sbt -v compile
       - name: Test
         run: sbt -v test
-      - name: Cleanup
-        run: |
-          rm -rf "$HOME/.ivy2/local" || true
-          find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
-          find $HOME/.ivy2/cache                       -name "*-LM-SNAPSHOT*"       -delete || true
-          find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
-          find $HOME/.sbt                              -name "*.lock"               -delete || true
 
   mima:
     # run on external PRs, but not on internal PRs since those will be run by push to branch
@@ -55,22 +44,11 @@ jobs:
         with:
           java-version: 11
       - name: Cache sbt
-        uses: actions/cache@v2
+        uses: coursier/cache-action@v6
         with:
-          path: |
-            ~/.sbt
-            ~/.ivy2/cache
-            ~/.coursier
-          key: sbt-cache-${{ runner.os }}-${{ hashFiles('project/build.properties') }}
+          extraKey: sbt-cache-${{ runner.os }}
       - name: Check MiMa # disable for major releases
         run: sbt -v core3/mimaReportBinaryIssues
-      - name: Cleanup
-        run: |
-          rm -rf "$HOME/.ivy2/local" || true
-          find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
-          find $HOME/.ivy2/cache                       -name "*-LM-SNAPSHOT*"       -delete || true
-          find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
-          find $HOME/.sbt                              -name "*.lock"               -delete || true
 
   publish:
     name: Publish release
@@ -88,13 +66,8 @@ jobs:
         with:
           java-version: 11
       - name: Cache sbt
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.sbt
-            ~/.ivy2/cache
-            ~/.coursier
-          key: sbt-cache-release-${{ runner.os }}-${{ hashFiles('project/build.properties') }}
+        uses: coursier/cache-action@v6
+          extraKey: sbt-cache-release-${{ runner.os }}
       - name: Compile
         run: sbt compile
       - name: Publish artifacts
@@ -120,10 +93,3 @@ jobs:
           version: "v${{ env.VERSION }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Cleanup
-        run: |
-          rm -rf "$HOME/.ivy2/local" || true
-          find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
-          find $HOME/.ivy2/cache                       -name "*-LM-SNAPSHOT*"       -delete || true
-          find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
-          find $HOME/.sbt                              -name "*.lock"               -delete || true
