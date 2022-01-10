@@ -50,6 +50,33 @@ jobs:
       - name: Check MiMa # disable for major releases
         run: sbt -v core3/mimaReportBinaryIssues
 
+  sourcegraph:
+    # run on external PRs, but not on internal PRs since those will be run by push to branch
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-20.04
+    env:
+      JAVA_OPTS: -Xmx4G
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: coursier/setup-action@v1.1.2
+        with:
+          jvm: adopt:11
+          apps: lsif-java
+      - name: Cache sbt
+        uses: coursier/cache-action@v6
+        with:
+          extraKey: sbt-cache-${{ runner.os }}
+      - name: Generate LSIF
+        run: lsif-java index 
+      - name: Upload LSIF data
+        uses: sourcegraph/lsif-upload-action@master
+        with:
+          endpoint: https://sourcegraph.com
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dump.lsif
+
   publish:
     name: Publish release
     needs: [ci]
