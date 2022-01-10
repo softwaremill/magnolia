@@ -67,6 +67,7 @@ jobs:
           java-version: 11
       - name: Cache sbt
         uses: coursier/cache-action@v6
+        with:
           extraKey: sbt-cache-release-${{ runner.os }}
       - name: Compile
         run: sbt compile
