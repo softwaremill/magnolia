@@ -195,8 +195,10 @@ object Magnolia {
 
       def fromBaseClasses(): List[Annotation] =
         symbol.asClass.baseClasses
-          .filter(s => s.name != symbol.name && s.annotations.exists(isInherit))
-          .flatMap(_.annotations.filterNot(isInherit))
+          .collect {
+            case s if s.name != symbol.name && s.annotations.exists(isInherit) => s.annotations.filterNot(isInherit)
+          }
+          .flatten
 
       val annotations = symbol.annotations ++ (if (symbol.isClass) fromBaseClasses() else fromBaseClassesMembers(symbol.owner))
 
