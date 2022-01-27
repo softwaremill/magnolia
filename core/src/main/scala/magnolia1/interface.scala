@@ -477,7 +477,7 @@ final case class TypeName(owner: String, short: String, typeArguments: Seq[TypeN
 final class debug(typeNamePart: String = "") extends scala.annotation.StaticAnnotation
 
 /** This annotation can be attached on the contents of base coproduct (trait/class) along with another specific annotations we want to inherit.
-  * It causes magnolia to collect annotations from overrides.
+  * It causes magnolia to collect annotations from base class members.
   */
 final class inherit extends scala.annotation.StaticAnnotation
 
