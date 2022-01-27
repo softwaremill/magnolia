@@ -183,7 +183,7 @@ object Magnolia {
 
     def annotationsOf(symbol: Symbol): List[Tree] = {
       @tailrec
-      def fromOverrides(owner: Symbol): List[Annotation] =
+      def fromBaseClasses(owner: Symbol): List[Annotation] =
         if (owner.isClass) {
           owner.asClass.baseClasses
             .flatMap(_.asType.toType.members)
@@ -191,9 +191,9 @@ object Magnolia {
               case t: TermSymbol if t.name == symbol.name && t.annotations.exists(isInherit) => t.annotations.filterNot(isInherit)
             }
             .flatten
-        } else fromOverrides(owner.owner)
+        } else fromBaseClasses(owner.owner)
 
-      val annotations = if (symbol.isTerm) symbol.annotations ++ fromOverrides(symbol.owner) else symbol.annotations
+      val annotations = if (symbol.isTerm) symbol.annotations ++ fromBaseClasses(symbol.owner) else symbol.annotations
 
       annotationTrees(annotations.distinct)
     }
