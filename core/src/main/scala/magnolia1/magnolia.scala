@@ -195,7 +195,7 @@ object Magnolia {
 
       val annotations = if (symbol.isTerm) symbol.annotations ++ fromOverrides(symbol.owner) else symbol.annotations
 
-      annotationTrees(annotations)
+      annotationTrees(annotations.distinct)
     }
 
     def isInherit(a: Annotation): Boolean = a.tree.tpe == typeOf[magnolia1.inherit]

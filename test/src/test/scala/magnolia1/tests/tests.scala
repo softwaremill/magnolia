@@ -204,11 +204,19 @@ final case class Louie(height: Int) extends BadChild
 
 sealed abstract class Pet {
   @inherit @MyAnnotation(1)
-  def petName: String
+  def name: String
+  @MyAnnotation(2)
+  def age: Int
 }
 
-case class Dog(petName: String, @MyAnnotation(2) dogFood: String) extends Pet
-case class Cat(petName: String, @MyAnnotation(2) catFood: String) extends Pet
+case class Dog(name: String, age: Int, @MyAnnotation(3) likesMeat: Boolean) extends Pet
+
+sealed abstract class Rodent extends Pet {
+  @inherit @MyAnnotation(3)
+  def likesNuts: Boolean
+}
+
+case class Hamster(name: String, age: Int, likesNuts: Boolean, @MyAnnotation(4) likesVeggies: Boolean) extends Rodent
 
 class Tests extends munit.FunSuite {
 
@@ -669,8 +677,13 @@ class Tests extends munit.FunSuite {
       assertEquals(res, "OffRoad[String](path=Crossroad[String](left=Destination[String](value=A),right=Destination[String](value=B)))")
     }
 
-    test("support inheriting annotations from base coproduct type") {
-      val res = Show.gen[Pet].show(Dog("Alex", "chicken"))
-      assertEquals(res, "Dog(petName{MyAnnotation(1)}=Alex,dogFood{MyAnnotation(2)}=chicken)")
+    test("inherit annotations marked with @inherit and ignore others") {
+      val res = Show.gen[Pet].show(Dog("Alex", 10, likesMeat = true))
+      assertEquals(res, "Dog(name{MyAnnotation(1)}=Alex,age=10,likesMeat{MyAnnotation(3)}=true)")
+    }
+
+    test("inherit annotations from multiple base classes") {
+      val res = Show.gen[Rodent].show(Hamster("Alex", 10, likesNuts = true, likesVeggies = true))
+      assertEquals(res, "Hamster(name{MyAnnotation(1)}=Alex,age=10,likesNuts{MyAnnotation(3)}=true,likesVeggies{MyAnnotation(4)}=true)")
     }
 }

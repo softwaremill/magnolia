@@ -81,6 +81,7 @@ object Show extends GenericShow[String] {
   implicit val string: Show[String, String] = identity
   implicit val int: Show[String, Int] = _.toString
   implicit val long: Show[String, Long] = _.toString + "L"
+  implicit val boolean: Show[String, Boolean] = _.toString
 
   /** show typeclass for sequences */
   implicit def seq[A](implicit A: Show[String, A]): Show[String, Seq[A]] =
