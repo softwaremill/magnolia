@@ -2,7 +2,7 @@ package magnolia1
 
 import magnolia1.Monadic.Ops
 
-import scala.annotation.compileTimeOnly
+import scala.annotation.{compileTimeOnly, tailrec}
 import scala.collection.mutable
 import scala.language.higherKinds
 import scala.reflect.macros._
@@ -181,8 +181,24 @@ object Magnolia {
           annotation.tree
       }
 
-    def annotationsOf(symbol: Symbol): List[Tree] =
-      annotationTrees(symbol.annotations)
+    def annotationsOf(symbol: Symbol): List[Tree] = {
+      @tailrec
+      def fromOverrides(owner: Symbol): List[Annotation] =
+        if (owner.isClass) {
+          owner.asClass.baseClasses
+            .flatMap(_.asType.toType.members)
+            .collect {
+              case t: TermSymbol if t.name == symbol.name && t.annotations.exists(isInherit) => t.annotations.filterNot(isInherit)
+            }
+            .flatten
+        } else fromOverrides(owner.owner)
+
+      val annotations = if (symbol.isTerm) symbol.annotations ++ fromOverrides(symbol.owner) else symbol.annotations
+
+      annotationTrees(annotations)
+    }
+
+    def isInherit(a: Annotation): Boolean = a.tree.tpe == typeOf[magnolia1.inherit]
 
     def typeAnnotationsOf(symbol: Symbol, fromParents: Boolean): List[Tree] = {
       val typeAnnotations = if (fromParents) {

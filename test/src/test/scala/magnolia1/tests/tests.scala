@@ -1,6 +1,6 @@
 package magnolia1.tests
 
-import magnolia1.TypeName
+import magnolia1.inherit
 import magnolia1.examples._
 
 import java.time.LocalDate
@@ -201,6 +201,14 @@ sealed trait GoodChild extends Parent
 final case class Huey(height: Int) extends GoodChild
 class Dewey(val height: Int) extends GoodChild
 final case class Louie(height: Int) extends BadChild
+
+sealed abstract class Pet {
+  @inherit @MyAnnotation(1)
+  def petName: String
+}
+
+case class Dog(petName: String, @MyAnnotation(2) dogFood: String) extends Pet
+case class Cat(petName: String, @MyAnnotation(2) catFood: String) extends Pet
 
 class Tests extends munit.FunSuite {
 
@@ -661,133 +669,8 @@ class Tests extends munit.FunSuite {
       assertEquals(res, "OffRoad[String](path=Crossroad[String](left=Destination[String](value=A),right=Destination[String](value=B)))")
     }
 
-    test("resolve aliases for type names") {
-      type LO[X] = Leaf[Option[X]]
-
-      val res = Show.gen[LO[String]].show(Leaf(None))
-      assertEquals(res,"Leaf[Option[String]](value=None())")
-    }
-
-    test("capture attributes against params") {
-      val res = Show.gen[Attributed].show(Attributed("xyz", 100))
-      assertEquals(res, "Attributed{MyAnnotation(0)}{MyTypeAnnotation(2)}(p1{MyAnnotation(1)}{MyTypeAnnotation(0)}=xyz,p2{MyAnnotation(2)}{MyTypeAnnotation(1)}=100)")
-    }
-
-    test("capture attributes against subtypes") {
-      val res = Show.gen[AttributeParent].show(Attributed("xyz", 100))
-      assertEquals(res, "{MyAnnotation(0)}Attributed{MyAnnotation(0)}{MyTypeAnnotation(2)}(p1{MyAnnotation(1)}{MyTypeAnnotation(0)}=xyz,p2{MyAnnotation(2)}{MyTypeAnnotation(1)}=100)")
-    }
-
-    test("show underivable type with fallback") {
-      val res = TypeNameInfo.gen[NotDerivable].name
-      assertEquals(res, TypeName("", "Unknown Type", Seq.empty))
-    }
-
-    test("allow no-coproduct derivation definitions") {
-      val error = compileErrors("WeakHash.gen[Person]")
-      assert(error.isEmpty)
-    }
-
-    test("disallow coproduct derivations without split method") {
-      val error = compileErrors("WeakHash.gen[Entity]")
-      assert(error contains "magnolia: the method `split` must be defined on the derivation object WeakHash to derive typeclasses for sealed traits")
-    }
-
-    test("equality of Wrapper") {
-      val res = Eq.gen[Wrapper].equal(Wrapper(Some(KArray(KArray(Nil) :: Nil))), Wrapper(Some(KArray(KArray(Nil) :: KArray(Nil) :: Nil))))
-      assertEquals(res, false)
-    }
-
-    test("very long") {
-      val vl =
-        VeryLong("p1",
-          "p2",
-          "p3",
-          "p4",
-          "p5",
-          "p6",
-          "p7",
-          "p8",
-          "p9",
-          "p10",
-          "p11",
-          "p12",
-          "p13",
-          "p14",
-          "p15",
-          "p16",
-          "p17",
-          "p18",
-          "p19",
-          "p20",
-          "p21",
-          "p22",
-          "p23")
-      val res = Eq.gen[VeryLong].equal(vl, vl)
-      assertEquals(res, true)
-    }
-
-    test("not attempt to derive instances for refined types") {
-      val error = compileErrors("Show.gen[Character]")
-      assert(error contains "magnolia: could not infer Show.Typeclass for refined type magnolia1.tests.Character.Id")
-    }
-
-    test("derive instances for types with refined types if implicit provided") {
-      val error = compileErrors("Show.gen[AnotherCharacter]")
-      assert(error.isEmpty)
-    }
-
-    test("not attempt to derive instances for Java enums") {
-      val error = compileErrors("Show.gen[WeekDay]")
-      assert(error contains "magnolia: could not infer Show.Typeclass for type magnolia1.tests.WeekDay")
-    }
-
-    test("determine subtypes of Exactly[Int]") {
-      implicit def hideFallbackWarning: TypeNameInfo[Int] = TypeNameInfo.fallback[Int]
-
-      val res = TypeNameInfo.gen[Exactly[Int]].subtypeNames.map(_.short).mkString(" | ")
-      assertEquals(res, "Custom | Int")
-    }
-
-    test("determine subtypes of Covariant[String]") {
-      implicit def hideFallbackWarning: TypeNameInfo[String] = TypeNameInfo.fallback[String]
-
-      val res = TypeNameInfo.gen[Covariant[String]].subtypeNames.map(_.short).mkString(" | ")
-      assertEquals(res, "Custom | Nothing | String")
-    }
-
-    test("determine subtypes of Contravariant[Double]") {
-      implicit def hideFallbackWarning: TypeNameInfo[Double] = TypeNameInfo.fallback[Double]
-
-      val res = TypeNameInfo.gen[Contravariant[Double]].subtypeNames.map(_.short).mkString(" | ")
-      assertEquals(res, "Any | Custom")
-    }
-
-    test("allow derivation result to have arbitrary type") {
-      val res = (ExportedTypeclass.gen[Length], ExportedTypeclass.gen[Color])
-      assertEquals(res, (ExportedTypeclass.Exported[Length](), ExportedTypeclass.Exported[Color]()))
-    }
-
-    test("no support for arbitrary derivation result type for recursive classes yet") {
-      val error = compileErrors("ExportedTypeclass.gen[Recursive]")
-      assert(error contains """
-        |magnolia: could not find ExportedTypeclass.Typeclass for type Seq[magnolia1.tests.Recursive]
-        |    in parameter 'children' of product type magnolia1.tests.Recursive
-        |""".stripMargin)
-    }
-
-    test("report an error when an abstract member of a sealed hierarchy is not sealed") {
-      val error = compileErrors("Show.gen[Parent]")
-      assert(error contains "magnolia: child trait BadChild of trait Parent is not sealed")
-    }
-
-    test("report an error when a concrete member of a sealed hierarchy is neither final nor a case class") {
-      val error = compileErrors("Show.gen[GoodChild]")
-      assert(error contains "magnolia: child class Dewey of trait GoodChild is neither final nor a case class")
-    }
-
-    test("support split without join") {
-      val res = implicitly[NoCombine[Halfy]].nameOf(Righty())
-      assertEquals(res, "Righty")
+    test("support inheriting annotations from base coproduct type") {
+      val res = Show.gen[Pet].show(Dog("Alex", "chicken"))
+      assertEquals(res, "Dog(petName{MyAnnotation(1)}=Alex,dogFood{MyAnnotation(2)}=chicken)")
     }
 }
