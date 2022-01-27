@@ -187,18 +187,20 @@ object Magnolia {
         if (owner.isClass) {
           owner.asClass.baseClasses
             .flatMap(_.asType.toType.members)
-            .collect {
-              case t: TermSymbol if t.name == symbol.name && t.annotations.exists(isInherit) => t.annotations.filterNot(isInherit)
-            }
-            .flatten
+            .filter(s =>
+              s.annotations.exists(isInherit) && ((symbol, s) match {
+                case (t1: TermSymbol, t2: TermSymbol) if t1.name == t2.name                                                 => true
+                case (m1: MethodSymbol, m2: MethodSymbol) if m1.name == m2.name && m1.paramLists.size == m2.paramLists.size => true
+                case _                                                                                                      => false
+              })
+            )
+            .flatMap(_.annotations.filterNot(isInherit))
         } else fromBaseClassesMembers(owner.owner)
 
       def fromBaseClasses(): List[Annotation] =
-        symbol.asClass.baseClasses
-          .collect {
-            case s if s.name != symbol.name && s.annotations.exists(isInherit) => s.annotations.filterNot(isInherit)
-          }
-          .flatten
+        symbol.asClass.baseClasses.collect {
+          case s if s.name != symbol.name && s.annotations.exists(isInherit) => s.annotations.filterNot(isInherit)
+        }.flatten
 
       val annotations = symbol.annotations ++ (if (symbol.isClass) fromBaseClasses() else fromBaseClassesMembers(symbol.owner))
 
