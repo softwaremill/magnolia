@@ -163,3 +163,8 @@ final class CallByNeed[+A](private[this] var eval: () => A)
     val result = eval()
     eval = null
     result
+
+/** This annotation can be attached on the contents of base coproduct (trait/class) along with another specific annotations we want to inherit.
+  * It causes magnolia to collect annotations from base class members.
+  */
+final class inherit extends scala.annotation.StaticAnnotation    

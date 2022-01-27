@@ -85,5 +85,6 @@ object Show extends GenericShow[String]:
   given Show[String, String] = identity(_)
   given Show[String, Int] = _.toString
   given Show[String, Long] = _.toString + "L"
+  given Show[String, Boolean] = _.toString
   given [A](using A: Show[String, A]): Show[String, Seq[A]] =
     _.iterator.map(A.show).mkString("[", ",", "]")
