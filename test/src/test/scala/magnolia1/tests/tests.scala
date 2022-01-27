@@ -1,7 +1,7 @@
 package magnolia1.tests
 
-import magnolia1.{TypeName, inherit}
 import magnolia1.examples._
+import magnolia1.{TypeName, inherit}
 
 import java.time.LocalDate
 import scala.annotation.StaticAnnotation
@@ -202,6 +202,7 @@ final case class Huey(height: Int) extends GoodChild
 class Dewey(val height: Int) extends GoodChild
 final case class Louie(height: Int) extends BadChild
 
+@inherit @MyTypeAnnotation(1)
 sealed abstract class Pet {
   @inherit @MyAnnotation(1)
   def name: String
@@ -209,6 +210,7 @@ sealed abstract class Pet {
   def age: Int
 }
 
+@MyTypeAnnotation(2)
 case class Dog(name: String, age: Int, @MyAnnotation(3) likesMeat: Boolean) extends Pet
 
 sealed abstract class Rodent extends Pet {
@@ -809,11 +811,17 @@ class Tests extends munit.FunSuite {
 
     test("inherit annotations marked with @inherit and ignore others") {
       val res = Show.gen[Pet].show(Dog("Alex", 10, likesMeat = true))
-      assertEquals(res, "Dog(name{MyAnnotation(1)}=Alex,age=10,likesMeat{MyAnnotation(3)}=true)")
+      assertEquals(
+        res,
+        "{MyTypeAnnotation(2),MyTypeAnnotation(1)}Dog{MyTypeAnnotation(2),MyTypeAnnotation(1)}(name{MyAnnotation(1)}=Alex,age=10,likesMeat{MyAnnotation(3)}=true)"
+      )
     }
 
     test("inherit annotations from multiple base classes") {
       val res = Show.gen[Rodent].show(Hamster("Alex", 10, likesNuts = true, likesVeggies = true))
-      assertEquals(res, "Hamster(name{MyAnnotation(1)}=Alex,age=10,likesNuts{MyAnnotation(3)}=true,likesVeggies{MyAnnotation(4)}=true)")
+      assertEquals(
+        res,
+        "{MyTypeAnnotation(1)}Hamster{MyTypeAnnotation(1)}(name{MyAnnotation(1)}=Alex,age=10,likesNuts{MyAnnotation(3)}=true,likesVeggies{MyAnnotation(4)}=true)"
+      )
     }
 }
