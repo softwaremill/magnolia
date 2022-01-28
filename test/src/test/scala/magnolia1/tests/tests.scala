@@ -203,7 +203,7 @@ class Dewey(val height: Int) extends GoodChild
 final case class Louie(height: Int) extends BadChild
 
 @MyTypeAnnotation(1)
-sealed abstract class Pet {
+sealed trait Pet {
   @MyAnnotation(1)
   def name: String
   @MyAnnotation(2)
@@ -213,7 +213,7 @@ sealed abstract class Pet {
 @MyTypeAnnotation(2)
 case class Dog(name: String, age: Int, @MyAnnotation(3) likesMeat: Boolean) extends Pet
 
-sealed abstract class Rodent extends Pet {
+sealed trait Rodent extends Pet {
   @MyAnnotation(3)
   def likesNuts: Boolean
 }
