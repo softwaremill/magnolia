@@ -429,13 +429,13 @@ object Magnolia {
             q"""$params($idx) = $factoryObject.$factoryMethod[$typeConstructor, $genericType, $paramType](
               ${paramName.toString.trim},
               $paramTypeName,
-              ${if (isValueClass) q"_.$paramName" else q"$idx"},
+              ${if (isValueClass) q"(t: $genericType) => t.$paramName" else q"$idx"},
               $repeated,
               $CallByNeedObj($ref),
               ..${default.toList.map(d => q"$CallByNeedObj($d)")},
-              $ArrayObj(..$annotations),
-              $ArrayObj(..$inheritedAnnotations),
-              $ArrayObj(..$typeAnnotations)
+              $ArrayObj(..$annotations): Array[_root_.scala.Any],
+              $ArrayObj(..$inheritedAnnotations): Array[_root_.scala.Any],
+              $ArrayObj(..$typeAnnotations): Array[_root_.scala.Any]
             )"""
         }
 
@@ -623,9 +623,9 @@ object Magnolia {
           q"""$subtypesVal($idx) = $SubtypeObj[$typeConstructor, $genericType, $subType](
               ${typeNameOf(subType)},
               $idx,
-              $ArrayObj(..${annotationTrees}),
-              $ArrayObj(..${inheritedAnnotationTrees}),
-              $ArrayObj(..${typeAnnotationsOf(symbol, fromParents = true)}),
+              $ArrayObj(..${annotationTrees}): Array[_root_.scala.Any],
+              $ArrayObj(..${inheritedAnnotationTrees}): Array[_root_.scala.Any],
+              $ArrayObj(..${typeAnnotationsOf(symbol, fromParents = true)}): Array[_root_.scala.Any],
               $CallByNeedObj($typeclass),
               (t: $genericType) => t.isInstanceOf[$subType],
               (t: $genericType) => t.asInstanceOf[$subType]
