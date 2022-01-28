@@ -1,7 +1,7 @@
 package magnolia1.tests
 
+import magnolia1.TypeName
 import magnolia1.examples._
-import magnolia1.{TypeName, inherit}
 
 import java.time.LocalDate
 import scala.annotation.StaticAnnotation
@@ -202,9 +202,9 @@ final case class Huey(height: Int) extends GoodChild
 class Dewey(val height: Int) extends GoodChild
 final case class Louie(height: Int) extends BadChild
 
-@inherit @MyTypeAnnotation(1)
+@MyTypeAnnotation(1)
 sealed abstract class Pet {
-  @inherit @MyAnnotation(1)
+  @MyAnnotation(1)
   def name: String
   @MyAnnotation(2)
   def age: Int
@@ -214,7 +214,7 @@ sealed abstract class Pet {
 case class Dog(name: String, age: Int, @MyAnnotation(3) likesMeat: Boolean) extends Pet
 
 sealed abstract class Rodent extends Pet {
-  @inherit @MyAnnotation(3)
+  @MyAnnotation(3)
   def likesNuts: Boolean
 }
 
@@ -809,19 +809,19 @@ class Tests extends munit.FunSuite {
       assertEquals(res, "Righty")
     }
 
-    test("inherit annotations marked with @inherit and ignore others") {
+    test("inherit annotations from parent trait") {
       val res = Show.gen[Pet].show(Dog("Alex", 10, likesMeat = true))
       assertEquals(
         res,
-        "{MyTypeAnnotation(2),MyTypeAnnotation(1)}Dog{MyTypeAnnotation(2),MyTypeAnnotation(1)}(name{MyAnnotation(1)}=Alex,age=10,likesMeat{MyAnnotation(3)}=true)"
+        "{MyTypeAnnotation(2),MyTypeAnnotation(1)}Dog{MyTypeAnnotation(2),MyTypeAnnotation(1)}(name{MyAnnotation(1)}=Alex,age{MyAnnotation(2)}=10,likesMeat{MyAnnotation(3)}=true)"
       )
     }
 
-    test("inherit annotations from multiple base classes") {
+    test("inherit annotations from all parent traits in hierarchy") {
       val res = Show.gen[Rodent].show(Hamster("Alex", 10, likesNuts = true, likesVeggies = true))
       assertEquals(
         res,
-        "{MyTypeAnnotation(1)}Hamster{MyTypeAnnotation(1)}(name{MyAnnotation(1)}=Alex,age=10,likesNuts{MyAnnotation(3)}=true,likesVeggies{MyAnnotation(4)}=true)"
+        "{MyTypeAnnotation(1)}Hamster{MyTypeAnnotation(1)}(name{MyAnnotation(1)}=Alex,age{MyAnnotation(2)}=10,likesNuts{MyAnnotation(3)}=true,likesVeggies{MyAnnotation(4)}=true)"
       )
     }
 }

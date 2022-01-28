@@ -181,33 +181,30 @@ object Magnolia {
           annotation.tree
       }
 
-    def annotationsOf(symbol: Symbol): List[Tree] = {
+    def annotationsOf(symbol: Symbol): (List[Tree], List[Tree]) = {
       @tailrec
       def fromBaseClassesMembers(owner: Symbol): List[Annotation] =
         if (owner.isClass) {
           owner.asClass.baseClasses
+            .filterNot(bc => bc.fullName.contains("java.lang.Object") || bc.fullName.startsWith("scala."))
             .flatMap(_.asType.toType.members)
             .filter(s =>
-              s.annotations.exists(isInherit) && ((symbol, s) match {
+              (symbol, s) match {
                 case (t1: TermSymbol, t2: TermSymbol) if t1.name == t2.name                                                 => true
                 case (m1: MethodSymbol, m2: MethodSymbol) if m1.name == m2.name && m1.paramLists.size == m2.paramLists.size => true
                 case _                                                                                                      => false
-              })
+              }
             )
-            .flatMap(_.annotations.filterNot(isInherit))
+            .flatMap(_.annotations)
         } else fromBaseClassesMembers(owner.owner)
 
       def fromBaseClasses(): List[Annotation] =
-        symbol.asClass.baseClasses.collect {
-          case s if s.name != symbol.name && s.annotations.exists(isInherit) => s.annotations.filterNot(isInherit)
-        }.flatten
+        symbol.asClass.baseClasses.collect { case s if s.name != symbol.name => s.annotations }.flatten
 
-      val annotations = symbol.annotations ++ (if (symbol.isClass) fromBaseClasses() else fromBaseClassesMembers(symbol.owner))
+      val inherited = if (symbol.isClass) fromBaseClasses() else fromBaseClassesMembers(symbol.owner)
 
-      annotationTrees(annotations.distinct)
+      (annotationTrees(symbol.annotations), annotationTrees(inherited))
     }
-
-    def isInherit(a: Annotation): Boolean = a.tree.tpe == typeOf[magnolia1.inherit]
 
     def typeAnnotationsOf(symbol: Symbol, fromParents: Boolean): List[Tree] = {
       val typeAnnotations = if (fromParents) {
@@ -324,7 +321,7 @@ object Magnolia {
       val isCaseObject = classType.exists(_.isModuleClass)
 
       val isSealedTrait = classType.exists(ct => ct.isSealed && !ct.isJavaEnum)
-      val classAnnotationTrees = annotationsOf(typeSymbol)
+      val (classAnnotationTrees, inheritedClassAnnotationTrees) = annotationsOf(typeSymbol)
       val classTypeAnnotationTrees = typeAnnotationsOf(typeSymbol, fromParents = true)
 
       val primitives = Set(
@@ -396,6 +393,7 @@ object Magnolia {
             false,
             new $ArrayClass(0),
             $ArrayObj(..$classAnnotationTrees),
+            $ArrayObj(..$inheritedClassAnnotationTrees),
             $ArrayObj(..$classTypeAnnotationTrees)
           ) {
             ..$classBody
@@ -420,7 +418,14 @@ object Magnolia {
         }
 
         case class CaseParam(paramName: TermName, repeated: Boolean, typeclass: Tree, paramType: Type, ref: TermName, paramTypeName: Tree) {
-          def compile(params: TermName, idx: Int, default: Option[Tree], annotations: List[Tree], typeAnnotations: List[Tree]): Tree =
+          def compile(
+              params: TermName,
+              idx: Int,
+              default: Option[Tree],
+              annotations: List[Tree],
+              inheritedAnnotations: List[Tree],
+              typeAnnotations: List[Tree]
+          ): Tree =
             q"""$params($idx) = $factoryObject.$factoryMethod[$typeConstructor, $genericType, $paramType](
               ${paramName.toString.trim},
               $paramTypeName,
@@ -429,6 +434,7 @@ object Magnolia {
               $CallByNeedObj($ref),
               ..${default.toList.map(d => q"$CallByNeedObj($d)")},
               $ArrayObj(..$annotations),
+              $ArrayObj(..$inheritedAnnotations),
               $ArrayObj(..$typeAnnotations)
             )"""
         }
@@ -469,8 +475,8 @@ object Magnolia {
         val typeAnnotations = headParamList.getOrElse(Nil).map(typeAnnotationsOf(_, fromParents = false))
 
         val assignments = if (isReadOnly) {
-          for ((((param, idx), annList), tpeAnnList) <- paramsWithIndex zip annotations zip typeAnnotations)
-            yield param.compile(paramsVal, idx, None, annList, tpeAnnList)
+          for ((((param, idx), (annList, inheritedAnnList)), tpeAnnList) <- paramsWithIndex zip annotations zip typeAnnotations)
+            yield param.compile(paramsVal, idx, None, annList, inheritedAnnList, tpeAnnList)
         } else {
           val defaults = headParamList.fold[List[Tree]](Nil) { params =>
             def allNone = params.map(_ => NoneObj)
@@ -493,8 +499,11 @@ object Magnolia {
               }
           }
 
-          for (((((param, idx), default), annList), typeAnnList) <- paramsWithIndex zip defaults zip annotations zip typeAnnotations)
-            yield param.compile(paramsVal, idx, Some(default), annList, typeAnnList)
+          for (
+            ((((param, idx), default), (annList, inheritedAnnList)), typeAnnList) <-
+              paramsWithIndex zip defaults zip annotations zip typeAnnotations
+          )
+            yield param.compile(paramsVal, idx, Some(default), annList, inheritedAnnList, typeAnnList)
         }
 
         val caseClassBody =
@@ -574,6 +583,7 @@ object Magnolia {
               $isValueClass,
               $paramsVal,
               $ArrayObj(..$classAnnotationTrees),
+              $ArrayObj(..$inheritedClassAnnotationTrees),
               $ArrayObj(..$classTypeAnnotationTrees)
             ) {
               ..$caseClassBody
@@ -609,10 +619,12 @@ object Magnolia {
 
         val assignments = typeclasses.zipWithIndex.map { case ((subType, typeclass), idx) =>
           val symbol = subType.typeSymbol
+          val (annotationTrees, inheritedAnnotationTrees) = annotationsOf(symbol)
           q"""$subtypesVal($idx) = $SubtypeObj[$typeConstructor, $genericType, $subType](
               ${typeNameOf(subType)},
               $idx,
-              $ArrayObj(..${annotationsOf(symbol)}),
+              $ArrayObj(..${annotationTrees}),
+              $ArrayObj(..${inheritedAnnotationTrees}),
               $ArrayObj(..${typeAnnotationsOf(symbol, fromParents = true)}),
               $CallByNeedObj($typeclass),
               (t: $genericType) => t.isInstanceOf[$subType],
@@ -629,6 +641,7 @@ object Magnolia {
             $typeName,
             $subtypesVal: $ArrayClass[$subType],
             $ArrayObj(..$classAnnotationTrees),
+            $ArrayObj(..$inheritedClassAnnotationTrees),
             $ArrayObj(..$classTypeAnnotationTrees)
           ))
         }""")
@@ -673,11 +686,12 @@ object Magnolia {
       name: TypeName,
       idx: Int,
       anns: Array[Any],
+      inheritedAnns: Array[Any],
       tpeAnns: Array[Any],
       tc: CallByNeed[Tc[S]],
       isType: T => Boolean,
       asType: T => S
-  ): Subtype[Tc, T] = Subtype(name, idx, anns, tpeAnns, tc, isType, asType)
+  ): Subtype[Tc, T] = Subtype(name, idx, anns, inheritedAnns, tpeAnns, tc, isType, asType)
 
   private[Magnolia] def readOnlyParam[Tc[_], T, P](
       name: String,
@@ -686,9 +700,19 @@ object Magnolia {
       isRepeated: Boolean,
       typeclassParam: CallByNeed[Tc[P]],
       annotationsArrayParam: Array[Any],
+      inheritedAnnotationsArrayParam: Array[Any],
       typeAnnotationsArrayParam: Array[Any]
   ): ReadOnlyParam[Tc, T] =
-    ReadOnlyParam(name, typeNameParam, idx, isRepeated, typeclassParam, annotationsArrayParam, typeAnnotationsArrayParam)
+    ReadOnlyParam(
+      name,
+      typeNameParam,
+      idx,
+      isRepeated,
+      typeclassParam,
+      annotationsArrayParam,
+      inheritedAnnotationsArrayParam,
+      typeAnnotationsArrayParam
+    )
 
   private[Magnolia] def readOnlyValueParam[Tc[_], T, P](
       name: String,
@@ -697,9 +721,19 @@ object Magnolia {
       isRepeated: Boolean,
       typeclassParam: CallByNeed[Tc[P]],
       annotationsArrayParam: Array[Any],
+      inheritedAnnotationsArrayParam: Array[Any],
       typeAnnotationsArrayParam: Array[Any]
   ): ReadOnlyParam[Tc, T] =
-    ReadOnlyParam.valueParam(name, typeNameParam, deref, isRepeated, typeclassParam, annotationsArrayParam, typeAnnotationsArrayParam)
+    ReadOnlyParam.valueParam(
+      name,
+      typeNameParam,
+      deref,
+      isRepeated,
+      typeclassParam,
+      annotationsArrayParam,
+      inheritedAnnotationsArrayParam,
+      typeAnnotationsArrayParam
+    )
 
   /** constructs a new [[Param]] instance
     *
@@ -714,9 +748,20 @@ object Magnolia {
       typeclassParam: CallByNeed[Tc[P]],
       defaultVal: CallByNeed[Option[P]],
       annotationsArrayParam: Array[Any],
+      inheritedAnnotationsArrayParam: Array[Any],
       typeAnnotationsArrayParam: Array[Any]
   ): Param[Tc, T] =
-    Param.apply(name, typeNameParam, idx, isRepeated, typeclassParam, defaultVal, annotationsArrayParam, typeAnnotationsArrayParam)
+    Param.apply(
+      name,
+      typeNameParam,
+      idx,
+      isRepeated,
+      typeclassParam,
+      defaultVal,
+      annotationsArrayParam,
+      inheritedAnnotationsArrayParam,
+      typeAnnotationsArrayParam
+    )
 
   private[Magnolia] def valueParam[Tc[_], T, P](
       name: String,
@@ -726,9 +771,20 @@ object Magnolia {
       typeclassParam: CallByNeed[Tc[P]],
       defaultVal: CallByNeed[Option[P]],
       annotationsArrayParam: Array[Any],
+      inheritedAnnotationsArrayParam: Array[Any],
       typeAnnotationsArrayParam: Array[Any]
   ): Param[Tc, T] =
-    Param.valueParam(name, typeNameParam, deref, isRepeated, typeclassParam, defaultVal, annotationsArrayParam, typeAnnotationsArrayParam)
+    Param.valueParam(
+      name,
+      typeNameParam,
+      deref,
+      isRepeated,
+      typeclassParam,
+      defaultVal,
+      annotationsArrayParam,
+      inheritedAnnotationsArrayParam,
+      typeAnnotationsArrayParam
+    )
 
   private[Magnolia] final def checkParamLengths(fieldValues: Seq[Any], paramsLength: Int, typeName: String): Unit =
     MagnoliaUtil.checkParamLengths(fieldValues, paramsLength, typeName)
