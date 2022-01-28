@@ -39,6 +39,8 @@ trait Subtype[Typeclass[_], Type] extends Serializable {
   final def inheritedAnnotations: Seq[Any] = inheritedAnnotationsArray
 
   def annotationsArray: Array[Any]
+
+  // default implementation for backward compatibility with v1.0.0
   def inheritedAnnotationsArray: Array[Any] = Array.empty
 
   /** all of the type annotations on the sub type */
@@ -79,6 +81,7 @@ object Subtype {
       override def toString: String = s"Subtype(${typeName.full})"
     }
 
+  // for backward compatibility with v1.0.0
   def apply[Tc[_], T, S <: T](
       name: TypeName,
       idx: Int,
@@ -161,6 +164,7 @@ trait ReadOnlyParam[Typeclass[_], Type] extends Serializable {
 
   def annotationsArray: Array[Any]
 
+  // default implementation for backward compatibility with v1.0.0
   def inheritedAnnotationsArray: Array[Any] = Array.empty
 
   def typeAnnotationsArray: Array[Any]
@@ -212,6 +216,7 @@ object ReadOnlyParam {
     override def typeAnnotationsArray: Array[Any] = typeAnnotationsArrayParam
   }
 
+  // for backward compatibility with v1.0.0
   def apply[Tc[_], T, P](
       name: String,
       typeNameParam: TypeName,
@@ -255,6 +260,7 @@ object ReadOnlyParam {
     override def typeAnnotationsArray: Array[Any] = typeAnnotationsArrayParam
   }
 
+  // for backward compatibility with v1.0.0
   def valueParam[Tc[_], T, P](
       name: String,
       typeNameParam: TypeName,
@@ -324,6 +330,7 @@ object Param {
     def typeAnnotationsArray: Array[Any] = typeAnnotationsArrayParam
   }
 
+  // for backward compatibility with v1.0.0
   def apply[Tc[_], T, P](
       name: String,
       typeNameParam: TypeName,
@@ -371,6 +378,7 @@ object Param {
     def typeAnnotationsArray: Array[Any] = typeAnnotationsArrayParam
   }
 
+  // for backward compatibility with v1.0.0
   def valueParam[Tc[_], T, P](
       name: String,
       typeNameParam: TypeName,
@@ -424,6 +432,7 @@ abstract class ReadOnlyCaseClass[Typeclass[_], Type](
     typeAnnotationsArray: Array[Any]
 ) extends Serializable {
 
+  // for backward compatibility with v1.0.0
   def this(
       typeName: TypeName,
       isObject: Boolean,
@@ -509,6 +518,7 @@ abstract class CaseClass[Typeclass[_], Type](
       typeAnnotationsArray
     ) {
 
+  // for backward compatibility with v1.0.0
   def this(
       typeName: TypeName,
       isObject: Boolean,
@@ -600,6 +610,7 @@ final class SealedTrait[Typeclass[_], Type](
     typeAnnotationsArray: Array[Any]
 ) extends Serializable {
 
+  // for backward compatibility with v1.0.0
   def this(
       typeName: TypeName,
       subtypesArray: Array[Subtype[Typeclass, Type]],
