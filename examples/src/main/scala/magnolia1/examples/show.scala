@@ -31,9 +31,11 @@ trait GenericShow[Out] {
     } else {
       val paramStrings = ctx.parameters.map { param =>
         val attribStr =
-          if (param.annotations.isEmpty) ""
+          if (param.annotations.isEmpty && param.inheritedAnnotations.isEmpty) ""
           else {
-            param.annotations.mkString("{", ", ", "}")
+            (param.annotations ++ param.inheritedAnnotations).distinct
+              .filterNot(_.isInstanceOf[scala.annotation.implicitNotFound])
+              .mkString("{", ", ", "}")
           }
         val tpeAttribStr =
           if (param.typeAnnotations.isEmpty) ""
@@ -43,7 +45,9 @@ trait GenericShow[Out] {
         s"${param.label}$attribStr$tpeAttribStr=${param.typeclass.show(param.dereference(value))}"
       }
 
-      val anns = ctx.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
+      val anns = (ctx.annotations ++ ctx.inheritedAnnotations).distinct
+        .filterNot(_.isInstanceOf[scala.SerialVersionUID])
+        .filterNot(_.isInstanceOf[scala.annotation.implicitNotFound])
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
       val tpeAnns = ctx.typeAnnotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
@@ -61,7 +65,9 @@ trait GenericShow[Out] {
     */
   def split[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] = (value: T) =>
     ctx.split(value) { sub =>
-      val anns = sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
+      val anns = (sub.annotations ++ sub.inheritedAnnotations).distinct
+        .filterNot(_.isInstanceOf[scala.SerialVersionUID])
+        .filterNot(_.isInstanceOf[scala.annotation.implicitNotFound])
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
       prefix(annotationStr, sub.typeclass.show(sub.cast(value)))
@@ -81,6 +87,7 @@ object Show extends GenericShow[String] {
   implicit val string: Show[String, String] = identity
   implicit val int: Show[String, Int] = _.toString
   implicit val long: Show[String, Long] = _.toString + "L"
+  implicit val boolean: Show[String, Boolean] = _.toString
 
   /** show typeclass for sequences */
   implicit def seq[A](implicit A: Show[String, A]): Show[String, Seq[A]] =

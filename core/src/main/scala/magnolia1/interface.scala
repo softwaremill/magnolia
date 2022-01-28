@@ -34,7 +34,14 @@ trait Subtype[Typeclass[_], Type] extends Serializable {
 
   /** all of the annotations on the sub type */
   final def annotations: Seq[Any] = annotationsArray
+
+  /** all of the inherited annotations on the sub type */
+  final def inheritedAnnotations: Seq[Any] = inheritedAnnotationsArray
+
   def annotationsArray: Array[Any]
+
+  // default implementation for backward compatibility with v1.0.0
+  def inheritedAnnotationsArray: Array[Any] = Array.empty
 
   /** all of the type annotations on the sub type */
   final def typeAnnotations: Seq[Any] = typeAnnotationsArray
@@ -54,6 +61,7 @@ object Subtype {
       name: TypeName,
       idx: Int,
       anns: Array[Any],
+      inheritedAnns: Array[Any],
       tpeAnns: Array[Any],
       tc: CallByNeed[Tc[S]],
       isType: T => Boolean,
@@ -68,6 +76,31 @@ object Subtype {
       def isDefinedAt(t: T): Boolean = isType(t)
       def apply(t: T): SType = asType(t)
       def annotationsArray: Array[Any] = anns
+      override def inheritedAnnotationsArray: Array[Any] = inheritedAnns
+      def typeAnnotationsArray: Array[Any] = tpeAnns
+      override def toString: String = s"Subtype(${typeName.full})"
+    }
+
+  // for backward compatibility with v1.0.0
+  def apply[Tc[_], T, S <: T](
+      name: TypeName,
+      idx: Int,
+      anns: Array[Any],
+      tpeAnns: Array[Any],
+      tc: CallByNeed[Tc[S]],
+      isType: T => Boolean,
+      asType: T => S
+  ): Subtype[Tc, T] =
+    new Subtype[Tc, T] with PartialFunction[T, S] {
+      type SType = S
+      def typeName: TypeName = name
+      def index: Int = idx
+      def typeclass: Tc[SType] = tc.value
+      def cast: PartialFunction[T, SType] = this
+      def isDefinedAt(t: T): Boolean = isType(t)
+      def apply(t: T): SType = asType(t)
+      def annotationsArray: Array[Any] = anns
+      override def inheritedAnnotationsArray: Array[Any] = Array.empty
       def typeAnnotationsArray: Array[Any] = tpeAnns
       override def toString: String = s"Subtype(${typeName.full})"
     }
@@ -131,16 +164,26 @@ trait ReadOnlyParam[Typeclass[_], Type] extends Serializable {
 
   def annotationsArray: Array[Any]
 
+  // default implementation for backward compatibility with v1.0.0
+  def inheritedAnnotationsArray: Array[Any] = Array.empty
+
   def typeAnnotationsArray: Array[Any]
 
-  /** a sequence of objects representing all of the annotations on the case class
+  /** a sequence of objects representing all of the annotations from the param implementation
     *
     * For efficiency, this sequence is implemented by an `Array`, but upcast to a [[scala.collection.Seq]] to hide the mutable collection
     * API.
     */
   final def annotations: Seq[Any] = annotationsArray
 
-  /** a sequence of objects representing all of the type annotations on the case class
+  /** a sequence of objects representing all of the annotations inherited from the param definition on base class/trait
+    *
+    * For efficiency, this sequence is implemented by an `Array`, but upcast to a [[scala.collection.Seq]] to hide the mutable collection
+    * API.
+    */
+  final def inheritedAnnotations: Seq[Any] = inheritedAnnotationsArray
+
+  /** a sequence of objects representing all of the type annotations on the param
     *
     * For efficiency, this sequence is implemented by an `Array`, but upcast to a [[scala.collection.Seq]] to hide the mutable collection
     * API.
@@ -158,6 +201,7 @@ object ReadOnlyParam {
       isRepeated: Boolean,
       typeclassParam: CallByNeed[Tc[P]],
       annotationsArrayParam: Array[Any],
+      inheritedAnnotationsArrayParam: Array[Any],
       typeAnnotationsArrayParam: Array[Any]
   ): ReadOnlyParam[Tc, T] = new ReadOnlyParam[Tc, T] {
     type PType = P
@@ -168,9 +212,55 @@ object ReadOnlyParam {
     override def typeclass: Tc[P] = typeclassParam.value
     override def dereference(t: T): P = t.asInstanceOf[Product].productElement(idx).asInstanceOf[PType]
     override def annotationsArray: Array[Any] = annotationsArrayParam
+    override def inheritedAnnotationsArray: Array[Any] = inheritedAnnotationsArrayParam
     override def typeAnnotationsArray: Array[Any] = typeAnnotationsArrayParam
   }
 
+  // for backward compatibility with v1.0.0
+  def apply[Tc[_], T, P](
+      name: String,
+      typeNameParam: TypeName,
+      idx: Int,
+      isRepeated: Boolean,
+      typeclassParam: CallByNeed[Tc[P]],
+      annotationsArrayParam: Array[Any],
+      typeAnnotationsArrayParam: Array[Any]
+  ): ReadOnlyParam[Tc, T] = new ReadOnlyParam[Tc, T] {
+    type PType = P
+    override def label: String = name
+    override def typeName: TypeName = typeNameParam
+    override def index: Int = idx
+    override def repeated: Boolean = isRepeated
+    override def typeclass: Tc[P] = typeclassParam.value
+    override def dereference(t: T): P = t.asInstanceOf[Product].productElement(idx).asInstanceOf[PType]
+    override def annotationsArray: Array[Any] = annotationsArrayParam
+    override def inheritedAnnotationsArray: Array[Any] = Array.empty
+    override def typeAnnotationsArray: Array[Any] = typeAnnotationsArrayParam
+  }
+
+  def valueParam[Tc[_], T, P](
+      name: String,
+      typeNameParam: TypeName,
+      deref: T => P,
+      isRepeated: Boolean,
+      typeclassParam: CallByNeed[Tc[P]],
+      annotationsArrayParam: Array[Any],
+      inheritedAnnotationsArrayParam: Array[Any],
+      typeAnnotationsArrayParam: Array[Any]
+  ): ReadOnlyParam[Tc, T] = new ReadOnlyParam[Tc, T] {
+    type PType = P
+    override def label: String = name
+    override def typeName: TypeName = typeNameParam
+    override def index: Int = 0
+    override def repeated: Boolean = isRepeated
+    override def typeclass: Tc[P] = typeclassParam.value
+    override def dereference(t: T): P = deref(t)
+    override def annotationsArray: Array[Any] = annotationsArrayParam
+    override def inheritedAnnotationsArray: Array[Any] = inheritedAnnotationsArrayParam
+    override def typeAnnotationsArray: Array[Any] = typeAnnotationsArrayParam
+  }
+
+  // for backward compatibility with v1.0.0
   def valueParam[Tc[_], T, P](
       name: String,
       typeNameParam: TypeName,
@@ -188,6 +278,7 @@ object ReadOnlyParam {
     override def typeclass: Tc[P] = typeclassParam.value
     override def dereference(t: T): P = deref(t)
     override def annotationsArray: Array[Any] = annotationsArrayParam
+    override def inheritedAnnotationsArray: Array[Any] = Array.empty
     override def typeAnnotationsArray: Array[Any] = typeAnnotationsArrayParam
   }
 
@@ -223,6 +314,7 @@ object Param {
       typeclassParam: CallByNeed[Tc[P]],
       defaultVal: CallByNeed[Option[P]],
       annotationsArrayParam: Array[Any],
+      inheritedAnnotationsArrayParam: Array[Any],
       typeAnnotationsArrayParam: Array[Any]
   ): Param[Tc, T] = new Param[Tc, T] {
     type PType = P
@@ -234,9 +326,59 @@ object Param {
     def typeclass: Tc[PType] = typeclassParam.value
     def dereference(t: T): PType = t.asInstanceOf[Product].productElement(idx).asInstanceOf[PType]
     def annotationsArray: Array[Any] = annotationsArrayParam
+    override def inheritedAnnotationsArray: Array[Any] = inheritedAnnotationsArrayParam
     def typeAnnotationsArray: Array[Any] = typeAnnotationsArrayParam
   }
 
+  // for backward compatibility with v1.0.0
+  def apply[Tc[_], T, P](
+      name: String,
+      typeNameParam: TypeName,
+      idx: Int,
+      isRepeated: Boolean,
+      typeclassParam: CallByNeed[Tc[P]],
+      defaultVal: CallByNeed[Option[P]],
+      annotationsArrayParam: Array[Any],
+      typeAnnotationsArrayParam: Array[Any]
+  ): Param[Tc, T] = new Param[Tc, T] {
+    type PType = P
+    def label: String = name
+    def typeName: TypeName = typeNameParam
+    def index: Int = idx
+    def repeated: Boolean = isRepeated
+    def default: Option[PType] = defaultVal.value
+    def typeclass: Tc[PType] = typeclassParam.value
+    def dereference(t: T): PType = t.asInstanceOf[Product].productElement(idx).asInstanceOf[PType]
+    def annotationsArray: Array[Any] = annotationsArrayParam
+    override def inheritedAnnotationsArray: Array[Any] = Array.empty
+    def typeAnnotationsArray: Array[Any] = typeAnnotationsArrayParam
+  }
+
+  def valueParam[Tc[_], T, P](
+      name: String,
+      typeNameParam: TypeName,
+      deref: T => P,
+      isRepeated: Boolean,
+      typeclassParam: CallByNeed[Tc[P]],
+      defaultVal: CallByNeed[Option[P]],
+      annotationsArrayParam: Array[Any],
+      inheritedAnnotationsArrayParam: Array[Any],
+      typeAnnotationsArrayParam: Array[Any]
+  ): Param[Tc, T] = new Param[Tc, T] {
+    type PType = P
+    def label: String = name
+    def typeName: TypeName = typeNameParam
+    def index: Int = 0
+    def repeated: Boolean = isRepeated
+    def default: Option[PType] = defaultVal.value
+    def typeclass: Tc[PType] = typeclassParam.value
+    def dereference(t: T): PType = deref(t)
+    def annotationsArray: Array[Any] = annotationsArrayParam
+    override def inheritedAnnotationsArray: Array[Any] = inheritedAnnotationsArrayParam
+    def typeAnnotationsArray: Array[Any] = typeAnnotationsArrayParam
+  }
+
+  // for backward compatibility with v1.0.0
   def valueParam[Tc[_], T, P](
       name: String,
       typeNameParam: TypeName,
@@ -256,6 +398,7 @@ object Param {
     def typeclass: Tc[PType] = typeclassParam.value
     def dereference(t: T): PType = deref(t)
     def annotationsArray: Array[Any] = annotationsArrayParam
+    override def inheritedAnnotationsArray: Array[Any] = Array.empty
     def typeAnnotationsArray: Array[Any] = typeAnnotationsArrayParam
   }
 
@@ -285,8 +428,27 @@ abstract class ReadOnlyCaseClass[Typeclass[_], Type](
     val isValueClass: Boolean,
     parametersArray: Array[ReadOnlyParam[Typeclass, Type]],
     annotationsArray: Array[Any],
+    inheritedAnnotationsArray: Array[Any],
     typeAnnotationsArray: Array[Any]
 ) extends Serializable {
+
+  // for backward compatibility with v1.0.0
+  def this(
+      typeName: TypeName,
+      isObject: Boolean,
+      isValueClass: Boolean,
+      parametersArray: Array[ReadOnlyParam[Typeclass, Type]],
+      annotationsArray: Array[Any],
+      typeAnnotationsArray: Array[Any]
+  ) = this(
+    typeName,
+    isObject,
+    isValueClass,
+    parametersArray,
+    annotationsArray,
+    Array.empty,
+    typeAnnotationsArray
+  )
 
   override def toString: String = s"ReadOnlyCaseClass(${typeName.full}, ${parameters.mkString(",")})"
 
@@ -303,6 +465,13 @@ abstract class ReadOnlyCaseClass[Typeclass[_], Type](
     * API.
     */
   final def annotations: Seq[Any] = annotationsArray
+
+  /** a sequence of objects representing all of the annotations inherited from base classes/traits
+    *
+    * For efficiency, this sequence is implemented by an `Array`, but upcast to a [[scala.collection.Seq]] to hide the mutable collection
+    * API.
+    */
+  final def inheritedAnnotations: Seq[Any] = inheritedAnnotationsArray
 
   /** a sequence of objects representing all of the type annotations on the case class
     *
@@ -336,6 +505,7 @@ abstract class CaseClass[Typeclass[_], Type](
     override val isValueClass: Boolean,
     parametersArray: Array[Param[Typeclass, Type]],
     annotationsArray: Array[Any],
+    inheritedAnnotationsArray: Array[Any],
     typeAnnotationsArray: Array[Any]
 ) extends ReadOnlyCaseClass[Typeclass, Type](
       typeName,
@@ -344,8 +514,29 @@ abstract class CaseClass[Typeclass[_], Type](
       // Safe to cast as we're never mutating the array
       parametersArray.asInstanceOf[Array[ReadOnlyParam[Typeclass, Type]]],
       annotationsArray,
+      inheritedAnnotationsArray,
       typeAnnotationsArray
     ) {
+
+  // for backward compatibility with v1.0.0
+  def this(
+      typeName: TypeName,
+      isObject: Boolean,
+      isValueClass: Boolean,
+      parametersArray: Array[Param[Typeclass, Type]],
+      annotationsArray: Array[Any],
+      typeAnnotationsArray: Array[Any]
+  ) = {
+    this(
+      typeName,
+      isObject,
+      isValueClass,
+      parametersArray,
+      annotationsArray,
+      Array.empty,
+      typeAnnotationsArray
+    )
+  }
 
   /** a sequence of [[Param]] objects representing all of the parameters in the case class
     *
@@ -415,8 +606,17 @@ final class SealedTrait[Typeclass[_], Type](
     val typeName: TypeName,
     subtypesArray: Array[Subtype[Typeclass, Type]],
     annotationsArray: Array[Any],
+    inheritedAnnotationsArray: Array[Any],
     typeAnnotationsArray: Array[Any]
 ) extends Serializable {
+
+  // for backward compatibility with v1.0.0
+  def this(
+      typeName: TypeName,
+      subtypesArray: Array[Subtype[Typeclass, Type]],
+      annotationsArray: Array[Any],
+      typeAnnotationsArray: Array[Any]
+  ) = this(typeName, subtypesArray, annotationsArray, Array.empty, typeAnnotationsArray)
 
   override def toString: String = s"SealedTrait($typeName, Array[${subtypes.mkString(",")}])"
 
@@ -453,6 +653,13 @@ final class SealedTrait[Typeclass[_], Type](
     * API.
     */
   def annotations: Seq[Any] = annotationsArray
+
+  /** a sequence of objects representing all of the annotations on the parent traits
+    *
+    * For efficiency, this sequence is implemented by an `Array`, but upcast to a [[scala.collection.Seq]] to hide the mutable collection
+    * API.
+    */
+  def inheritedAnnotations: Seq[Any] = inheritedAnnotationsArray
 
   /** a sequence of objects representing all of the type annotations on the topmost trait
     *

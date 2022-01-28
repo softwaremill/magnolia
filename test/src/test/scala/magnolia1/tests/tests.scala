@@ -202,6 +202,24 @@ final case class Huey(height: Int) extends GoodChild
 class Dewey(val height: Int) extends GoodChild
 final case class Louie(height: Int) extends BadChild
 
+@MyTypeAnnotation(1)
+sealed trait Pet {
+  @MyAnnotation(1)
+  def name: String
+  @MyAnnotation(2)
+  def age: Int
+}
+
+@MyTypeAnnotation(2)
+case class Dog(name: String, age: Int, @MyAnnotation(3) likesMeat: Boolean) extends Pet
+
+sealed trait Rodent extends Pet {
+  @MyAnnotation(3)
+  def likesNuts: Boolean
+}
+
+case class Hamster(name: String, age: Int, likesNuts: Boolean, @MyAnnotation(4) likesVeggies: Boolean) extends Rodent
+
 class Tests extends munit.FunSuite {
 
     test("construct a Show product instance with alternative apply functions") {
@@ -789,5 +807,21 @@ class Tests extends munit.FunSuite {
     test("support split without join") {
       val res = implicitly[NoCombine[Halfy]].nameOf(Righty())
       assertEquals(res, "Righty")
+    }
+
+    test("inherit annotations from parent trait") {
+      val res = Show.gen[Pet].show(Dog("Alex", 10, likesMeat = true))
+      assertEquals(
+        res,
+        "{MyTypeAnnotation(2),MyTypeAnnotation(1)}Dog{MyTypeAnnotation(2),MyTypeAnnotation(1)}(name{MyAnnotation(1)}=Alex,age{MyAnnotation(2)}=10,likesMeat{MyAnnotation(3)}=true)"
+      )
+    }
+
+    test("inherit annotations from all parent traits in hierarchy") {
+      val res = Show.gen[Rodent].show(Hamster("Alex", 10, likesNuts = true, likesVeggies = true))
+      assertEquals(
+        res,
+        "{MyTypeAnnotation(1)}Hamster{MyTypeAnnotation(1)}(name{MyAnnotation(1)}=Alex,age{MyAnnotation(2)}=10,likesNuts{MyAnnotation(3)}=true,likesVeggies{MyAnnotation(4)}=true)"
+      )
     }
 }
