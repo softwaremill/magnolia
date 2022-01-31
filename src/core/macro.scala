@@ -148,7 +148,7 @@ object Macro:
   private class CollectAnnotations[T: Type](using val quotes: Quotes) {
     import quotes.reflect.*
 
-    private val tpe = TypeRepr.of[T]
+    private val tpe: TypeRepr = TypeRepr.of[T]
 
     def anns: Expr[List[Any]] =
       Expr.ofList {
@@ -161,14 +161,14 @@ object Macro:
       Expr.ofList {
         tpe.baseClasses
           .collect {
-            case s if s.name != tpe.typeSymbol.name => s.annotations
+            case s if s != tpe.typeSymbol => s.annotations
           } // skip self
           .flatten
           .filter(filterAnnotation)
           .map(_.asExpr.asInstanceOf[Expr[Any]])
       }
 
-    def typeAnns: Expr[List[Any]] =
+    def typeAnns: Expr[List[Any]] = {
 
       def getAnnotations(t: TypeRepr): List[Term] = t match
         case AnnotatedType(inner, ann) => ann :: getAnnotations(inner)
@@ -184,6 +184,7 @@ object Macro:
               .map(_.asExpr.asInstanceOf[Expr[Any]])
           }
         case _ => Expr.ofList(List.empty)
+    }
 
     def paramAnns: Expr[List[(String, List[Any])]] =
       Expr.ofList {
@@ -197,13 +198,13 @@ object Macro:
       Expr.ofList {
         groupByParamName {
           tpe.baseClasses
-            .filterNot(bc =>
+            .filterNot { bc =>
               bc.name.contains("java.lang.Object") || bc.fullName.startsWith(
                 "scala."
               )
-            )
+            }
             .collect {
-              case s if s.name != tpe.typeSymbol.name =>
+              case s if s != tpe.typeSymbol =>
                 (fromConstructor(s) ++ fromDeclarations(s)).filter {
                   case (_, anns) => anns.nonEmpty
                 }

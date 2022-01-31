@@ -3,8 +3,6 @@ package magnolia1
 import scala.annotation.tailrec
 import scala.reflect.*
 
-import language.experimental.macros
-
 case class TypeInfo(
     owner: String,
     short: String,
