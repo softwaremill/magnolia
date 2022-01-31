@@ -111,29 +111,8 @@ trait CommonDerivation[TypeClass[_]]:
       repeated: Map[String, Boolean],
       idx: Int = 0
   ): List[CaseClass.Param[Typeclass, T]] =
-    inline erasedValue[(Labels, Params)] match
-      case _: (EmptyTuple, EmptyTuple) =>
-        Nil
-      case _: ((l *: ltail), (p *: ptail)) =>
-        val label = constValue[l].asInstanceOf[String]
-        val typeclass = CallByNeed(summonInline[Typeclass[p]])
+    getParams_(annotations, Map.empty, typeAnnotations, repeated, idx)
 
-        CaseClass.Param[Typeclass, T, p](
-          label,
-          idx,
-          repeated.getOrElse(label, false),
-          typeclass,
-          CallByNeed(None),
-          IArray.from(annotations.getOrElse(label, List())),
-          IArray.empty[Any],
-          IArray.from(typeAnnotations.getOrElse(label, List()))
-        ) ::
-          getParams[T, ltail, ptail](
-            annotations,
-            typeAnnotations,
-            repeated,
-            idx + 1
-          )
 end CommonDerivation
 
 trait ProductDerivation[TypeClass[_]] extends CommonDerivation[TypeClass]:

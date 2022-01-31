@@ -40,12 +40,10 @@ trait GenericShow[Out] extends AutoDerivation[[X] =>> Show[Out, X]] {
         s"${param.label}$attribStr$tpeAttribStr=${param.typeclass.show(param.deref(value))}"
       }
 
-      val anns = filterUnwantedAnns(
-        (ctx.annotations ++ ctx.inheritedAnnotations).distinct
-      )
+      val anns = (ctx.annotations ++ ctx.inheritedAnnotations).distinct
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
-      val tpeAnns = filterUnwantedAnns(ctx.typeAnnotations)
+      val tpeAnns = ctx.typeAnnotations
       val typeAnnotationStr =
         if (tpeAnns.isEmpty) "" else tpeAnns.mkString("{", ",", "}")
 
@@ -70,21 +68,13 @@ trait GenericShow[Out] extends AutoDerivation[[X] =>> Show[Out, X]] {
   override def split[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] =
     (value: T) =>
       ctx.choose(value) { sub =>
-        val anns = filterUnwantedAnns(
-          (sub.annotations ++ sub.inheritedAnnotations).distinct
-        )
+        val anns = (sub.annotations ++ sub.inheritedAnnotations).distinct
 
         val annotationStr =
           if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
         prefix(annotationStr, sub.typeclass.show(sub.value))
       }
-
-  def filterUnwantedAnns(anns: IArray[Any]): IArray[Any] =
-    anns
-      .filterNot(_.isInstanceOf[scala.SerialVersionUID])
-      .filterNot(_.isInstanceOf[scala.annotation.showAsInfix])
-      .filterNot(_.isInstanceOf[scala.annotation.transparentTrait])
 }
 
 /** companion object to [[Show]] */

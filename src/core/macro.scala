@@ -160,6 +160,7 @@ object Macro:
     def inheritedAnns: Expr[List[Any]] =
       Expr.ofList {
         tpe.baseClasses
+          .filterNot(isObjectOrScala)
           .collect {
             case s if s != tpe.typeSymbol => s.annotations
           } // skip self
@@ -198,11 +199,7 @@ object Macro:
       Expr.ofList {
         groupByParamName {
           tpe.baseClasses
-            .filterNot { bc =>
-              bc.name.contains("java.lang.Object") || bc.fullName.startsWith(
-                "scala."
-              )
-            }
+            .filterNot(isObjectOrScala)
             .collect {
               case s if s != tpe.typeSymbol =>
                 (fromConstructor(s) ++ fromDeclarations(s)).filter {
@@ -236,6 +233,9 @@ object Macro:
         .toList
         .map { case (name, l) => name -> l.flatMap(_._2) }
         .map { (name, anns) => Expr.ofTuple(Expr(name), Expr.ofList(anns)) }
+
+    private def isObjectOrScala(bc: Symbol) =
+      bc.name.contains("java.lang.Object") || bc.fullName.startsWith("scala.")
 
     private def filterAnnotation(a: Term): Boolean =
       a.tpe.typeSymbol.maybeOwner.isNoSymbol ||

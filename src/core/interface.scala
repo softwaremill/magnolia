@@ -151,19 +151,17 @@ abstract class CaseClass[Typeclass[_], Type](
       defaultVal: CallByNeed[Option[P]],
       annotations: IArray[Any],
       typeAnnotations: IArray[Any]
-  ): Param =
-    new CaseClass.Param[Typeclass, Type](
-      name,
-      idx,
-      repeated,
-      annotations,
-      typeAnnotations
-    ):
-      type PType = P
-      def default: Option[PType] = defaultVal.value
-      def typeclass = cbn.value
-      def deref(value: Type): P =
-        value.asInstanceOf[Product].productElement(idx).asInstanceOf[P]
+  ): Param = param(
+    name,
+    idx,
+    repeated,
+    cbn,
+    defaultVal,
+    annotations,
+    IArray.empty[Any],
+    typeAnnotations
+  )
+
 end CaseClass
 
 case class SealedTrait[Typeclass[_], Type](
