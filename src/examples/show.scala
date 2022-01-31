@@ -24,26 +24,42 @@ trait GenericShow[Out] extends AutoDerivation[[X] =>> Show[Out, X]] {
     else
       val paramStrings = ctx.params.map { param =>
         val attribStr =
-          if (param.annotations.isEmpty) ""
+          if (param.annotations.isEmpty && param.inheritedAnnotations.isEmpty)
+            ""
           else {
-            param.annotations.mkString("{", ", ", "}")
+            (param.annotations ++ param.inheritedAnnotations).distinct
+              .mkString("{", ", ", "}")
           }
+
+        println(s"Show param $param annotations " + attribStr)
+
         val tpeAttribStr =
           if (param.typeAnnotations.isEmpty) ""
           else {
             param.typeAnnotations.mkString("{", ", ", "}")
           }
+
+        println(s"Show param $param type annotations " + tpeAttribStr)
+
         s"${param.label}$attribStr$tpeAttribStr=${param.typeclass.show(param.deref(value))}"
       }
 
       val anns =
-        ctx.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
+        (ctx.annotations ++ ctx.inheritedAnnotations).filterNot(
+          _.isInstanceOf[scala.SerialVersionUID]
+        )
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
+
+      println(s"Show class ${ctx.typeInfo.short} annotations " + annotationStr)
 
       val tpeAnns =
         ctx.typeAnnotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
       val typeAnnotationStr =
         if (tpeAnns.isEmpty) "" else tpeAnns.mkString("{", ",", "}")
+
+      println(
+        s"Show class ${ctx.typeInfo.short} type annotations " + typeAnnotationStr
+      )
 
       def typeArgsString(typeInfo: TypeInfo): String =
         if typeInfo.typeParams.isEmpty then ""
@@ -67,10 +83,11 @@ trait GenericShow[Out] extends AutoDerivation[[X] =>> Show[Out, X]] {
     (value: T) =>
       ctx.choose(value) { sub =>
         val anns =
-          sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
+          (sub.annotations ++ sub.inheritedAnnotations).distinct.filterNot(_.isInstanceOf[scala.SerialVersionUID])
         val annotationStr =
           if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
+        println("Show sub annotations " + annotationStr)
         prefix(annotationStr, sub.typeclass.show(sub.value))
       }
 }

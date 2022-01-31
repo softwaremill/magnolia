@@ -15,6 +15,7 @@ trait CommonDerivation[TypeClass[_]]:
     val parameters = IArray(
       getParams[A, product.MirroredElemLabels, product.MirroredElemTypes](
         paramAnns[A].to(Map),
+        inheritedParamAnns[A].to(Map),
         paramTypeAnns[A].to(Map),
         repeated[A].to(Map)
       )*
@@ -26,6 +27,7 @@ trait CommonDerivation[TypeClass[_]]:
       isValueClass[A],
       parameters,
       IArray(anns[A]*),
+      IArray(inheritedAnns[A]*),
       IArray[Any](typeAnns[A]*)
     ):
 
@@ -71,6 +73,7 @@ trait CommonDerivation[TypeClass[_]]:
 
   inline def getParams[T, Labels <: Tuple, Params <: Tuple](
       annotations: Map[String, List[Any]],
+      inheritedAnnotations: Map[String, List[Any]],
       typeAnnotations: Map[String, List[Any]],
       repeated: Map[String, Boolean],
       idx: Int = 0
@@ -89,10 +92,12 @@ trait CommonDerivation[TypeClass[_]]:
           typeclass,
           CallByNeed(None),
           IArray.from(annotations.getOrElse(label, List())),
+          IArray.from(inheritedAnnotations.getOrElse(label, List())),
           IArray.from(typeAnnotations.getOrElse(label, List()))
         ) ::
           getParams[T, ltail, ptail](
             annotations,
+            inheritedAnnotations,
             typeAnnotations,
             repeated,
             idx + 1
@@ -121,6 +126,7 @@ trait Derivation[TypeClass[_]] extends CommonDerivation[TypeClass]:
         new SealedTrait.Subtype(
           typeInfo[s],
           IArray.from(anns[s]),
+          IArray.from(inheritedAnns[s]),
           IArray.from(paramTypeAnns[T]),
           isObject[s],
           idx,
@@ -137,6 +143,7 @@ trait Derivation[TypeClass[_]] extends CommonDerivation[TypeClass]:
       typeInfo[A],
       IArray(subtypes[A, sum.MirroredElemTypes](sum)*),
       IArray.from(anns[A]),
+      IArray.from(inheritedAnns[A]),
       IArray(paramTypeAnns[A]*),
       isEnum[A]
     )

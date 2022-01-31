@@ -6,8 +6,12 @@ object Macro:
   inline def isObject[T]: Boolean = ${ isObject[T] }
   inline def isEnum[T]: Boolean = ${ isEnum[T] }
   inline def anns[T]: List[Any] = ${ anns[T] }
+  inline def inheritedAnns[T]: List[Any] = ${ inheritedAnns[T] }
   inline def typeAnns[T]: List[Any] = ${ typeAnns[T] }
   inline def paramAnns[T]: List[(String, List[Any])] = ${ paramAnns[T] }
+  inline def inheritedParamAnns[T]: List[(String, List[Any])] = ${
+    inheritedParamAnns[T]
+  }
   inline def isValueClass[T]: Boolean = ${ isValueClass[T] }
   inline def defaultValue[T]: List[(String, Option[Any])] = ${ defaultValue[T] }
   inline def paramTypeAnns[T]: List[(String, List[Any])] = ${ paramTypeAnns[T] }
@@ -24,75 +28,22 @@ object Macro:
 
     Expr(TypeRepr.of[T].typeSymbol.flags.is(Flags.Enum))
 
-  def paramAnns[T: Type](using Quotes): Expr[List[(String, List[Any])]] =
-    import quotes.reflect.*
-
-    val tpe = TypeRepr.of[T]
-
-    def filterAnnotation(a: Term): Boolean =
-      a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
-        a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
-
-    Expr.ofList {
-      val constructorAnnotations =
-        tpe.typeSymbol.primaryConstructor.paramSymss.flatten.map { field =>
-          field.name -> field.annotations
-            .filter(filterAnnotation)
-            .map(_.asExpr.asInstanceOf[Expr[Any]])
-        }
-      val fieldAnnotations = tpe.typeSymbol.caseFields.collect {
-        case field: Symbol if field.tree.isInstanceOf[ValDef] =>
-          field.name -> field.annotations
-            .filter(filterAnnotation)
-            .map(_.asExpr.asInstanceOf[Expr[Any]])
-      }
-      (constructorAnnotations ++ fieldAnnotations)
-        .filter(_._2.nonEmpty)
-        .groupBy(_._1)
-        .toList
-        .map { case (name, l) =>
-          Expr(name) -> l.flatMap(_._2)
-        }
-        .map { (name, anns) => Expr.ofTuple(name, Expr.ofList(anns)) }
-    }
-
   def anns[T: Type](using Quotes): Expr[List[Any]] =
-    import quotes.reflect.*
+    new CollectAnnotations[T].anns
 
-    val tpe = TypeRepr.of[T]
-
-    Expr.ofList {
-      tpe.typeSymbol.annotations
-        .filter { a =>
-          a.tpe.typeSymbol.maybeOwner.isNoSymbol || a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
-        }
-        .map(_.asExpr.asInstanceOf[Expr[Any]])
-    }
+  def inheritedAnns[T: Type](using Quotes): Expr[List[Any]] =
+    new CollectAnnotations[T].inheritedAnns
 
   def typeAnns[T: Type](using Quotes): Expr[List[Any]] =
-    import quotes.reflect.*
+    new CollectAnnotations[T].typeAnns
 
-    def getAnnotations(t: TypeRepr): List[Term] = t match
-      case AnnotatedType(inner, ann) => ann :: getAnnotations(inner)
-      case _                         => Nil
+  def paramAnns[T: Type](using Quotes): Expr[List[(String, List[Any])]] =
+    new CollectAnnotations[T].paramAnns
 
-    val tpe = TypeRepr.of[T]
-
-    tpe.typeSymbol.tree match
-      case ClassDef(_, _, parents, _, _) =>
-        Expr.ofList {
-          parents
-            .collect { case t: TypeTree =>
-              t.tpe
-            }
-            .flatMap(getAnnotations)
-            .filter { a =>
-              a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
-              a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
-            }
-            .map(_.asExpr.asInstanceOf[Expr[Any]])
-        }
-      case _ => Expr.ofList(List.empty)
+  def inheritedParamAnns[T: Type](using
+      Quotes
+  ): Expr[List[(String, List[Any])]] =
+    new CollectAnnotations[T].inheritedParamAnns
 
   def isValueClass[T: Type](using Quotes): Expr[Boolean] =
     import quotes.reflect.*
@@ -193,3 +144,92 @@ object Macro:
         '{ TypeInfo(${ owner(tpe) }, ${ name(tpe) }, Nil) }
 
     typeInfo(TypeRepr.of[T])
+
+  private class CollectAnnotations[T: Type](using val quotes: Quotes) {
+    import quotes.reflect.*
+
+    private val tpe = TypeRepr.of[T]
+
+    def anns: Expr[List[Any]] =
+      Expr.ofList {
+        tpe.typeSymbol.annotations
+          .filter(filterAnnotation)
+          .map(_.asExpr.asInstanceOf[Expr[Any]])
+      }
+
+    def inheritedAnns: Expr[List[Any]] =
+      Expr.ofList {
+        tpe.baseClasses
+          .collect {
+            case s if s.name != tpe.typeSymbol.name => s.annotations
+          } // skip self
+          .flatten
+          .filter(filterAnnotation)
+          .map(_.asExpr.asInstanceOf[Expr[Any]])
+      }
+
+    def typeAnns: Expr[List[Any]] =
+
+      def getAnnotations(t: TypeRepr): List[Term] = t match
+        case AnnotatedType(inner, ann) => ann :: getAnnotations(inner)
+        case _                         => Nil
+
+      tpe.typeSymbol.tree match
+        case ClassDef(_, _, parents, _, _) =>
+          Expr.ofList {
+            parents
+              .collect { case t: TypeTree => t.tpe }
+              .flatMap(getAnnotations)
+              .filter(filterAnnotation)
+              .map(_.asExpr.asInstanceOf[Expr[Any]])
+          }
+        case _ => Expr.ofList(List.empty)
+
+    def paramAnns: Expr[List[(String, List[Any])]] =
+      Expr.ofList {
+        groupByParamName {
+          (fromConstructor(tpe.typeSymbol) ++ fromDeclarations(tpe.typeSymbol))
+            .filter { case (_, anns) => anns.nonEmpty }
+        }
+      }
+
+    def inheritedParamAnns: Expr[List[(String, List[Any])]] =
+      Expr.ofList {
+        groupByParamName {
+          tpe.baseClasses.collect {
+            case s if s.name != tpe.typeSymbol.name =>
+              (fromConstructor(s) ++ fromDeclarations(s)).filter {
+                case (_, anns) => anns.nonEmpty
+              }
+          }.flatten
+        }
+      }
+
+    private def fromConstructor(from: Symbol): List[(String, List[Expr[Any]])] =
+      from.primaryConstructor.paramSymss.flatten.map { field =>
+        field.name -> field.annotations
+          .filter(filterAnnotation)
+          .map(_.asExpr.asInstanceOf[Expr[Any]])
+      }
+
+    private def fromDeclarations(
+        from: Symbol
+    ): List[(String, List[Expr[Any]])] =
+      from.declarations.collect {
+        case field: Symbol if field.tree.isInstanceOf[ValDef] =>
+          field.name -> field.annotations
+            .filter(filterAnnotation)
+            .map(_.asExpr.asInstanceOf[Expr[Any]])
+      }
+
+    private def groupByParamName(anns: List[(String, List[Expr[Any]])]) =
+      anns
+        .groupBy { case (name, _) => name }
+        .toList
+        .map { case (name, l) => name -> l.flatMap(_._2) }
+        .map { (name, anns) => Expr.ofTuple(Expr(name), Expr.ofList(anns)) }
+
+    private def filterAnnotation(a: Term): Boolean =
+      a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
+        a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
+  }

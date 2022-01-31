@@ -17,6 +17,7 @@ object CaseClass:
       val index: Int,
       val repeated: Boolean,
       val annotations: IArray[Any],
+      val inheritedAnnotations: IArray[Any],
       val typeAnnotations: IArray[Any]
   ):
 
@@ -35,6 +36,7 @@ object CaseClass:
         cbn: CallByNeed[F[P]],
         defaultVal: CallByNeed[Option[P]],
         annotations: IArray[Any],
+        inheritedAnnotations: IArray[Any],
         typeAnnotations: IArray[Any]
     ): Param[F, T] =
       new CaseClass.Param[F, T](
@@ -42,6 +44,7 @@ object CaseClass:
         idx,
         repeated,
         annotations,
+        inheritedAnnotations,
         typeAnnotations
       ):
         type PType = P
@@ -58,6 +61,7 @@ abstract class CaseClass[Typeclass[_], Type](
     val isValueClass: Boolean,
     val params: IArray[CaseClass.Param[Typeclass, Type]],
     val annotations: IArray[Any],
+    val inheritedAnnotations: IArray[Any],
     val typeAnnotations: IArray[Any]
 ) extends Serializable:
 
@@ -81,6 +85,7 @@ abstract class CaseClass[Typeclass[_], Type](
       cbn: CallByNeed[Typeclass[P]],
       defaultVal: CallByNeed[Option[P]],
       annotations: IArray[Any],
+      inheritedAnnotations: IArray[Any],
       typeAnnotations: IArray[Any]
   ): Param =
     new CaseClass.Param[Typeclass, Type](
@@ -88,6 +93,7 @@ abstract class CaseClass[Typeclass[_], Type](
       idx,
       repeated,
       annotations,
+      inheritedAnnotations,
       typeAnnotations
     ):
       type PType = P
@@ -101,6 +107,7 @@ case class SealedTrait[Typeclass[_], Type](
     typeInfo: TypeInfo,
     subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
     annotations: IArray[Any],
+    inheritedAnnotations: IArray[Any],
     typeAnnotations: IArray[Any],
     isEnum: Boolean
 ) extends Serializable:
@@ -130,6 +137,7 @@ object SealedTrait:
   class Subtype[Typeclass[_], Type, SType](
       val typeInfo: TypeInfo,
       val annotations: IArray[Any],
+      val inheritedAnnotations: IArray[Any],
       val typeAnnotations: IArray[Any],
       val isObject: Boolean,
       val index: Int,
@@ -149,7 +157,7 @@ object SealedTrait:
       val subtype: Subtype[Typeclass, Type, S],
       v: Type
   ):
-    export subtype.{typeclass, typeAnnotations, annotations, cast, typeInfo}
+    export subtype.{typeclass, typeAnnotations, annotations, inheritedAnnotations, cast, typeInfo}
     def value: S & Type = cast(v)
 
 end SealedTrait
