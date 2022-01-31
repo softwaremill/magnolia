@@ -1,8 +1,9 @@
 package magnolia1
 
-import scala.deriving.Mirror
 import scala.compiletime.*
+import scala.deriving.Mirror
 import scala.reflect.*
+
 import Macro.*
 
 trait CommonDerivation[TypeClass[_]]:
@@ -13,7 +14,7 @@ trait CommonDerivation[TypeClass[_]]:
       product: Mirror.ProductOf[A]
   ): Typeclass[A] =
     val parameters = IArray(
-      getParams[A, product.MirroredElemLabels, product.MirroredElemTypes](
+      getParams_[A, product.MirroredElemLabels, product.MirroredElemTypes](
         paramAnns[A].to(Map),
         inheritedParamAnns[A].to(Map),
         paramTypeAnns[A].to(Map),
@@ -71,7 +72,7 @@ trait CommonDerivation[TypeClass[_]]:
 
     join(caseClass)
 
-  inline def getParams[T, Labels <: Tuple, Params <: Tuple](
+  inline def getParams_[T, Labels <: Tuple, Params <: Tuple](
       annotations: Map[String, List[Any]],
       inheritedAnnotations: Map[String, List[Any]],
       typeAnnotations: Map[String, List[Any]],
@@ -95,9 +96,40 @@ trait CommonDerivation[TypeClass[_]]:
           IArray.from(inheritedAnnotations.getOrElse(label, List())),
           IArray.from(typeAnnotations.getOrElse(label, List()))
         ) ::
-          getParams[T, ltail, ptail](
+          getParams_[T, ltail, ptail](
             annotations,
             inheritedAnnotations,
+            typeAnnotations,
+            repeated,
+            idx + 1
+          )
+
+  // for backward compatibility with v1.0.0
+  inline def getParams[T, Labels <: Tuple, Params <: Tuple](
+      annotations: Map[String, List[Any]],
+      typeAnnotations: Map[String, List[Any]],
+      repeated: Map[String, Boolean],
+      idx: Int = 0
+  ): List[CaseClass.Param[Typeclass, T]] =
+    inline erasedValue[(Labels, Params)] match
+      case _: (EmptyTuple, EmptyTuple) =>
+        Nil
+      case _: ((l *: ltail), (p *: ptail)) =>
+        val label = constValue[l].asInstanceOf[String]
+        val typeclass = CallByNeed(summonInline[Typeclass[p]])
+
+        CaseClass.Param[Typeclass, T, p](
+          label,
+          idx,
+          repeated.getOrElse(label, false),
+          typeclass,
+          CallByNeed(None),
+          IArray.from(annotations.getOrElse(label, List())),
+          IArray.empty[Any],
+          IArray.from(typeAnnotations.getOrElse(label, List()))
+        ) ::
+          getParams[T, ltail, ptail](
+            annotations,
             typeAnnotations,
             repeated,
             idx + 1
@@ -143,9 +175,9 @@ trait Derivation[TypeClass[_]] extends CommonDerivation[TypeClass]:
       typeInfo[A],
       IArray(subtypes[A, sum.MirroredElemTypes](sum)*),
       IArray.from(anns[A]),
-      IArray.from(inheritedAnns[A]),
       IArray(paramTypeAnns[A]*),
-      isEnum[A]
+      isEnum[A],
+      IArray.from(inheritedAnns[A])
     )
 
     split(sealedTrait)

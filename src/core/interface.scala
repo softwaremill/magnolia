@@ -1,8 +1,9 @@
 package magnolia1
 
-import language.experimental.macros
 import scala.annotation.tailrec
 import scala.reflect.*
+
+import language.experimental.macros
 
 case class TypeInfo(
     owner: String,
@@ -17,7 +18,6 @@ object CaseClass:
       val index: Int,
       val repeated: Boolean,
       val annotations: IArray[Any],
-      val inheritedAnnotations: IArray[Any],
       val typeAnnotations: IArray[Any]
   ):
 
@@ -26,6 +26,7 @@ object CaseClass:
     def typeclass: Typeclass[PType]
     def deref(param: Type): PType
     def default: Option[PType]
+    def inheritedAnnotations: IArray[Any] = IArray.empty[Any]
     override def toString: String = s"Param($label)"
 
   object Param:
@@ -36,7 +37,7 @@ object CaseClass:
         cbn: CallByNeed[F[P]],
         defaultVal: CallByNeed[Option[P]],
         annotations: IArray[Any],
-        inheritedAnnotations: IArray[Any],
+        inheritedAnns: IArray[Any],
         typeAnnotations: IArray[Any]
     ): Param[F, T] =
       new CaseClass.Param[F, T](
@@ -44,7 +45,30 @@ object CaseClass:
         idx,
         repeated,
         annotations,
-        inheritedAnnotations,
+        typeAnnotations
+      ):
+        type PType = P
+        def default: Option[PType] = defaultVal.value
+        def typeclass = cbn.value
+        override def inheritedAnnotations = inheritedAnns
+        def deref(value: T): P =
+          value.asInstanceOf[Product].productElement(idx).asInstanceOf[P]
+
+    // for backward compatibility with v1.0.0
+    def apply[F[_], T, P](
+        name: String,
+        idx: Int,
+        repeated: Boolean,
+        cbn: CallByNeed[F[P]],
+        defaultVal: CallByNeed[Option[P]],
+        annotations: IArray[Any],
+        typeAnnotations: IArray[Any]
+    ): Param[F, T] =
+      new CaseClass.Param[F, T](
+        name,
+        idx,
+        repeated,
+        annotations,
         typeAnnotations
       ):
         type PType = P
@@ -61,9 +85,27 @@ abstract class CaseClass[Typeclass[_], Type](
     val isValueClass: Boolean,
     val params: IArray[CaseClass.Param[Typeclass, Type]],
     val annotations: IArray[Any],
-    val inheritedAnnotations: IArray[Any],
+    val inheritedAnnotations: IArray[Any] = IArray.empty[Any],
     val typeAnnotations: IArray[Any]
 ) extends Serializable:
+
+  // for backward compatibility with v1.0.0
+  def this(
+      typeInfo: TypeInfo,
+      isObject: Boolean,
+      isValueClass: Boolean,
+      params: IArray[CaseClass.Param[Typeclass, Type]],
+      annotations: IArray[Any],
+      typeAnnotations: IArray[Any]
+  ) = this(
+    typeInfo,
+    isObject,
+    isValueClass,
+    params,
+    annotations,
+    IArray.empty[Any],
+    typeAnnotations
+  )
 
   type Param = CaseClass.Param[Typeclass, Type]
 
@@ -85,7 +127,7 @@ abstract class CaseClass[Typeclass[_], Type](
       cbn: CallByNeed[Typeclass[P]],
       defaultVal: CallByNeed[Option[P]],
       annotations: IArray[Any],
-      inheritedAnnotations: IArray[Any],
+      inheritedAnns: IArray[Any],
       typeAnnotations: IArray[Any]
   ): Param =
     new CaseClass.Param[Typeclass, Type](
@@ -93,7 +135,30 @@ abstract class CaseClass[Typeclass[_], Type](
       idx,
       repeated,
       annotations,
-      inheritedAnnotations,
+      typeAnnotations
+    ):
+      type PType = P
+      def default: Option[PType] = defaultVal.value
+      def typeclass = cbn.value
+      override def inheritedAnnotations = inheritedAnns
+      def deref(value: Type): P =
+        value.asInstanceOf[Product].productElement(idx).asInstanceOf[P]
+
+  // for backward compatibility with v1.0.0
+  def param[P](
+      name: String,
+      idx: Int,
+      repeated: Boolean,
+      cbn: CallByNeed[Typeclass[P]],
+      defaultVal: CallByNeed[Option[P]],
+      annotations: IArray[Any],
+      typeAnnotations: IArray[Any]
+  ): Param =
+    new CaseClass.Param[Typeclass, Type](
+      name,
+      idx,
+      repeated,
+      annotations,
       typeAnnotations
     ):
       type PType = P
@@ -107,10 +172,42 @@ case class SealedTrait[Typeclass[_], Type](
     typeInfo: TypeInfo,
     subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
     annotations: IArray[Any],
-    inheritedAnnotations: IArray[Any],
     typeAnnotations: IArray[Any],
-    isEnum: Boolean
+    isEnum: Boolean,
+    inheritedAnnotations: IArray[Any]
 ) extends Serializable:
+
+  // for backward compatibility with v1.0.0
+  def this(
+      typeInfo: TypeInfo,
+      subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
+      annotations: IArray[Any],
+      typeAnnotations: IArray[Any],
+      isEnum: Boolean
+  ) = this(
+    typeInfo,
+    subtypes,
+    annotations,
+    typeAnnotations,
+    isEnum,
+    IArray.empty[Any]
+  )
+
+  // for backward compatibility with v1.0.0
+  def copy(
+      typeInfo: TypeInfo,
+      subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
+      annotations: IArray[Any],
+      typeAnnotations: IArray[Any],
+      isEnum: Boolean
+  ): SealedTrait[Typeclass, Type] = this.copy(
+    typeInfo,
+    subtypes,
+    annotations,
+    typeAnnotations,
+    isEnum,
+    this.inheritedAnnotations
+  )
 
   type Subtype[S] = SealedTrait.SubtypeValue[Typeclass, Type, S]
 
@@ -134,6 +231,23 @@ case class SealedTrait[Typeclass[_], Type](
 end SealedTrait
 
 object SealedTrait:
+
+  // for backward compatibility with v1.0.0
+  def apply[Typeclass[_], Type](
+      typeInfo: TypeInfo,
+      subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
+      annotations: IArray[Any],
+      typeAnnotations: IArray[Any],
+      isEnum: Boolean
+  ) = new SealedTrait[Typeclass, Type](
+    typeInfo,
+    subtypes,
+    annotations,
+    typeAnnotations,
+    isEnum,
+    IArray.empty[Any]
+  )
+
   class Subtype[Typeclass[_], Type, SType](
       val typeInfo: TypeInfo,
       val annotations: IArray[Any],
@@ -146,6 +260,29 @@ object SealedTrait:
       asType: Type => SType & Type
   ) extends PartialFunction[Type, SType & Type],
         Serializable:
+
+    // for backward compatibility with v1.0.0
+    def this(
+        typeInfo: TypeInfo,
+        annotations: IArray[Any],
+        typeAnnotations: IArray[Any],
+        isObject: Boolean,
+        index: Int,
+        callByNeed: CallByNeed[Typeclass[SType]],
+        isType: Type => Boolean,
+        asType: Type => SType & Type
+    ) = this(
+      typeInfo,
+      annotations,
+      IArray.empty[Any],
+      typeAnnotations,
+      isObject,
+      index,
+      callByNeed,
+      isType,
+      asType
+    )
+
     def typeclass: Typeclass[SType & Type] =
       callByNeed.value.asInstanceOf[Typeclass[SType & Type]]
     def cast: PartialFunction[Type, SType & Type] = this
@@ -157,7 +294,14 @@ object SealedTrait:
       val subtype: Subtype[Typeclass, Type, S],
       v: Type
   ):
-    export subtype.{typeclass, typeAnnotations, annotations, inheritedAnnotations, cast, typeInfo}
+    export subtype.{
+      typeclass,
+      typeAnnotations,
+      annotations,
+      inheritedAnnotations,
+      cast,
+      typeInfo
+    }
     def value: S & Type = cast(v)
 
 end SealedTrait
@@ -171,8 +315,3 @@ final class CallByNeed[+A](private[this] var eval: () => A)
     val result = eval()
     eval = null
     result
-
-/** This annotation can be attached on the contents of base coproduct (trait/class) along with another specific annotations we want to inherit.
-  * It causes magnolia to collect annotations from base class members.
-  */
-final class inherit extends scala.annotation.StaticAnnotation    
