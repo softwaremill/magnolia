@@ -24,24 +24,26 @@ trait GenericShow[Out] extends AutoDerivation[[X] =>> Show[Out, X]] {
     else
       val paramStrings = ctx.params.map { param =>
         val attribStr =
-          if (param.annotations.isEmpty) ""
+          if (param.annotations.isEmpty && param.inheritedAnnotations.isEmpty)
+            ""
           else {
-            param.annotations.mkString("{", ", ", "}")
+            (param.annotations ++ param.inheritedAnnotations).distinct
+              .mkString("{", ", ", "}")
           }
+
         val tpeAttribStr =
           if (param.typeAnnotations.isEmpty) ""
           else {
             param.typeAnnotations.mkString("{", ", ", "}")
           }
+
         s"${param.label}$attribStr$tpeAttribStr=${param.typeclass.show(param.deref(value))}"
       }
 
-      val anns =
-        ctx.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
+      val anns = (ctx.annotations ++ ctx.inheritedAnnotations).distinct
       val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
-      val tpeAnns =
-        ctx.typeAnnotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
+      val tpeAnns = ctx.typeAnnotations
       val typeAnnotationStr =
         if (tpeAnns.isEmpty) "" else tpeAnns.mkString("{", ",", "}")
 
@@ -66,8 +68,8 @@ trait GenericShow[Out] extends AutoDerivation[[X] =>> Show[Out, X]] {
   override def split[T](ctx: SealedTrait[Typeclass, T]): Show[Out, T] =
     (value: T) =>
       ctx.choose(value) { sub =>
-        val anns =
-          sub.annotations.filterNot(_.isInstanceOf[scala.SerialVersionUID])
+        val anns = (sub.annotations ++ sub.inheritedAnnotations).distinct
+
         val annotationStr =
           if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
@@ -85,5 +87,6 @@ object Show extends GenericShow[String]:
   given Show[String, String] = identity(_)
   given Show[String, Int] = _.toString
   given Show[String, Long] = _.toString + "L"
+  given Show[String, Boolean] = _.toString
   given [A](using A: Show[String, A]): Show[String, Seq[A]] =
     _.iterator.map(A.show).mkString("[", ",", "]")
