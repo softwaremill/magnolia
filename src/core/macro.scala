@@ -196,12 +196,19 @@ object Macro:
     def inheritedParamAnns: Expr[List[(String, List[Any])]] =
       Expr.ofList {
         groupByParamName {
-          tpe.baseClasses.collect {
-            case s if s.name != tpe.typeSymbol.name =>
-              (fromConstructor(s) ++ fromDeclarations(s)).filter {
-                case (_, anns) => anns.nonEmpty
-              }
-          }.flatten
+          tpe.baseClasses
+            .filterNot(bc =>
+              bc.name.contains("java.lang.Object") || bc.fullName.startsWith(
+                "scala."
+              )
+            )
+            .collect {
+              case s if s.name != tpe.typeSymbol.name =>
+                (fromConstructor(s) ++ fromDeclarations(s)).filter {
+                  case (_, anns) => anns.nonEmpty
+                }
+            }
+            .flatten
         }
       }
 
