@@ -65,19 +65,18 @@ jobs:
         uses: coursier/setup-action@v1.1.2
         with:
           jvm: adopt:11
-          apps: lsif-java
       - name: Cache sbt
         uses: coursier/cache-action@v6
         with:
           extraKey: sbt-cache-${{ runner.os }}
       - name: Generate LSIF
-        run: lsif-java index
+        run: sbt 'set every semanticdbEnabled := true; set every semanticdbVersion := "4.4.33"' sourcegraphLsif
       - name: Upload LSIF data
         uses: sourcegraph/lsif-upload-action@master
         with:
           endpoint: https://sourcegraph.com
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dump.lsif
+          file: target/sbt-sourcegraph/dump.lsif
 
   publish:
     name: Publish release

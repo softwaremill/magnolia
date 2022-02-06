@@ -7,3 +7,5 @@ addSbtPlugin("com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-publish" % 
 addSbtPlugin("org.jetbrains.scala" % "sbt-ide-settings" % "1.1.1")
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.8.0")
 addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.0.1")
+
+addSbtPlugin("com.sourcegraph" % "sbt-sourcegraph" % "0.3.3")
