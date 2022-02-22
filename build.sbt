@@ -80,3 +80,10 @@ lazy val test = (projectMatrix in file(".test"))
   )
   .jvmPlatform(scalaVersions = List(scala3))
   .jsPlatform(scalaVersions = List(scala3))
+
+inThisBuild(
+  List(
+    semanticdbEnabled := true,
+    semanticdbVersion := "4.4.33"
+  )
+)
