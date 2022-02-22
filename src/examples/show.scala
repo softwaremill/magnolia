@@ -28,13 +28,13 @@ trait GenericShow[Out] extends AutoDerivation[[X] =>> Show[Out, X]] {
             ""
           else {
             (param.annotations ++ param.inheritedAnnotations).distinct
-              .mkString("{", ", ", "}")
+              .mkString("{", ",", "}")
           }
 
         val tpeAttribStr =
           if (param.typeAnnotations.isEmpty) ""
           else {
-            param.typeAnnotations.mkString("{", ", ", "}")
+            param.typeAnnotations.mkString("{", ",", "}")
           }
 
         s"${param.label}$attribStr$tpeAttribStr=${param.typeclass.show(param.deref(value))}"
