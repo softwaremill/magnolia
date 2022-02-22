@@ -245,6 +245,29 @@ case class Hamster(
     @MyAnnotation(4) likesVeggies: Boolean
 ) extends Rodent
 
+class Base(
+    @MyAnnotation(1)
+    val foo: String
+)
+
+case class Foo(
+    @MyAnnotation(2)
+    override val foo: String
+) extends Base(foo)
+
+class Base2(
+    override val foo: String,
+    @MyAnnotation(1)
+    val bar: String
+) extends Base(foo)
+
+case class Bar(
+    @MyAnnotation(2)
+    override val foo: String,
+    @MyAnnotation(2)
+    override val bar: String
+) extends Base2(foo, bar)
+
 class Tests extends munit.FunSuite {
 
   test("construct a Show product instance with alternative apply functions") {
@@ -622,6 +645,21 @@ class Tests extends munit.FunSuite {
     assertEquals(
       res,
       "{MyTypeAnnotation(1)}Hamster{MyTypeAnnotation(1)}(name{MyAnnotation(1)}=Alex,age{MyAnnotation(2)}=10,likesNuts{MyAnnotation(3)}=true,likesVeggies{MyAnnotation(4)}=true)"
+    )
+  }
+
+  test("inherit annotations from base class constructor parameters") {
+    val res = Show.derived[Foo].show(Foo("foo"))
+    assertEquals(res, "Foo(foo{MyAnnotation(2),MyAnnotation(1)}=foo)")
+  }
+
+  test(
+    "inherit annotations from all base class constructor parameters in hierarchy"
+  ) {
+    val res = Show.derived[Bar].show(Bar("foo", "bar"))
+    assertEquals(
+      res,
+      "Bar(foo{MyAnnotation(2),MyAnnotation(1)}=foo,bar{MyAnnotation(2),MyAnnotation(1)}=bar)"
     )
   }
 }
