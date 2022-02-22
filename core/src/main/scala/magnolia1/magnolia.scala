@@ -186,8 +186,10 @@ object Magnolia {
       @tailrec
       def fromBaseClassesMembers(owner: Symbol): List[Annotation] =
         if (owner.isClass) {
-          owner.asClass.baseClasses
+          val baseClasses = owner.asClass.baseClasses
             .filterNot(bc => bc.fullName.contains("java.lang.Object") || bc.fullName.startsWith("scala."))
+
+          val fromMembers = baseClasses
             .flatMap(_.asType.toType.members)
             .filter(s =>
               (symbol, s) match {
@@ -197,6 +199,26 @@ object Magnolia {
               }
             )
             .flatMap(_.annotations)
+
+          val fromConstructorParameters = baseClasses
+            .flatMap {
+              case c: ClassSymbol =>
+                c.primaryConstructor match {
+                  case m: MethodSymbol =>
+                    m.paramLists.flatten
+                      .filter { s =>
+                        (symbol, s) match {
+                          case (t1: TermSymbol, t2: TermSymbol) if t1.name == t2.name => true
+                          case _                                                      => false
+                        }
+                      }
+                      .flatMap(_.annotations)
+                  case _ => List.empty
+                }
+              case _ => List.empty
+            }
+
+          fromMembers ++ fromConstructorParameters
         } else fromBaseClassesMembers(owner.owner)
 
       def fromBaseClasses(): List[Annotation] =

@@ -35,12 +35,12 @@ trait GenericShow[Out] {
           else {
             (param.annotations ++ param.inheritedAnnotations).distinct
               .filterNot(_.isInstanceOf[scala.annotation.implicitNotFound])
-              .mkString("{", ", ", "}")
+              .mkString("{", ",", "}")
           }
         val tpeAttribStr =
           if (param.typeAnnotations.isEmpty) ""
           else {
-            param.typeAnnotations.mkString("{", ", ", "}")
+            param.typeAnnotations.mkString("{", ",", "}")
           }
         s"${param.label}$attribStr$tpeAttribStr=${param.typeclass.show(param.dereference(value))}"
       }
