@@ -58,9 +58,9 @@ object Macro:
       Quotes
   ): Expr[List[(String, Option[() => Any])]] =
     import quotes.reflect._
-    def exprOfOption[T](
-        oet: (Expr[String], Option[Expr[T]])
-    ): Expr[(String, Option[() => T])] = oet match {
+    def exprOfOption(
+        oet: (Expr[String], Option[Expr[Any]])
+    ): Expr[(String, Option[() => Any])] = oet match {
       case (label, None)     => Expr(label.valueOrAbort -> None)
       case (label, Some(et)) => '{ $label -> Some(() => $et) }
     }
