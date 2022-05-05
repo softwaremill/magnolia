@@ -13,7 +13,9 @@ object Macro:
     inheritedParamAnns[T]
   }
   inline def isValueClass[T]: Boolean = ${ isValueClass[T] }
-  inline def defaultValue[T]: List[(String, Option[Any])] = ${ defaultValue[T] }
+  inline def defaultValue[T]: List[(String, Option[() => Any])] = ${
+    defaultValue[T]
+  }
   inline def paramTypeAnns[T]: List[(String, List[Any])] = ${ paramTypeAnns[T] }
   inline def repeated[T]: List[(String, Boolean)] = ${ repeated[T] }
   inline def typeInfo[T]: TypeInfo = ${ typeInfo[T] }
@@ -52,13 +54,30 @@ object Macro:
       TypeRepr.of[T].baseClasses.contains(Symbol.classSymbol("scala.AnyVal"))
     )
 
-  def defaultValue[T: Type](using Quotes): Expr[List[(String, Option[Any])]] =
+  def defaultValue[T: Type](using
+      Quotes
+  ): Expr[List[(String, Option[() => Any])]] =
     import quotes.reflect._
-
-    // TODO: Implement RHS
-    Expr.ofList(TypeRepr.of[T].typeSymbol.caseFields.map { case s =>
-      Expr(s.name -> None)
-    })
+    def exprOfOption[T](
+        oet: (Expr[String], Option[Expr[T]])
+    ): Expr[(String, Option[() => T])] = oet match {
+      case (label, None)     => Expr(label.valueOrAbort -> None)
+      case (label, Some(et)) => '{ $label -> Some(() => $et) }
+    }
+    val tpe = TypeRepr.of[T].typeSymbol
+    val terms = tpe.primaryConstructor.paramSymss.flatten
+      .filter(_.isValDef)
+      .zipWithIndex
+      .map { case (field, i) =>
+        exprOfOption {
+          Expr(field.name) -> tpe.companionClass
+            .declaredMethod(s"$$lessinit$$greater$$default$$${i + 1}")
+            .headOption
+            .flatMap(_.tree.asInstanceOf[DefDef].rhs)
+            .map(_.asExprOf[Any])
+        }
+      }
+    Expr.ofList(terms)
 
   def paramTypeAnns[T: Type](using Quotes): Expr[List[(String, List[Any])]] =
     import quotes.reflect._

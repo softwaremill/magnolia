@@ -18,7 +18,8 @@ trait CommonDerivation[TypeClass[_]]:
         paramAnns[A].to(Map),
         inheritedParamAnns[A].to(Map),
         paramTypeAnns[A].to(Map),
-        repeated[A].to(Map)
+        repeated[A].to(Map),
+        defaultValue[A].to(Map)
       )*
     )
 
@@ -77,6 +78,7 @@ trait CommonDerivation[TypeClass[_]]:
       inheritedAnnotations: Map[String, List[Any]],
       typeAnnotations: Map[String, List[Any]],
       repeated: Map[String, Boolean],
+      defaults: Map[String, Option[() => Any]],
       idx: Int = 0
   ): List[CaseClass.Param[Typeclass, T]] =
     inline erasedValue[(Labels, Params)] match
@@ -91,7 +93,7 @@ trait CommonDerivation[TypeClass[_]]:
           idx,
           repeated.getOrElse(label, false),
           typeclass,
-          CallByNeed(None),
+          CallByNeed(defaults.get(label).flatten.map(_.apply.asInstanceOf[p])),
           IArray.from(annotations.getOrElse(label, List())),
           IArray.from(inheritedAnnotations.getOrElse(label, List())),
           IArray.from(typeAnnotations.getOrElse(label, List()))
@@ -101,6 +103,7 @@ trait CommonDerivation[TypeClass[_]]:
             inheritedAnnotations,
             typeAnnotations,
             repeated,
+            defaults,
             idx + 1
           )
 
@@ -111,7 +114,7 @@ trait CommonDerivation[TypeClass[_]]:
       repeated: Map[String, Boolean],
       idx: Int = 0
   ): List[CaseClass.Param[Typeclass, T]] =
-    getParams_(annotations, Map.empty, typeAnnotations, repeated, idx)
+    getParams_(annotations, Map.empty, typeAnnotations, repeated, Map(), idx)
 
 end CommonDerivation
 
