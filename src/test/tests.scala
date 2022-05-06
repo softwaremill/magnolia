@@ -26,6 +26,8 @@ case class Company(name: String) extends Entity
 case class Person(name: String, age: Int) extends Entity
 case class Address(line1: String, occupant: Person)
 
+case class WithDefault(x: Int = 2)
+
 class Length(val value: Int) extends AnyVal
 
 case class FruitBasket(fruits: Fruit*)
@@ -433,6 +435,20 @@ class Tests extends munit.FunSuite {
       """Address(line1=53 High Street,occupant=Person(name=Richard Jones,age=44))"""
     )
     assertEquals(res, Address("53 High Street", Person("Richard Jones", 44)))
+  }
+
+  test("decode not using default") {
+    val res = summon[Decoder[WithDefault]].decode(
+      """WithDefault(x=1)"""
+    )
+    assertEquals(res, WithDefault(x=1))
+  }
+
+  test("decode using default") {
+    val res = summon[Decoder[WithDefault]].decode(
+      """WithDefault()"""
+    )
+    assertEquals(res, WithDefault(x=2))
   }
 
   test("typenames and labels are not encoded") {

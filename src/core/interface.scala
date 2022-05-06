@@ -23,6 +23,11 @@ object CaseClass:
 
     def typeclass: Typeclass[PType]
     def deref(param: Type): PType
+
+    /** Requires compilation with `-Yretain-trees` on.
+      * @return
+      *   default argument value, if any
+      */
     def default: Option[PType]
     def inheritedAnnotations: IArray[Any] = IArray.empty[Any]
     override def toString: String = s"Param($label)"

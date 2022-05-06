@@ -14,11 +14,12 @@ trait CommonDerivation[TypeClass[_]]:
       product: Mirror.ProductOf[A]
   ): Typeclass[A] =
     val parameters = IArray(
-      getParams_[A, product.MirroredElemLabels, product.MirroredElemTypes](
+      getParams__[A, product.MirroredElemLabels, product.MirroredElemTypes](
         paramAnns[A].to(Map),
         inheritedParamAnns[A].to(Map),
         paramTypeAnns[A].to(Map),
-        repeated[A].to(Map)
+        repeated[A].to(Map),
+        defaultValue[A].to(Map)
       )*
     )
 
@@ -72,11 +73,12 @@ trait CommonDerivation[TypeClass[_]]:
 
     join(caseClass)
 
-  inline def getParams_[T, Labels <: Tuple, Params <: Tuple](
+  inline def getParams__[T, Labels <: Tuple, Params <: Tuple](
       annotations: Map[String, List[Any]],
       inheritedAnnotations: Map[String, List[Any]],
       typeAnnotations: Map[String, List[Any]],
       repeated: Map[String, Boolean],
+      defaults: Map[String, Option[() => Any]],
       idx: Int = 0
   ): List[CaseClass.Param[Typeclass, T]] =
     inline erasedValue[(Labels, Params)] match
@@ -91,18 +93,29 @@ trait CommonDerivation[TypeClass[_]]:
           idx,
           repeated.getOrElse(label, false),
           typeclass,
-          CallByNeed(None),
+          CallByNeed(defaults.get(label).flatten.map(_.apply.asInstanceOf[p])),
           IArray.from(annotations.getOrElse(label, List())),
           IArray.from(inheritedAnnotations.getOrElse(label, List())),
           IArray.from(typeAnnotations.getOrElse(label, List()))
         ) ::
-          getParams_[T, ltail, ptail](
+          getParams__[T, ltail, ptail](
             annotations,
             inheritedAnnotations,
             typeAnnotations,
             repeated,
+            defaults,
             idx + 1
           )
+
+  // for backward compatibility with v1.1.1
+  inline def getParams_[T, Labels <: Tuple, Params <: Tuple](
+      annotations: Map[String, List[Any]],
+      inheritedAnnotations: Map[String, List[Any]],
+      typeAnnotations: Map[String, List[Any]],
+      repeated: Map[String, Boolean],
+      idx: Int = 0
+  ): List[CaseClass.Param[Typeclass, T]] =
+    getParams__(annotations, Map.empty, typeAnnotations, repeated, Map(), idx)
 
   // for backward compatibility with v1.0.0
   inline def getParams[T, Labels <: Tuple, Params <: Tuple](
@@ -111,7 +124,7 @@ trait CommonDerivation[TypeClass[_]]:
       repeated: Map[String, Boolean],
       idx: Int = 0
   ): List[CaseClass.Param[Typeclass, T]] =
-    getParams_(annotations, Map.empty, typeAnnotations, repeated, idx)
+    getParams__(annotations, Map.empty, typeAnnotations, repeated, Map(), idx)
 
 end CommonDerivation
 

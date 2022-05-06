@@ -15,7 +15,13 @@ object Decoder extends AutoDerivation[Decoder]:
   /** defines how new [[Decoder]]s for case classes should be constructed */
   def join[T](ctx: CaseClass[Decoder, T]): Decoder[T] = value =>
     val (_, values) = parse(value)
-    ctx.construct { param => param.typeclass.decode(values(param.label)) }
+    ctx.construct { param =>
+      values
+        .get(param.label)
+        .map(param.typeclass.decode)
+        .orElse(param.default)
+        .getOrElse(sys.error(s"missing ${param.label}"))
+    }
 
   /** defines how to choose which subtype of the sealed trait to use for
     * decoding
