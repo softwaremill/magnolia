@@ -6,12 +6,12 @@ import scala.reflect.*
 
 import Macro.*
 
-object Impl:
-  inline def getCaseClass[Typeclass[_], A](
+object CaseClassDerivation:
+  inline def fromMirror[Typeclass[_], A](
       product: Mirror.ProductOf[A]
   ): CaseClass[Typeclass, A] =
     val parameters = IArray(
-      getParams[
+      paramsFromMaps[
         Typeclass,
         A,
         product.MirroredElemLabels,
@@ -66,7 +66,7 @@ object Impl:
         } { params => product.fromProduct(Tuple.fromArray(params)) }
       }
 
-  inline def getParams[Typeclass[_], A, Labels <: Tuple, Params <: Tuple](
+  inline def paramsFromMaps[Typeclass[_], A, Labels <: Tuple, Params <: Tuple](
       annotations: Map[String, List[Any]],
       inheritedAnnotations: Map[String, List[Any]],
       typeAnnotations: Map[String, List[Any]],
@@ -89,7 +89,7 @@ object Impl:
           IArray.from(inheritedAnnotations.getOrElse(label, List())),
           IArray.from(typeAnnotations.getOrElse(label, List()))
         ) ::
-          getParams[Typeclass, A, ltail, ptail](
+          paramsFromMaps[Typeclass, A, ltail, ptail](
             annotations,
             inheritedAnnotations,
             typeAnnotations,
@@ -97,42 +97,43 @@ object Impl:
             defaults,
             idx + 1
           )
+end CaseClassDerivation
 
-  trait Subtypes:
-    protected type Typeclass[_]
-    protected inline def deriveSubtype[s](m: Mirror.Of[s]): Typeclass[s]
+trait SealedTraitDerivation[TypeClass[_]]:
+  protected inline def deriveSubtype[s](m: Mirror.Of[s]): TypeClass[s]
 
-    protected inline def getSealedTrait[A](
-        m: Mirror.SumOf[A]
-    ): SealedTrait[Typeclass, A] =
-      SealedTrait(
-        typeInfo[A],
-        IArray(getSubtypes[A, m.MirroredElemTypes](m)*),
-        IArray.from(anns[A]),
-        IArray(paramTypeAnns[A]*),
-        isEnum[A],
-        IArray.from(inheritedAnns[A])
-      )
+  protected inline def sealedTraitFromMirror[A](
+      m: Mirror.SumOf[A]
+  ): SealedTrait[TypeClass, A] =
+    SealedTrait(
+      typeInfo[A],
+      IArray(subtypesFromMirror[A, m.MirroredElemTypes](m)*),
+      IArray.from(anns[A]),
+      IArray(paramTypeAnns[A]*),
+      isEnum[A],
+      IArray.from(inheritedAnns[A])
+    )
 
-    protected transparent inline def getSubtypes[A, SubtypeTuple <: Tuple](
-        m: Mirror.SumOf[A],
-        idx: Int = 0
-    ): List[SealedTrait.Subtype[Typeclass, A, _]] =
-      inline erasedValue[SubtypeTuple] match
-        case _: EmptyTuple =>
-          Nil
-        case _: (s *: tail) =>
-          new SealedTrait.Subtype(
-            typeInfo[s],
-            IArray.from(anns[s]),
-            IArray.from(inheritedAnns[s]),
-            IArray.from(paramTypeAnns[A]),
-            isObject[s],
-            idx,
-            CallByNeed(summonFrom {
-              case tc: Typeclass[`s`] => tc
-              case _ => deriveSubtype(summonInline[Mirror.Of[s]])
-            }),
-            x => m.ordinal(x) == idx,
-            _.asInstanceOf[s & A]
-          ) :: getSubtypes[A, tail](m, idx + 1)
+  protected transparent inline def subtypesFromMirror[A, SubtypeTuple <: Tuple](
+      m: Mirror.SumOf[A],
+      idx: Int = 0
+  ): List[SealedTrait.Subtype[TypeClass, A, _]] =
+    inline erasedValue[SubtypeTuple] match
+      case _: EmptyTuple =>
+        Nil
+      case _: (s *: tail) =>
+        new SealedTrait.Subtype(
+          typeInfo[s],
+          IArray.from(anns[s]),
+          IArray.from(inheritedAnns[s]),
+          IArray.from(paramTypeAnns[A]),
+          isObject[s],
+          idx,
+          CallByNeed(summonFrom {
+            case tc: TypeClass[`s`] => tc
+            case _ => deriveSubtype(summonInline[Mirror.Of[s]])
+          }),
+          x => m.ordinal(x) == idx,
+          _.asInstanceOf[s & A]
+        ) :: subtypesFromMirror[A, tail](m, idx + 1)
+end SealedTraitDerivation

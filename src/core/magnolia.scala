@@ -12,7 +12,7 @@ trait CommonDerivation[TypeClass[_]]:
 
   inline def derivedMirrorProduct[A](
       product: Mirror.ProductOf[A]
-  ): Typeclass[A] = join(Impl.getCaseClass(product))
+  ): Typeclass[A] = join(CaseClassDerivation.fromMirror(product))
 
   inline def getParams__[T, Labels <: Tuple, Params <: Tuple](
       annotations: Map[String, List[Any]],
@@ -21,7 +21,7 @@ trait CommonDerivation[TypeClass[_]]:
       repeated: Map[String, Boolean],
       defaults: Map[String, Option[() => Any]],
       idx: Int = 0
-  ): List[CaseClass.Param[Typeclass, T]] = Impl.getParams(
+  ): List[CaseClass.Param[Typeclass, T]] = CaseClassDerivation.paramsFromMaps(
     annotations,
     inheritedAnnotations,
     typeAnnotations,
@@ -60,17 +60,17 @@ end ProductDerivation
 
 trait Derivation[TypeClass[_]]
     extends CommonDerivation[TypeClass]
-    with Impl.Subtypes:
+    with SealedTraitDerivation[TypeClass]:
   def split[T](ctx: SealedTrait[Typeclass, T]): Typeclass[T]
 
   transparent inline def subtypes[T, SubtypeTuple <: Tuple](
       m: Mirror.SumOf[T],
       idx: Int = 0
   ): List[SealedTrait.Subtype[Typeclass, T, _]] =
-    getSubtypes[T, SubtypeTuple](m, idx)
+    subtypesFromMirror[T, SubtypeTuple](m, idx)
 
   inline def derivedMirrorSum[A](sum: Mirror.SumOf[A]): Typeclass[A] =
-    split(getSealedTrait(sum))
+    split(sealedTraitFromMirror(sum))
 
   inline def derivedMirror[A](using mirror: Mirror.Of[A]): Typeclass[A] =
     inline mirror match
