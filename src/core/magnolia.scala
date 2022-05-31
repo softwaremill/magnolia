@@ -60,7 +60,7 @@ end ProductDerivation
 
 trait Derivation[TypeClass[_]]
     extends CommonDerivation[TypeClass]
-    with SealedTraitDerivation[TypeClass]:
+    with SealedTraitDerivation:
   def split[T](ctx: SealedTrait[Typeclass, T]): Typeclass[T]
 
   transparent inline def subtypes[T, SubtypeTuple <: Tuple](

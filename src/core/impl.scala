@@ -99,12 +99,14 @@ object CaseClassDerivation:
           )
 end CaseClassDerivation
 
-trait SealedTraitDerivation[TypeClass[_]]:
-  protected inline def deriveSubtype[s](m: Mirror.Of[s]): TypeClass[s]
+trait SealedTraitDerivation:
+  type Typeclass[T]
+
+  protected inline def deriveSubtype[s](m: Mirror.Of[s]): Typeclass[s]
 
   protected inline def sealedTraitFromMirror[A](
       m: Mirror.SumOf[A]
-  ): SealedTrait[TypeClass, A] =
+  ): SealedTrait[Typeclass, A] =
     SealedTrait(
       typeInfo[A],
       IArray(subtypesFromMirror[A, m.MirroredElemTypes](m)*),
@@ -117,7 +119,7 @@ trait SealedTraitDerivation[TypeClass[_]]:
   protected transparent inline def subtypesFromMirror[A, SubtypeTuple <: Tuple](
       m: Mirror.SumOf[A],
       idx: Int = 0
-  ): List[SealedTrait.Subtype[TypeClass, A, _]] =
+  ): List[SealedTrait.Subtype[Typeclass, A, _]] =
     inline erasedValue[SubtypeTuple] match
       case _: EmptyTuple =>
         Nil
@@ -130,7 +132,7 @@ trait SealedTraitDerivation[TypeClass[_]]:
           isObject[s],
           idx,
           CallByNeed(summonFrom {
-            case tc: TypeClass[`s`] => tc
+            case tc: Typeclass[`s`] => tc
             case _ => deriveSubtype(summonInline[Mirror.Of[s]])
           }),
           x => m.ordinal(x) == idx,
