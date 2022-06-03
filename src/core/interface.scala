@@ -17,7 +17,7 @@ object CaseClass:
       val repeated: Boolean,
       val annotations: IArray[Any],
       val typeAnnotations: IArray[Any]
-  ):
+  ) extends Serializable:
 
     type PType
 
