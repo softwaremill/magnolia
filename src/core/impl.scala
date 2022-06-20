@@ -133,7 +133,7 @@ trait SealedTraitDerivation:
           idx,
           CallByNeed(summonFrom {
             case tc: Typeclass[`s`] => tc
-            case _ => deriveSubtype(summonInline[Mirror.Of[s]])
+            case _                  => deriveSubtype(summonInline[Mirror.Of[s]])
           }),
           x => m.ordinal(x) == idx,
           _.asInstanceOf[s & A]

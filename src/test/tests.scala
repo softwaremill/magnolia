@@ -441,14 +441,14 @@ class Tests extends munit.FunSuite {
     val res = summon[Decoder[WithDefault]].decode(
       """WithDefault(x=1)"""
     )
-    assertEquals(res, WithDefault(x=1))
+    assertEquals(res, WithDefault(x = 1))
   }
 
   test("decode using default") {
     val res = summon[Decoder[WithDefault]].decode(
       """WithDefault()"""
     )
-    assertEquals(res, WithDefault(x=2))
+    assertEquals(res, WithDefault(x = 2))
   }
 
   test("typenames and labels are not encoded") {
