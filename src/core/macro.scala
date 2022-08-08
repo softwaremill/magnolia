@@ -117,11 +117,11 @@ object Macro:
           case _           => false
       case _ => false
 
-    val tr = TypeRepr.of[T]
-    val symbol = tr.typeSymbol
-    val constr = symbol.primaryConstructor.tree.asInstanceOf[DefDef]
+    val tpe = TypeRepr.of[T]
+    val symbol: Option[Symbol] = if tpe.typeSymbol.isNoSymbol then None else Some(tpe.typeSymbol)
+    val constr: Option[DefDef] = symbol.map(_.primaryConstructor.tree.asInstanceOf[DefDef])
 
-    val areRepeated = constr.paramss.flatMap(_.params.flatMap {
+    val areRepeated = constr.toList.flatMap(_.paramss).flatMap(_.params.flatMap {
       case ValDef(name, tpeTree, _) => Some(name -> isRepeated(tpeTree.tpe))
       case _                        => None
     })
@@ -194,16 +194,19 @@ object Macro:
         case AnnotatedType(inner, ann) => ann :: getAnnotations(inner)
         case _                         => Nil
 
-      tpe.typeSymbol.tree match
-        case ClassDef(_, _, parents, _, _) =>
-          Expr.ofList {
-            parents
-              .collect { case t: TypeTree => t.tpe }
-              .flatMap(getAnnotations)
-              .filter(filterAnnotation)
-              .map(_.asExpr.asInstanceOf[Expr[Any]])
-          }
-        case _ => Expr.ofList(List.empty)
+      val symbol: Option[Symbol] = if tpe.typeSymbol.isNoSymbol then None else Some(tpe.typeSymbol)
+      Expr.ofList {
+        symbol.toList.map(_.tree).flatMap {
+          case ClassDef(_, _, parents, _, _) =>
+              parents
+                .collect { case t: TypeTree => t.tpe }
+                .flatMap(getAnnotations)
+                .filter(filterAnnotation)
+                .map(_.asExpr.asInstanceOf[Expr[Any]])
+          case _ =>
+            List.empty
+        }
+      }
     }
 
     def paramAnns: Expr[List[(String, List[Any])]] =

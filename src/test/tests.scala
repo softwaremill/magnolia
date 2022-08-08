@@ -270,6 +270,15 @@ case class Bar(
     override val bar: String
 ) extends Base2(foo, bar)
 
+object ExtendingTraits:
+  trait One
+  trait Two
+
+enum ExtendingTraits:
+  case A extends ExtendingTraits with ExtendingTraits.One
+  case B extends ExtendingTraits with ExtendingTraits.Two
+  case C extends ExtendingTraits with ExtendingTraits.Two
+
 //
 
 trait PrintRepeated[T] {
@@ -700,5 +709,10 @@ class Tests extends munit.FunSuite {
   test("should print repeated") {
     val res = PrintRepeated.derived[Account].print(Account("id", "email1", "email2"))
     assertEquals(res, "List(emails)")
+  }
+
+  test("should print repeated 1") {
+    val res = Show.derived[ExtendingTraits.A.type].show(ExtendingTraits.A)
+    assertEquals(res, "A()")
   }
 }
