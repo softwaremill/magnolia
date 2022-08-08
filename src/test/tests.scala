@@ -1,6 +1,6 @@
 package magnolia1.tests
 
-import magnolia1.TypeInfo
+import magnolia1.*
 import magnolia1.examples.*
 
 import java.time.LocalDate
@@ -269,6 +269,24 @@ case class Bar(
     @MyAnnotation(2)
     override val bar: String
 ) extends Base2(foo, bar)
+
+//
+
+trait PrintRepeated[T] {
+  def print(t: T): String
+}
+
+object PrintRepeated extends AutoDerivation[PrintRepeated]:
+  def join[T](ctx: CaseClass[Typeclass, T]): PrintRepeated[T] = _ =>
+    ctx.params.filter(_.repeated).map(_.label).toList.toString
+
+  override def split[T](ctx: SealedTrait[PrintRepeated, T]): PrintRepeated[T] =
+    ctx.choose(_) { sub => sub.typeclass.print(sub.value) }
+
+  given PrintRepeated[String] = _ => ""
+  given seq[T](using printT: PrintRepeated[T]): PrintRepeated[Seq[T]] = _ => ""
+
+//
 
 class Tests extends munit.FunSuite {
 
@@ -677,5 +695,10 @@ class Tests extends munit.FunSuite {
       res,
       "Bar(foo{MyAnnotation(2),MyAnnotation(1)}=foo,bar{MyAnnotation(2),MyAnnotation(1)}=bar)"
     )
+  }
+
+  test("should print repeated") {
+    val res = PrintRepeated.derived[Account].print(Account("id", "email1", "email2"))
+    assertEquals(res, "List(emails)")
   }
 }
