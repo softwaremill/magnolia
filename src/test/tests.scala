@@ -711,7 +711,7 @@ class Tests extends munit.FunSuite {
     assertEquals(res, "List(emails)")
   }
 
-  test("should print repeated 1") {
+  test("should derive Show for a enum extending a trait") {
     val res = Show.derived[ExtendingTraits.A.type].show(ExtendingTraits.A)
     assertEquals(res, "A()")
   }
