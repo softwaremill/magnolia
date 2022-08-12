@@ -707,7 +707,8 @@ class Tests extends munit.FunSuite {
   }
 
   test("should print repeated") {
-    val res = PrintRepeated.derived[Account].print(Account("id", "email1", "email2"))
+    val res =
+      PrintRepeated.derived[Account].print(Account("id", "email1", "email2"))
     assertEquals(res, "List(emails)")
   }
 
