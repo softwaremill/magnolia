@@ -43,7 +43,7 @@ trait Print[T] {
 }
 
 object Print extends AutoDerivation[Print]:
-  def join[T](ctx: CaseClass[Typeclass, T]): Print[T] = value =>
+  def join[T](ctx: CaseClass[Print, T]): Print[T] = value =>
     ctx.params.map { param =>
       param.typeclass.print(param.deref(value))
     }.mkString(s"${ctx.typeInfo.short}(", ",", ")")
