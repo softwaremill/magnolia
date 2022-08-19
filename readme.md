@@ -47,8 +47,6 @@ The derivation typeclass for a `Show` typeclass might look like this:
 import language.experimental.macros, magnolia1._
 
 object ShowDerivation {
-  type Typeclass[T] = Show[T]
-  
   def join[T](ctx: CaseClass[Show, T]): Show[T] = new Show[T] {
     def show(value: T): String = ctx.parameters.map { p =>
       s"${p.label}=${p.typeclass.show(p.dereference(value))}"
