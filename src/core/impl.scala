@@ -124,18 +124,26 @@ trait SealedTraitDerivation:
       case _: EmptyTuple =>
         Nil
       case _: (s *: tail) =>
-        new SealedTrait.Subtype(
-          typeInfo[s],
-          IArray.from(anns[s]),
-          IArray.from(inheritedAnns[s]),
-          IArray.from(paramTypeAnns[A]),
-          isObject[s],
-          idx,
-          CallByNeed(summonFrom {
-            case tc: Typeclass[`s`] => tc
-            case _                  => deriveSubtype(summonInline[Mirror.Of[s]])
-          }),
-          x => m.ordinal(x) == idx,
-          _.asInstanceOf[s & A]
-        ) :: subtypesFromMirror[A, tail](m, idx + 1)
+        val sub = summonFrom {
+          case mm: Mirror.SumOf[`s`] =>
+            subtypesFromMirror[A, mm.MirroredElemTypes](m, idx)
+          case _ =>
+            List(
+              new SealedTrait.Subtype[Typeclass, A, s](
+                typeInfo[s],
+                IArray.from(anns[s]),
+                IArray.from(inheritedAnns[s]),
+                IArray.from(paramTypeAnns[A]),
+                isObject[s],
+                idx,
+                CallByNeed(summonFrom {
+                  case tc: Typeclass[`s`] => tc
+                  case _ => deriveSubtype(summonInline[Mirror.Of[s]])
+                }),
+                x => m.ordinal(x) == idx,
+                _.asInstanceOf[s & A]
+              )
+            )
+        }
+        sub ::: subtypesFromMirror[A, tail](m, idx + 1)
 end SealedTraitDerivation

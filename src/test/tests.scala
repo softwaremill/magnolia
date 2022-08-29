@@ -22,8 +22,10 @@ case class OffRoad[+A](path: Option[Path[A]]) extends Path[A]
 
 sealed trait Entity
 
-case class Company(name: String) extends Entity
-case class Person(name: String, age: Int) extends Entity
+sealed trait AEntity extends Entity
+case class Company(name: String) extends AEntity
+sealed trait BEntity extends Entity
+case class Person(name: String, age: Int) extends BEntity
 case class Address(line1: String, occupant: Person)
 
 case class WithDefault(x: Int = 2)
