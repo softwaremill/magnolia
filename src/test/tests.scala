@@ -22,10 +22,8 @@ case class OffRoad[+A](path: Option[Path[A]]) extends Path[A]
 
 sealed trait Entity
 
-sealed trait AEntity extends Entity
-case class Company(name: String) extends AEntity
-sealed trait BEntity extends Entity
-case class Person(name: String, age: Int) extends BEntity
+case class Company(name: String) extends Entity
+case class Person(name: String, age: Int) extends Entity
 case class Address(line1: String, occupant: Person)
 
 case class WithDefault(x: Int = 2)
@@ -298,6 +296,22 @@ object PrintRepeated extends AutoDerivation[PrintRepeated]:
   given seq[T](using printT: PrintRepeated[T]): PrintRepeated[Seq[T]] = _ => ""
 
 //
+
+sealed trait Complex
+object Complex {
+  case object Object extends G
+  sealed trait A extends Complex
+  sealed trait B extends A
+  case object ObjectC extends Complex
+  case object ObjectD extends A
+  case object ObjectE extends B
+  case object ObjectF extends A with Complex
+  sealed trait G extends B
+  case class ClassH(i: Int) extends A with G
+  object Scoped {
+    case object Object extends A
+  }
+}
 
 class Tests extends munit.FunSuite {
 
@@ -717,5 +731,26 @@ class Tests extends munit.FunSuite {
   test("should derive Show for a enum extending a trait") {
     val res = Show.derived[ExtendingTraits.A.type].show(ExtendingTraits.A)
     assertEquals(res, "A()")
+  }
+
+  test("derive all subtypes in complex hierarchy") {
+    val res = Passthrough.derived[Complex].ctx.get.toOption.get
+    assertEquals(res.subtypes.size, 7)
+    List(
+      Complex.ObjectE,
+      Complex.Object,
+      Complex.Scoped.Object,
+      Complex.ClassH(1),
+      Complex.ObjectD,
+      Complex.ObjectF,
+      Complex.ObjectC
+    ).foreach { o =>
+      val chosen = res.choose(o)(identity)
+      assertEquals(chosen.value, o)
+      assertEquals(
+        chosen.typeInfo.short,
+        o.getClass.getSimpleName.replace("$", "")
+      )
+    }
   }
 }

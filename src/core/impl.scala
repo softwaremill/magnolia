@@ -118,7 +118,7 @@ trait SealedTraitDerivation:
 
   protected transparent inline def subtypesFromMirror[A, SubtypeTuple <: Tuple](
       m: Mirror.SumOf[A],
-      idx: Int = 0
+      idx: Int = 0 //no longer used, kept for bincompat
   ): List[SealedTrait.Subtype[Typeclass, A, _]] =
     inline erasedValue[SubtypeTuple] match
       case _: EmptyTuple =>
@@ -126,7 +126,7 @@ trait SealedTraitDerivation:
       case _: (s *: tail) =>
         val sub = summonFrom {
           case mm: Mirror.SumOf[`s`] =>
-            subtypesFromMirror[A, mm.MirroredElemTypes](m, idx)
+            subtypesFromMirror[A, mm.MirroredElemTypes](mm.asInstanceOf[m.type], 0)
           case _ =>
             List(
               new SealedTrait.Subtype[Typeclass, A, s](
@@ -140,10 +140,10 @@ trait SealedTraitDerivation:
                   case tc: Typeclass[`s`] => tc
                   case _ => deriveSubtype(summonInline[Mirror.Of[s]])
                 }),
-                x => m.ordinal(x) == idx,
+                x => x.isInstanceOf[s & A],
                 _.asInstanceOf[s & A]
               )
             )
         }
-        sub ::: subtypesFromMirror[A, tail](m, idx + 1)
+        (sub ::: subtypesFromMirror[A, tail](m, idx + 1)).distinctBy(_.typeInfo)
 end SealedTraitDerivation
