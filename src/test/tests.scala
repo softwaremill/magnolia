@@ -733,6 +733,22 @@ class Tests extends munit.FunSuite {
     assertEquals(res, "A()")
   }
 
+  test("choose a enum") {
+    val res = Passthrough.derived[Size].ctx.get.toOption.get
+    List(
+      Size.S,
+      Size.M,
+      Size.L,
+    ).foreach { o =>
+      val chosen = res.choose(o)(identity)
+      assertEquals(chosen.value, o)
+      assertEquals(
+        chosen.typeInfo.short,
+        o.toString
+      )
+    }
+  }
+
   test("derive all subtypes in complex hierarchy") {
     val res = Passthrough.derived[Complex].ctx.get.toOption.get
     assertEquals(res.subtypes.size, 7)
