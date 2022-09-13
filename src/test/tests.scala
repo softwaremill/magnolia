@@ -297,6 +297,22 @@ object PrintRepeated extends AutoDerivation[PrintRepeated]:
 
 //
 
+sealed trait Complex
+object Complex {
+  case object Object extends G
+  sealed trait A extends Complex
+  sealed trait B extends A
+  case object ObjectC extends Complex
+  case object ObjectD extends A
+  case object ObjectE extends B
+  case object ObjectF extends A with Complex
+  sealed trait G extends B
+  case class ClassH(i: Int) extends A with G
+  object Scoped {
+    case object Object extends A
+  }
+}
+
 class Tests extends munit.FunSuite {
 
   test("construct a Show product instance with alternative apply functions") {
@@ -715,5 +731,42 @@ class Tests extends munit.FunSuite {
   test("should derive Show for a enum extending a trait") {
     val res = Show.derived[ExtendingTraits.A.type].show(ExtendingTraits.A)
     assertEquals(res, "A()")
+  }
+
+  test("choose a enum") {
+    val res = Passthrough.derived[Size].ctx.get.toOption.get
+    List(
+      Size.S,
+      Size.M,
+      Size.L,
+    ).foreach { o =>
+      val chosen = res.choose(o)(identity)
+      assertEquals(chosen.value, o)
+      assertEquals(
+        chosen.typeInfo.short,
+        o.toString
+      )
+    }
+  }
+
+  test("derive all subtypes in complex hierarchy") {
+    val res = Passthrough.derived[Complex].ctx.get.toOption.get
+    assertEquals(res.subtypes.size, 7)
+    List(
+      Complex.ObjectE,
+      Complex.Object,
+      Complex.Scoped.Object,
+      Complex.ClassH(1),
+      Complex.ObjectD,
+      Complex.ObjectF,
+      Complex.ObjectC
+    ).foreach { o =>
+      val chosen = res.choose(o)(identity)
+      assertEquals(chosen.value, o)
+      assertEquals(
+        chosen.typeInfo.short,
+        o.getClass.getSimpleName.replace("$", "")
+      )
+    }
   }
 }

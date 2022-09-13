@@ -118,24 +118,32 @@ trait SealedTraitDerivation:
 
   protected transparent inline def subtypesFromMirror[A, SubtypeTuple <: Tuple](
       m: Mirror.SumOf[A],
-      idx: Int = 0
+      idx: Int = 0 //no longer used, kept for bincompat
   ): List[SealedTrait.Subtype[Typeclass, A, _]] =
     inline erasedValue[SubtypeTuple] match
       case _: EmptyTuple =>
         Nil
       case _: (s *: tail) =>
-        new SealedTrait.Subtype(
-          typeInfo[s],
-          IArray.from(anns[s]),
-          IArray.from(inheritedAnns[s]),
-          IArray.from(paramTypeAnns[A]),
-          isObject[s],
-          idx,
-          CallByNeed(summonFrom {
-            case tc: Typeclass[`s`] => tc
-            case _                  => deriveSubtype(summonInline[Mirror.Of[s]])
-          }),
-          x => m.ordinal(x) == idx,
-          _.asInstanceOf[s & A]
-        ) :: subtypesFromMirror[A, tail](m, idx + 1)
+        val sub = summonFrom {
+          case mm: Mirror.SumOf[`s`] =>
+            subtypesFromMirror[A, mm.MirroredElemTypes](mm.asInstanceOf[m.type], 0)
+          case _ =>
+            List(
+              new SealedTrait.Subtype[Typeclass, A, s](
+                typeInfo[s],
+                IArray.from(anns[s]),
+                IArray.from(inheritedAnns[s]),
+                IArray.from(paramTypeAnns[A]),
+                isObject[s],
+                idx,
+                CallByNeed(summonFrom {
+                  case tc: Typeclass[`s`] => tc
+                  case _ => deriveSubtype(summonInline[Mirror.Of[s]])
+                }),
+                x => x.isInstanceOf[s & A],
+                _.asInstanceOf[s & A]
+              )
+            )
+        }
+        (sub ::: subtypesFromMirror[A, tail](m, idx + 1)).distinctBy(_.typeInfo)
 end SealedTraitDerivation

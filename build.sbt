@@ -75,7 +75,7 @@ lazy val test = (projectMatrix in file(".test"))
     name := "magnolia-test",
     scalacOptions += "-Yretain-trees",
     projectDependencies ++= Seq(
-      "org.scalameta" %% "munit" % "0.7.26"
+      "org.scalameta" %%% "munit" % "1.0.0-M6"
     ),
     testFrameworks += new TestFramework("munit.Framework"),
     Test / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "test",
