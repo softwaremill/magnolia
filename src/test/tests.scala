@@ -738,7 +738,7 @@ class Tests extends munit.FunSuite {
     List(
       Size.S,
       Size.M,
-      Size.L,
+      Size.L
     ).foreach { o =>
       val chosen = res.choose(o)(identity)
       assertEquals(chosen.value, o)
