@@ -65,7 +65,7 @@ trait Derivation[TypeClass[_]]
 
   transparent inline def subtypes[T, SubtypeTuple <: Tuple](
       m: Mirror.SumOf[T],
-      idx: Int = 0 //no longer used, kept for bincompat
+      idx: Int = 0 // no longer used, kept for bincompat
   ): List[SealedTrait.Subtype[Typeclass, T, _]] =
     subtypesFromMirror[T, SubtypeTuple](m, idx)
 
