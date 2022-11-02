@@ -136,3 +136,27 @@ object AnnotationsTests:
   @SuppressWarnings(Array("deprecation"))
   @JavaExampleAnnotation(description = "Some model")
   case class MyDto(foo: String, bar: Int)
+
+  @MyTypeAnnotation(1)
+  sealed trait Pet {
+    @MyAnnotation(1)
+    def name: String
+    @MyAnnotation(2)
+    def age: Int
+  }
+
+  @MyTypeAnnotation(2)
+  case class Dog(name: String, age: Int, @MyAnnotation(3) likesMeat: Boolean)
+      extends Pet
+
+  sealed trait Rodent extends Pet {
+    @MyAnnotation(3)
+    def likesNuts: Boolean
+  }
+
+  case class Hamster(
+      name: String,
+      age: Int,
+      likesNuts: Boolean,
+      @MyAnnotation(4) likesVeggies: Boolean
+  ) extends Rodent

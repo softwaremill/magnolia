@@ -2,6 +2,7 @@ package magnolia1.tests
 
 import magnolia1.*
 import magnolia1.examples.*
+import java.time.LocalDate
 
 class ProductsTests extends munit.FunSuite:
   import ProductsTests.*
@@ -176,13 +177,13 @@ class ProductsTests extends munit.FunSuite:
       def subtypeNames = ???
     }
     val res = TypeNameInfo.derived[Fruit].name
-    assertEquals(res.full, "magnolia1.tests.Fruit")
+    assertEquals(res.full, "magnolia1.tests.ProductsTests.Fruit")
   }
 
   test("show chained error stack when leaf instance is missing") {
     val error = compileErrors("Show.derived[Schedule]")
     assert(
-      error contains "No given instance of type magnolia1.examples.Show[String, Seq[magnolia1.tests.Event]] was found."
+      error contains "No given instance of type magnolia1.examples.Show[String, Seq[magnolia1.tests.ProductsTests.Event]] was found."
     )
   }
 
@@ -258,3 +259,12 @@ object ProductsTests:
   case class Account(id: String, emails: String*)
 
   @SerialVersionUID(42) case class Schedule(events: Seq[Event])
+
+  case class Event(date: LocalDate)
+
+  case class Param(a: String, b: String)
+
+  case class Fruit(name: String)
+
+  object Fruit:
+    given showFruit: Show[String, Fruit] = (f: Fruit) => f.name

@@ -2,8 +2,10 @@ package magnolia1.tests
 
 import magnolia1.*
 import magnolia1.examples.*
+import scala.annotation.StaticAnnotation
 
 class SumsTests extends munit.FunSuite:
+
   import SumsTests.*
 
   test("serialize case object as a sealed trait") {
@@ -155,6 +157,9 @@ class SumsTests extends munit.FunSuite:
 
 object SumsTests:
 
+  case class MyAnnotation(order: Int) extends StaticAnnotation
+  case class MyTypeAnnotation(order: Int) extends StaticAnnotation
+
   sealed trait Entity
   case class Company(name: String) extends Entity
   case class Person(name: String, age: Int) extends Entity
@@ -214,10 +219,9 @@ object SumsTests:
 
   sealed abstract class Halfy
   final case class Lefty() extends Halfy
-  object Lefty {
-    // implicit val noCombine: NoCombine[Lefty] = NoCombine.instance(_ => "Lefty")
-  }
+  object Lefty:
+    given NoCombine[Lefty] = NoCombine.instance(_ => "Lefty")
   final case class Righty() extends Halfy
-  object Righty {
-  // implicit val noCombine: NoCombine[Righty] = NoCombine.instance(_ => "Righty")
-}
+  object Righty:
+    given NoCombine[Righty] = NoCombine.instance(_ => "Righty")
+

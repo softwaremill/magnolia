@@ -52,3 +52,5 @@ object DefaultValuesTests:
   case class Item(name: String, quantity: Int = 1, price: Int)
 
   case class WithDefault(x: Int = 2)
+
+  case class NoDefault(value: Boolean)
