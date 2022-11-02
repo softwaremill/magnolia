@@ -15,7 +15,7 @@ class VarianceTests extends munit.FunSuite:
     )
   }
 
-  // TODO: 
+  // TODO:
   // LabelledBox being invariant in L <: String prohibits the derivation for LabelledBox[Int, _]
   // test("can't show a Box with invariant label") {
   //   val error = compileErrors("Show.derived[Box[Int]]")
@@ -27,8 +27,7 @@ class VarianceTests extends munit.FunSuite:
   //       |""".stripMargin)
   // }
 
-
-    // TODO: yields [Any | Custom | Int | Nothing | String]
+  // TODO: yields [Any | Custom | Int | Nothing | String]
   // test("determine subtypes of Exactly[Int]") {
   //   given TypeNameInfo[Int] = TypeNameInfo.fallback[Int]
   //   val res = TypeNameInfo.derived[Exactly[Int]].subtypeNames.map(_.short).mkString(" | ")
@@ -42,7 +41,6 @@ class VarianceTests extends munit.FunSuite:
   //   val res = TypeNameInfo.derived[Covariant[String]].subtypeNames.map(_.short).mkString(" | ")
   //   assertEquals(res, "Custom | Nothing | String")
   // }
-
 
   // TODO: yields [Any | Custom | Int | Nothing | String]
   // test("determine subtypes of Contravariant[Double]") {

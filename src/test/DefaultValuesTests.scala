@@ -3,10 +3,8 @@ package magnolia1.tests
 import magnolia1.*
 import magnolia1.examples.*
 
-/**
-  * TODO:
-    1. Moving TC type object outside companion object breaks few tests
-    2. Default generic case does not work.
+/** TODO: \1. Moving TC type object outside companion object breaks few tests 2.
+  * Default generic case does not work.
   */
 
 class DefaultValuesTests extends munit.FunSuite:

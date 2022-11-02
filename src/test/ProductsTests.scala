@@ -159,7 +159,6 @@ class ProductsTests extends munit.FunSuite:
     assert(error.isEmpty)
   }
 
-
   // TODO - no SemiDefault TC in scala3 branch
   // test("not assume full auto derivation of external products") {
   //   val error = compileErrors("""
@@ -195,10 +194,12 @@ class ProductsTests extends munit.FunSuite:
     assertEquals(res.full, "magnolia1.tests.Fruit")
   }
 
-  // TODO - not sure what's the point of that test 
+  // TODO - not sure what's the point of that test
   test("show chained error stack when leaf instance is missing") {
     val error = compileErrors("Show.derived[Schedule]")
-    assert(error contains "No given instance of type magnolia1.examples.Show[String, Seq[magnolia1.tests.Event]] was found.")
+    assert(
+      error contains "No given instance of type magnolia1.examples.Show[String, Seq[magnolia1.tests.Event]] was found."
+    )
     // assert(error contains """
     //   |magnolia: could not find Show.Typeclass for type java.time.LocalDate
     //   |    in parameter 'date' of product type magnolia1.tests.Event
@@ -207,10 +208,12 @@ class ProductsTests extends munit.FunSuite:
     //   |""".stripMargin)
   }
 
-  // TODO - not sure what's the point of that test 
+  // TODO - not sure what's the point of that test
   test("show chained error stack") {
     val error = compileErrors("Show.derived[(Int, Seq[(Double, String)])]")
-    assert(error contains "No given instance of type magnolia1.examples.Show[String, Seq[(Double, String)]] was found.")
+    assert(
+      error contains "No given instance of type magnolia1.examples.Show[String, Seq[(Double, String)]] was found."
+    )
   }
 
 object ProductsTests:

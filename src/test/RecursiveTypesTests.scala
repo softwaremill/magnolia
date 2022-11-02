@@ -92,11 +92,13 @@ class RecursiveTypesTests extends munit.FunSuite:
     assertEquals(res, "Recursive(children=[Recursive(children=[])])")
   }
 
-  // 
-  test("no support for arbitrary derivation result type for recursive classes yet") {
+  //
+  test(
+    "no support for arbitrary derivation result type for recursive classes yet"
+  ) {
     val error = compileErrors("ExportedTypeclass.derived[Recursive]")
     println(s"ERR rec: ${error}")
-    val expectedError = 
+    val expectedError =
       """|No given instance of type magnolia1.examples.ExportedTypeclass[
          |  Seq[magnolia1.tests.RecursiveTypesTests.Recursive]
          |] was found.

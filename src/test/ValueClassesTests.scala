@@ -3,8 +3,8 @@ package magnolia1.tests
 import magnolia1.*
 import magnolia1.examples.*
 
-/** TODO: Support for value classes is missing for scala3 branch. Eventually refactor and uncomment the
-  * tests below once the feature is implemented.
+/** TODO: Support for value classes is missing for scala3 branch. Eventually
+  * refactor and uncomment the tests below once the feature is implemented.
   */
 class ValueClassesTests extends munit.FunSuite:
   import ValueClassesTests.*
