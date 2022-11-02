@@ -20,10 +20,10 @@ case class Destination[+A](value: A) extends Path[A]
 case class Crossroad[+A](left: Path[A], right: Path[A]) extends Path[A]
 case class OffRoad[+A](path: Option[Path[A]]) extends Path[A]
 
-sealed trait Entity
-case class Company(name: String) extends Entity
-case class Person(name: String, age: Int) extends Entity
-case class Address(line1: String, occupant: Person)
+// sealed trait Entity
+// case class Company(name: String) extends Entity
+// case class Person(name: String, age: Int) extends Entity
+// case class Address(line1: String, occupant: Person)
 
 case class WithDefault(x: Int = 2)
 
@@ -77,10 +77,10 @@ object TestEntry {
   def apply(a: String, b: String): TestEntry = TestEntry(Param(a, b))
 }
 
-sealed trait Politician[+S]
-case class Accountable[+S](slogan: S) extends Politician[S]
-case class Corrupt[+S, +L <: Seq[Company]](slogan: S, lobby: L)
-    extends Politician[S]
+// sealed trait Politician[+S]
+// case class Accountable[+S](slogan: S) extends Politician[S]
+// case class Corrupt[+S, +L <: Seq[Company]](slogan: S, lobby: L)
+//     extends Politician[S]
 
 sealed trait Box[+A]
 case class SimpleBox[+A](value: A) extends Box[A]
@@ -88,7 +88,7 @@ case class LabelledBox[+A, L <: String](value: A, var label: L) extends Box[A]
 
 case class Account(id: String, emails: String*)
 
-case class Portfolio(companies: Company*)
+// case class Portfolio(companies: Company*)
 
 case class Recursive(children: Seq[Recursive])
 object Recursive {
@@ -189,17 +189,17 @@ final case class Abc(
     c: String
 )
 
-sealed trait Covariant[+A]
-sealed trait Contravariant[-A]
-sealed trait Exactly[A] extends Covariant[A] with Contravariant[A]
+// sealed trait Covariant[+A]
+// sealed trait Contravariant[-A]
+// sealed trait Exactly[A] extends Covariant[A] with Contravariant[A]
 
-object Exactly {
-  case object Any extends Exactly[Any]
-  case class Custom[A](value: A) extends Exactly[A]
-  case object Int extends Exactly[Int]
-  case object Nothing extends Exactly[Nothing]
-  case object String extends Exactly[String]
-}
+// object Exactly {
+//   case object Any extends Exactly[Any]
+//   case class Custom[A](value: A) extends Exactly[A]
+//   case object Int extends Exactly[Int]
+//   case object Nothing extends Exactly[Nothing]
+//   case object String extends Exactly[String]
+// }
 
 case class ParamsWithDefault(a: Int = 3, b: Int = 4)
 case class ParamsWithDefaultGeneric[A, B](a: A = "A", b: B = "B")

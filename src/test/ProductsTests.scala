@@ -6,22 +6,10 @@ import magnolia1.examples.*
 class ProductsTests extends munit.FunSuite:
   import ProductsTests.*
 
-  // TODO - whis will not work ?
-  // test("serialize an object") {
-  //   val res = summon[Show[String, JustObject.type]].show(JustObject)
-  //   println(s"CO: $res")
-  //   assertEquals(res, "JustObject()")
-  // }
-
-  // test("serialize a case object") {
-  //   val res = summon[Show[String, JustCaseObject.type]].show(JustCaseObject)
-  //   assertEquals(res, "JustCaseObject()")
-  // }
-
-  // test("serialize a class") {
-  //   val res = summon[Show[String, JustClass]].show(JustClass())
-  //   println(s"JUST CLASS : $res")
-  // }
+   test("serialize a case object") {
+     val res = summon[Show[String, JustCaseObject.type]].show(JustCaseObject)
+     assertEquals(res, "JustCaseObject()")
+   }
 
   test("serialize a case class") {
     val res = summon[Show[String, JustCaseClass]].show(
@@ -159,21 +147,18 @@ class ProductsTests extends munit.FunSuite:
     assert(error.isEmpty)
   }
 
-  // TODO - no SemiDefault TC in scala3 branch
-  // test("not assume full auto derivation of external products") {
-  //   val error = compileErrors("""
-  //     case class LoggingConfig(n: ServiceName2)
-  //     object LoggingConfig {
-  //       given semi: SemiDefault[LoggingConfig] = SemiDefault.derived
-  //     }
-  //   """)
-  //   assert(error contains """
-  //     |magnolia: could not find SemiDefault.Typeclass for type magnolia1.tests.ServiceName2
-  //     |    in parameter 'n' of product type LoggingConfig
-  //     |""".stripMargin)
-  // }
+  test("assume full auto derivation of external products") {
+    case class Input(value: String)
+    case class LoggingConfig(input: Input)
+    object LoggingConfig:
+      given SemiDefault[LoggingConfig] = SemiDefault.derived
 
-  // TODO - not working as expected: showing T instead of Int
+    val res = summon[SemiDefault[LoggingConfig]].default
+    assertEquals(res, LoggingConfig(Input("")))
+
+  }
+
+  // TODO - not working as expected: showing "T" type instead of Int
   // test("show a list of ints") {
   //   given [T: [X] =>> Show[String, X]]: Show[String, List[T]] = Show.derived
   //   val res = Show.derived[List[Int]].show(List(1, 2, 3))
@@ -194,21 +179,13 @@ class ProductsTests extends munit.FunSuite:
     assertEquals(res.full, "magnolia1.tests.Fruit")
   }
 
-  // TODO - not sure what's the point of that test
   test("show chained error stack when leaf instance is missing") {
     val error = compileErrors("Show.derived[Schedule]")
     assert(
       error contains "No given instance of type magnolia1.examples.Show[String, Seq[magnolia1.tests.Event]] was found."
     )
-    // assert(error contains """
-    //   |magnolia: could not find Show.Typeclass for type java.time.LocalDate
-    //   |    in parameter 'date' of product type magnolia1.tests.Event
-    //   |    in chained implicit Show.Typeclass for type Seq[magnolia1.tests.Event]
-    //   |    in parameter 'events' of product type magnolia1.tests.Schedule
-    //   |""".stripMargin)
   }
 
-  // TODO - not sure what's the point of that test
   test("show chained error stack") {
     val error = compileErrors("Show.derived[(Int, Seq[(Double, String)])]")
     assert(
@@ -219,10 +196,6 @@ class ProductsTests extends munit.FunSuite:
 object ProductsTests:
 
   class NotDerivable
-
-  class JustClass
-
-  object JustObject
 
   case object JustCaseObject
 

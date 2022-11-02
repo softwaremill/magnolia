@@ -11,7 +11,7 @@ class RecursiveTypesTests extends munit.FunSuite:
     assertEquals(res, "Leaf[String](value=testing)")
   }
 
-  // TODO not working - not serializing the concrete type down the hierarchy: "T" instead of String
+  // TODO not working - not serializing the concrete type down the hierarchy: showing "T" instead of String
   // test("serialize a Branch") {
   //   val res = summon[Show[String, Branch[String]]].show(Branch(Leaf("LHS"), Leaf("RHS")))
   //   assertEquals(res, "Branch[String](left=Leaf[String](value=LHS),right=Leaf[String](value=RHS))")
@@ -41,7 +41,6 @@ class RecursiveTypesTests extends munit.FunSuite:
     val granny = GPerson(List(RPerson(1, "Mama", List(alice, bob))))
 
     val res = summon[Show[String, GPerson]].show(granny)
-    println(s"GRAND: $res")
     assertEquals(
       res,
       "GPerson(children=[RPerson(age=1,name=Mama,children=[RPerson(age=0,name=Alice,children=[]),RPerson(age=0,name=Bob,children=[])])])"
@@ -51,14 +50,12 @@ class RecursiveTypesTests extends munit.FunSuite:
   test("construct a semi print for recursive hierarchy") {
     given instance: SemiPrint[Recursive] = SemiPrint.derived
     val res = instance.print(Recursive(Seq(Recursive(Seq.empty))))
-
     assertEquals(res, "Recursive(Recursive())")
   }
 
   test("construct a semmi print for a recursive, generic type") {
     given instance: SemiPrint[Tree[Int]] = SemiPrint.derived
     val res = instance.print(Branch(Branch(Leaf(0), Leaf(1)), Leaf(2)))
-    println(s"SEMI RES = $res")
     assertEquals(res, "Branch(Branch(Leaf(0),Leaf(1)),Leaf(2))")
   }
 
@@ -92,12 +89,8 @@ class RecursiveTypesTests extends munit.FunSuite:
     assertEquals(res, "Recursive(children=[Recursive(children=[])])")
   }
 
-  //
-  test(
-    "no support for arbitrary derivation result type for recursive classes yet"
-  ) {
+  test("no support for arbitrary derivation result type for recursive classes yet") {
     val error = compileErrors("ExportedTypeclass.derived[Recursive]")
-    println(s"ERR rec: ${error}")
     val expectedError =
       """|No given instance of type magnolia1.examples.ExportedTypeclass[
          |  Seq[magnolia1.tests.RecursiveTypesTests.Recursive]
@@ -109,19 +102,30 @@ class RecursiveTypesTests extends munit.FunSuite:
 object RecursiveTypesTests:
 
   sealed trait Tree[+T] derives Eq
+
   object Tree:
     given [T: [X] =>> Show[String, X]]: Show[String, Tree[T]] = Show.derived
+
   case class Leaf[+L](value: L) extends Tree[L]
+
   case class Branch[+B](left: Tree[B], right: Tree[B]) extends Tree[B]
 
+
   case class RPerson(age: Int, name: String, children: Seq[RPerson])
+
   object RPerson:
     given Show[String, RPerson] = Show.derived
+
   case class GPerson(children: Seq[RPerson])
 
+
   case class Recursive(children: Seq[Recursive])
+
   object Recursive:
     given showRecursive: Show[String, Recursive] = Show.derived[Recursive]
 
+
   case class KArray(value: List[KArray]) derives Eq
+
+
   case class Wrapper(v: Option[KArray])

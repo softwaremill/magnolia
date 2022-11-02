@@ -3,10 +3,6 @@ package magnolia1.tests
 import magnolia1.*
 import magnolia1.examples.*
 
-/** TODO: \1. Moving TC type object outside companion object breaks few tests 2.
-  * Default generic case does not work.
-  */
-
 class DefaultValuesTests extends munit.FunSuite:
   import DefaultValuesTests.*
 
@@ -44,7 +40,6 @@ class DefaultValuesTests extends munit.FunSuite:
   // TODO - not working
   // test("construct a HasDefault instance for a generic product with default values") {
   //   val res = HasDefault.derived[ParamsWithDefaultGeneric[String, Int]].defaultValue
-  //   println(s"DEFAULT RES = $res")
   //   assertEquals(res, Right(ParamsWithDefaultGeneric("A", 0)))
   // }
 

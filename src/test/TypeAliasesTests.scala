@@ -4,7 +4,9 @@ import magnolia1.*
 import magnolia1.examples.*
 
 class TypeAliasesTests extends munit.FunSuite:
+  
   import TypeAliasesTests.*
+
   // TODO not working: Cannot get a tree of no symbol
   // test("show a type aliased case class") {
   //   type T = Person
@@ -12,7 +14,7 @@ class TypeAliasesTests extends munit.FunSuite:
   //   assertEquals(res, "Person(name=Donald Duck,age=313)")
   // }
 
-  // TODO - not wking
+  // TODO - not working: assertion failed: Cannot get tree of no symbol
   // test("resolve aliases for type names") {
   //     type LO[X] = Leaf[Option[X]]
 

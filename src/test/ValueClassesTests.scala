@@ -47,6 +47,11 @@ class ValueClassesTests extends munit.FunSuite:
   //   assertEquals(res, "42")
   // }
 
+  // test("allow derivation result to have arbitrary type") {
+  //    val res = (ExportedTypeclass.derived[Length], ExportedTypeclass.derived[Color])
+  //    assertEquals(res, (ExportedTypeclass.Exported[Length](), ExportedTypeclass.Exported[Color]()))
+  //  }
+
 object ValueClassesTests:
 
   class Length(val value: Int) extends AnyVal

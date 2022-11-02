@@ -54,7 +54,6 @@ class AnnotationsTests extends munit.FunSuite:
     )
   }
 
-  // TODO - is this about annotations or rather subtyping?
   test("capture attributes against subtypes") {
     val res = Show.derived[AttributeParent].show(Attributed("xyz", 100))
     assertEquals(
@@ -64,8 +63,7 @@ class AnnotationsTests extends munit.FunSuite:
   }
 
   test("sealed trait enumeration should provide trait annotations") {
-    val traitAnnotations =
-      SubtypeInfo.derived[Sport].traitAnnotations.map(_.toString)
+    val traitAnnotations = SubtypeInfo.derived[Sport].traitAnnotations.map(_.toString)
     assertEquals(traitAnnotations.mkString, "MyAnnotation(0)")
   }
 
@@ -90,10 +88,12 @@ class AnnotationsTests extends munit.FunSuite:
 object AnnotationsTests:
 
   case class MyAnnotation(order: Int) extends StaticAnnotation
+
   case class MyTypeAnnotation(order: Int) extends StaticAnnotation
 
   sealed trait AttributeParent
-  @MyAnnotation(0) case class Attributed(
+  @MyAnnotation(0) 
+  case class Attributed(
       @MyAnnotation(1) p1: String @MyTypeAnnotation(0),
       @MyAnnotation(2) p2: Int @MyTypeAnnotation(1)
   ) extends AttributeParent @MyTypeAnnotation(2)
@@ -125,8 +125,10 @@ object AnnotationsTests:
 
   @MyAnnotation(0)
   sealed trait Sport
+
   @MyAnnotation(1)
   case object Boxing extends Sport
+
   @MyAnnotation(2)
   case class Soccer(players: Int) extends Sport
 

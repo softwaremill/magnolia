@@ -40,12 +40,19 @@ class ScopesTests extends munit.FunSuite:
 object ScopesTests:
 
   sealed trait Entity
+
   case class Company(name: String) extends Entity
+
   case class Person(name: String, age: Int) extends Entity
+
   case class Address(line1: String, occupant: Person)
 
+
   case class Fruit(name: String)
+
   object Fruit:
     given showFruit: Show[String, Fruit] = (f: Fruit) => f.name
+
   case class FruitBasket(fruits: Fruit*)
+  
   case class Lunchbox(fruit: Fruit, drink: String)

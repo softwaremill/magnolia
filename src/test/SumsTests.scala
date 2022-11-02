@@ -94,9 +94,7 @@ class SumsTests extends munit.FunSuite:
     assertEquals(res.full, "magnolia1.tests.SumsTests.Color")
   }
 
-  test(
-    "report an error when an abstract member of a sealed hierarchy is not sealed"
-  ) {
+  test("report an error when an abstract member of a sealed hierarchy is not sealed") {
     val error = compileErrors("Show.derived[Parent]")
     assert(
       error contains "No given instance of type deriving.Mirror.Of[magnolia1.tests.SumsTests.Parent] was found for parameter x$1 of method derived in trait Derivation."
@@ -106,35 +104,28 @@ class SumsTests extends munit.FunSuite:
     )
   }
 
-  test(
-    "report an error when a concrete member of a sealed hierarchy is neither final nor a case class"
-  ) {
+  test("report an error when a concrete member of a sealed hierarchy is neither final nor a case class") {
     val error = compileErrors("Show.derived[GoodChild]")
     assert(
       error contains "trait GoodChild is not a generic sum because its child class Dewey is not a generic product because it is not a case class"
     )
   }
 
-  // TODO - no SemiDefault TC in scala3 branch
-  // test("not assume full auto derivation of external coproducts") {
-  //   val error = compileErrors("""
-  //     case class LoggingConfig(o: Option[String])
-  //     object LoggingConfig {
-  //       implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
-  //     }
-  //   """)
-  //   assert(error contains """
-  //     |magnolia: could not find SemiDefault.Typeclass for type Option[String]
-  //     |    in parameter 'o' of product type LoggingConfig
-  //     |""".stripMargin)
-  // }
+  test("not assume full auto derivation of external coproducts") {
+    case class LoggingConfig(o: Option[String])
+    object LoggingConfig:
+      given SemiDefault[LoggingConfig] = SemiDefault.derived
 
-  // TODO - no SemiDefault TC in scala3 branch
-  // test("half auto derivation of sealed families") {
-  //   val res = SemiDefault.gen[Halfy].default
-  //   assertEquals(res, Lefty())
-  // }
+    val res = summon[SemiDefault[LoggingConfig]].default
+    assertEquals(res, LoggingConfig(None))
+  }
 
+  test("half auto derivation of sealed families") {
+    val res = SemiDefault.derived[Halfy].default
+    assertEquals(res, Lefty())
+  }
+
+  // TODO: not working - children of trait A were already queried before object Object was discovered.
   // test("derive all subtypes in complex hierarchy") {
   //   val res = Passthrough.derived[Complex].ctx.get.toOption.get
   //   assertEquals(res.subtypes.size, 7)
@@ -156,17 +147,11 @@ class SumsTests extends munit.FunSuite:
   //   }
   // }
 
-  // // missing
-  //   test("support split without join") {
-  //     val res = implicitly[NoCombine[Halfy]].nameOf(Righty())
-  //     assertEquals(res, "Righty")
-  //   }
+  test("support split without join") {
+    val res = summon[NoCombine[Halfy]].nameOf(Righty())
+    assertEquals(res, "Righty")
+  }
 
-  // TODO - not working: value class Length
-  // test("allow derivation result to have arbitrary type") {
-  //   val res = (ExportedTypeclass.derived[Length], ExportedTypeclass.derived[Color])
-  //   assertEquals(res, (ExportedTypeclass.Exported[Length](), ExportedTypeclass.Exported[Color]()))
-  // }
 
 object SumsTests:
 
@@ -196,20 +181,20 @@ object SumsTests:
   @MyAnnotation(2)
   case class Soccer(players: Int) extends Sport
 
-  // sealed trait Complex
-  // object Complex:
-  //   case object ObjectC extends Complex
-  //   case object Object extends G
-  //   sealed trait A extends Complex
-  //   case object ObjectD extends A
-  //   sealed trait B extends A
+  sealed trait Complex
+  object Complex:
+    case object ObjectC extends Complex
+    case object Object extends G
+    sealed trait A extends Complex
+    case object ObjectD extends A
+    sealed trait B extends A
 
-  //   case object ObjectE extends B
-  //   case object ObjectF extends A with Complex
-  //   sealed trait G extends B
-  //   case class ClassH(i: Int) extends A with G
-  //   object Scoped:
-  //     case object Object extends A
+    case object ObjectE extends B
+    case object ObjectF extends A with Complex
+    sealed trait G extends B
+    case class ClassH(i: Int) extends A with G
+    object Scoped:
+      case object Object extends A
 
   object ExtendingTraits:
     trait One
@@ -226,3 +211,13 @@ object SumsTests:
   final case class Huey(height: Int) extends GoodChild
   class Dewey(val height: Int) extends GoodChild
   final case class Louie(height: Int) extends BadChild
+
+  sealed abstract class Halfy
+  final case class Lefty() extends Halfy
+  object Lefty {
+    // implicit val noCombine: NoCombine[Lefty] = NoCombine.instance(_ => "Lefty")
+  }
+  final case class Righty() extends Halfy
+  object Righty {
+  // implicit val noCombine: NoCombine[Righty] = NoCombine.instance(_ => "Righty")
+}
