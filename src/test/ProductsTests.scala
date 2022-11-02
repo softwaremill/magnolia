@@ -7,10 +7,10 @@ import java.time.LocalDate
 class ProductsTests extends munit.FunSuite:
   import ProductsTests.*
 
-   test("serialize a case object") {
-     val res = summon[Show[String, JustCaseObject.type]].show(JustCaseObject)
-     assertEquals(res, "JustCaseObject()")
-   }
+  test("serialize a case object") {
+    val res = summon[Show[String, JustCaseObject.type]].show(JustCaseObject)
+    assertEquals(res, "JustCaseObject()")
+  }
 
   test("serialize a case class") {
     val res = summon[Show[String, JustCaseClass]].show(
