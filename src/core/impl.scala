@@ -7,6 +7,31 @@ import scala.reflect.*
 import Macro.*
 
 object CaseClassDerivation:
+
+
+  inline def fromMacro[TC[_], A]: CaseClass[TC, A] = valueClassDerivation[TC, A]
+
+  inline def valueClassDerivation[TC[_], A]: CaseClass[TC, A] =
+
+    val params: IArray[CaseClass.Param[TC, A]] = ???
+
+    new CaseClass[TC, A](
+      typeInfo = typeInfo[A],
+      isObject = isObject[A],
+      isValueClass = isValueClass[A],
+      params = params,
+      annotations = IArray.from(anns[A]),
+      inheritedAnnotations = IArray.from(inheritedAnns[A]),
+      typeAnnotations = IArray.from(typeAnns[A])
+    ):
+      def construct[PType: ClassTag](makeParam: Param => PType): A = ???
+
+      def rawConstruct(fieldValues: Seq[Any]): A = ???
+
+      def constructEither[Err, PType: ClassTag](makeParam: Param => Either[Err, PType]): Either[List[Err], A] = ???
+
+      def constructMonadic[M[_]: Monadic, PType: ClassTag](makeParam: Param => M[PType]): M[A] = ???
+
   inline def fromMirror[Typeclass[_], A](
       product: Mirror.ProductOf[A]
   ): CaseClass[Typeclass, A] =

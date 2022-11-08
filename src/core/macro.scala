@@ -20,6 +20,27 @@ object Macro:
   inline def repeated[T]: List[(String, Boolean)] = ${ repeated[T] }
   inline def typeInfo[T]: TypeInfo = ${ typeInfo[T] }
 
+  inline def getParams[TC[_], A]: List[CaseClass.Param[TC, A]] = ${ getParamsImpl[TC, A] }
+
+  def getParamsImpl[TC[_]: Type, A: Type](using Quotes): Expr[List[CaseClass.Param[TC, A]]] = 
+    import quotes.reflect.*
+    
+    val tpe: TypeRepr = TypeRepr.of[A]
+    val sym: Symbol = tpe.typeSymbol
+
+    ???
+
+  inline def getValueClassParam[TC[_], A]: CaseClass.Param[TC, A] = ${ getValueClassParamImpl[TC, A] }
+
+  def getValueClassParamImpl[TC[_]: Type, A: Type](using Quotes): Expr[CaseClass.Param[TC, A]] = 
+    import quotes.reflect.*
+    val tpe: TypeRepr = TypeRepr.of[A]
+    val sym: Symbol = tpe.typeSymbol
+
+    ???
+
+
+
   def isObject[T: Type](using Quotes): Expr[Boolean] =
     import quotes.reflect.*
 
