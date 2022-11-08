@@ -14,10 +14,24 @@ class OtherTests extends munit.FunSuite:
       case class Beta(alpha: Alpha)
       Show.derived[Beta]
     """)
+    println(s"------------------ ERR: [$error]")
     assert(
       error contains "No given instance of type magnolia1.examples.Show[String, Alpha] was found."
     )
   }
+
+  // test("alpha") {
+  //   case class Alpha(d: Double)
+  //   val res = Show.derived[Alpha].show(Alpha(3.14))
+  //   println(s"********* ALPHA RES = [$res].")
+  // }
+
+  // test("no error???") {
+  //   case class Alpha(d: Double)
+  //   case class Beta(alpha: Alpha)
+  //   val res = Show.derived[Beta].show(Beta(Alpha(3.14)))
+  //   println(s"********* RES = [$res].")
+  // }
 
   test("not attempt to instantiate Unit when producing error stack") {
     val error = compileErrors("""
