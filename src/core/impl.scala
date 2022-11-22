@@ -13,13 +13,13 @@ object CaseClassDerivation:
 
   inline def valueClassDerivation[TC[_], A]: CaseClass[TC, A] =
 
-    val params: IArray[CaseClass.Param[TC, A]] = ???
+    val param: CaseClass.Param[TC, A] = getValueClassParam[TC, A]
 
     new CaseClass[TC, A](
       typeInfo = typeInfo[A],
       isObject = isObject[A],
-      isValueClass = isValueClass[A],
-      params = params,
+      isValueClass = isValueClass[A], // just true?
+      params = IArray.from(param :: Nil),
       annotations = IArray.from(anns[A]),
       inheritedAnnotations = IArray.from(inheritedAnns[A]),
       typeAnnotations = IArray.from(typeAnns[A])
@@ -175,3 +175,4 @@ trait SealedTraitDerivation:
         }
         (sub ::: subtypesFromMirror[A, tail](m, idx + 1)).distinctBy(_.typeInfo)
 end SealedTraitDerivation
+

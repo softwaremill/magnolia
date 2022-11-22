@@ -9,10 +9,16 @@ import magnolia1.examples.*
 class ValueClassesTests extends munit.FunSuite:
   import ValueClassesTests.*
 
-  test("serialize a value class") {
-    val res = Show.derived[Length].show(new Length(100))
-    assertEquals(res, "100")
+  test("Show foo") {
+    given Print[Int] = _.toString
+    val res = Print.derived[Foo].print(Foo(3))
+    println(s"RES = $res")
   }
+
+  // test("serialize a value class") {
+  //   val res = Show.derived[Length].show(new Length(100))
+  //   assertEquals(res, "100")
+  // }
 
   // test("construct a Show instance for value case class") {
   //   val res = Show.derived[ServiceName1].show(ServiceName1("service"))
@@ -54,6 +60,8 @@ class ValueClassesTests extends munit.FunSuite:
 
 object ValueClassesTests:
 
+  case class Foo(k: Int = 99) extends AnyVal
+  
   class Length(val value: Int) extends AnyVal
 
   final case class ServiceName1(value: String) extends AnyVal

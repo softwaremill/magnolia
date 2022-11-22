@@ -63,7 +63,7 @@ object CaseClass:
       ):
         type PType = P
         def default: Option[PType] = defaultVal.value
-        def typeclass = cbn.value
+        def typeclass: F[PType] = cbn.value
         override def inheritedAnnotations = inheritedAnns
         def deref(value: T): P =
           value.asInstanceOf[Product].productElement(idx).asInstanceOf[P]
