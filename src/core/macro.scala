@@ -40,6 +40,7 @@ object Macro:
           .appliedToType(tpe)
           .appliedTo(term)
 
+    // TODO most likely to be deleted
     extension (tpe: TypeRepr)
       def defaultValues: Map[String, Expr[Any]] = 
         val sym = tpe.typeSymbol
@@ -77,16 +78,10 @@ object Macro:
         val paramTypeTpe = paramTypeTree.tpe
 
         // instance of TC[P]
-
-
-
         val tcOfParamType = AppliedType(TypeRepr.of[TC], List(paramTypeTpe))
-        val Inlined(_, _, TypeApply(summonInlineTerm, _)) = '{scala.compiletime.summonInline}.asTerm: @unchecked
-        val summonInlineApp = summonInlineTerm.appliedToType(tcOfParamType)
         val paramCallByNeed = tcOfParamType.asType match 
           case '[t] => 
-            println(s"---------- ${}")
-            Debug.printTypeStruct[t]
+            // Debug.printTypeStruct[t]
             Expr.summon[t].map{ e => Debug.printTreeImpl(e); e.asCallByNeedExpr }.getOrElse {
               report.errorAndAbort(s"Cannot summon instance for ${Type.show[t]}")
           }
