@@ -25,7 +25,7 @@ enum Tree[+T] derives Print:
   case Branch(left: Tree[T], right: Tree[T])
   case Leaf(value: T)
 ```
-and provided an given instance of `Print[Int]` is in scope, and a Magnolia derivation for the `Print` typeclass
+and provided a given instance of `Print[Int]` is in scope, and a Magnolia derivation for the `Print` typeclass
 has been provided, we can automatically derive given typeclass instances of `Print[Tree[Int]]` on-demand, like
 so,
 ```scala
@@ -34,7 +34,19 @@ Tree.Branch(Tree.Branch(Tree.Leaf(1), Tree.Leaf(2)), Tree.Leaf(3)).print
 Typeclass authors may provide Magnolia derivations in the typeclass's companion object, but it is easy to create
 your own.
 
-The definition of a `Print` typeclass with generic derivation defined with Magnolia might look like this:
+Creating a generic derivation with Magnolia requires implementing two methods on `magnolia1.Derivation`:
+
+* `join()` : create typeclasses for case classes ('product types')
+* `split()` : create typeclasses for sealed-traits/enums ('sum types')
+
+### Example derivations
+
+There are many examples in the [`src/examples`](src/examples) folder.
+
+The definition of a `Print` typeclass with generic derivation might look like this
+(note we're using the [Lambda syntax for Single Abstract Method types](https://www.scala-lang.org/news/2.12.0/#lambda-syntax-for-sam-types)
+to instantiate the `Print` instances in `join` & `split` - that's possible because
+`Print` has only a single abstract method, `print`):
 ```scala
 import magnolia1.*
 
