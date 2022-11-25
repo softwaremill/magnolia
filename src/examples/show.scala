@@ -18,10 +18,6 @@ trait GenericShow[Out] extends AutoDerivation[[X] =>> Show[Out, X]] {
     * the result of showing each parameter, and prefixing it with the class name
     */
   def join[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = { value =>
-    if ctx.isValueClass then
-      val param = ctx.params.head
-      param.typeclass.show(param.deref(value))
-    else
       val paramStrings = ctx.params.map { param =>
         val attribStr =
           if (param.annotations.isEmpty && param.inheritedAnnotations.isEmpty)

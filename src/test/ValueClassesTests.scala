@@ -2,6 +2,7 @@ package magnolia1.tests
 
 import magnolia1.*
 import magnolia1.examples.*
+import scala.annotation.StaticAnnotation
 
 /** TODO: Support for value classes is missing for scala3 branch. Eventually
   * refactor and uncomment the tests below once the feature is implemented.
@@ -9,14 +10,55 @@ import magnolia1.examples.*
 class ValueClassesTests extends munit.FunSuite:
   import ValueClassesTests.*
 
-  test("Show foo") {
+  test("Print foo") {
     given Print[Int] = _.toString
-    val res = Print.derived[Foo].print(Foo(3))
-    println(s"RES = $res")
+    val res = Print.derived[VC].print(VC(555))
+    assertEquals(res, "VC(555)")
+  }
+
+  test("Print bar") {
+    given Print[Int] = _.toString
+    val res = Print.derived[Bar].print(Bar(666))
+    assertEquals(res, "Bar(666)")
+  }
+
+  test("semi default for VC") {
+    given SemiDefault[VC] = SemiDefault.derived
+    val res = summon[SemiDefault[VC]].default
+    assertEquals(res, VC(0))
+  }
+
+  test("SemiDefault for BigBox value class") {
+    given SemiDefault[BigBox] = SemiDefault.derived
+    val res = summon[SemiDefault[BigBox]].default 
+    assertEquals(res, BigBox(NormalBox(SmallBox(TinyBox(0)))))
+  }
+
+  test("Semi default for Foo") {
+    given SemiDefault[Foo] = SemiDefault.derived
+    val res = summon[SemiDefault[Foo]].default
+    assertEquals(res, Foo(0))
+  }
+
+  test("show for Foo") {
+    val res = Show.derived[Foo].show(Foo(33))
+    assertEquals(res, "Foo{MyAnnotation(0)}(k{MyAnnotation(1)}{MyAnnotation(2)}=33)")
+  }
+
+  test("Print default") {
+    given Print[Int] = _.toString
+    val res = Print.derived[WithDefault].print(WithDefault())
+    assertEquals(res, "WithDefault(123)")
+  }
+
+  test("Semi default") {
+    val res = SemiDefault.derived[WithDefault].default
+    assertEquals(res, WithDefault(123))
   }
 
   // test("serialize a value class") {
   //   val res = Show.derived[Length].show(new Length(100))
+  //   println(s"-------- Length : $res")
   //   assertEquals(res, "100")
   // }
 
@@ -60,8 +102,28 @@ class ValueClassesTests extends munit.FunSuite:
 
 object ValueClassesTests:
 
-  case class Foo(k: Int = 99) extends AnyVal
-  
+  case class TinyBox(size: Int)
+  case class SmallBox(tinyBox: TinyBox)
+  case class NormalBox(smallBox: SmallBox)
+  case class BigBox(normalBox: NormalBox) extends AnyVal
+
+  case class Bar(k: Int) 
+
+  case class WrappedVC(bar: Bar) extends AnyVal
+
+  case class MyAnnotation(order: Int) extends scala.annotation.Annotation
+
+  case class MyTypeAnnotation(order: Int) extends StaticAnnotation
+
+  case class VC(k: Int) extends AnyVal
+
+  case class WithDefault(k: Int = 123) extends AnyVal
+
+  @MyAnnotation(0)
+  case class Foo(
+    @MyAnnotation(1) k: Int @MyAnnotation(2)
+    ) extends AnyVal
+
   class Length(val value: Int) extends AnyVal
 
   final case class ServiceName1(value: String) extends AnyVal
@@ -72,6 +134,3 @@ object ValueClassesTests:
     // given Show[String, PrivateValueClass] = Show.derived
   }
 
-@main 
-def testVC(): Unit = 
-  println("test")

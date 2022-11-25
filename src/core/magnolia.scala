@@ -6,7 +6,6 @@ import scala.reflect.*
 
 import Macro.*
 
-
 trait CommonDerivation[TypeClass[_]]:
   type Typeclass[T] = TypeClass[T]
   def join[T](ctx: CaseClass[Typeclass, T]): Typeclass[T]
@@ -14,8 +13,6 @@ trait CommonDerivation[TypeClass[_]]:
   inline def derivedMirrorProduct[A](
       product: Mirror.ProductOf[A]
   ): Typeclass[A] = join(CaseClassDerivation.fromMirror(product))
-
-  inline def derivedMacroProduct[A]: Typeclass[A] = join(CaseClassDerivation.fromMacro)
 
   inline def getParams__[T, Labels <: Tuple, Params <: Tuple](
       annotations: Map[String, List[Any]],
@@ -82,25 +79,14 @@ trait Derivation[TypeClass[_]]
       case sum: Mirror.SumOf[A]         => derivedMirrorSum[A](sum)
       case product: Mirror.ProductOf[A] => derivedMirrorProduct[A](product)
 
-  inline def derivedValueClass[A]: Typeclass[A] = derivedMacroProduct[A]
+  inline def derivedValueClass[A]: Typeclass[A] = join(CaseClassDerivation.valueClassDerivation)
 
   inline def derivedMirrorless[A]: Typeclass[A] = 
     inline if Macro.isValueClass[A] then 
       derivedValueClass[A]
-    else error("Mirrorless derivation failed.")
-
+    else error("Mirrorless derivation not implemented.")
 
   inline def derived[A]: Typeclass[A] = 
-    // derivedMirror[A]
-    // inline if Macro.isValueClass[A] then 
-    //   println("VC")
-    //   derivedValueClass[A]
-    // else 
-    //   summonFrom {
-    //     case prod: Mirror.ProductOf[A] => derivedMirrorProduct[A](prod)
-    //     case sum: Mirror.SumOf[A] => derivedMirrorSum[A](sum)
-    //     case _ => derivedMirrorless[A]
-    //   }
     summonFrom {
       case prod: Mirror.ProductOf[A] => derivedMirrorProduct[A](prod)
       case sum: Mirror.SumOf[A] => derivedMirrorSum[A](sum)

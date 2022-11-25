@@ -1,121 +1,48 @@
 package magnolia1
 
 import scala.quoted.*
+import scala.reflect.ClassTag
+import scala.annotation.meta.field
+import scala.annotation.Annotation
 
 object Macro:
-  inline def isObject[T]: Boolean = ${ isObject[T] }
-  inline def isEnum[T]: Boolean = ${ isEnum[T] }
-  inline def anns[T]: List[Any] = ${ anns[T] }
-  inline def inheritedAnns[T]: List[Any] = ${ inheritedAnns[T] }
-  inline def typeAnns[T]: List[Any] = ${ typeAnns[T] }
-  inline def paramAnns[T]: List[(String, List[Any])] = ${ paramAnns[T] }
-  inline def inheritedParamAnns[T]: List[(String, List[Any])] = ${
-    inheritedParamAnns[T]
-  }
-  inline def isValueClass[T]: Boolean = ${ isValueClass[T] }
-  inline def defaultValue[T]: List[(String, Option[() => Any])] = ${
-    defaultValue[T]
-  }
-  inline def paramTypeAnns[T]: List[(String, List[Any])] = ${ paramTypeAnns[T] }
-  inline def repeated[T]: List[(String, Boolean)] = ${ repeated[T] }
-  inline def typeInfo[T]: TypeInfo = ${ typeInfo[T] }
 
-  inline def getValueClassParam[TC[_], A]: CaseClass.Param[TC, A] = ${ getValueClassParamImpl[TC, A] }
+  inline def isObject[T]: Boolean = 
+    ${ isObject[T] }
 
-  def getValueClassParamImpl[TC[_]: Type, A: Type](using Quotes): Expr[CaseClass.Param[TC, A]] = 
-    import quotes.reflect.*
+  inline def isEnum[T]: Boolean = 
+    ${ isEnum[T] }
 
-    def getDefaultValue(dict: Map[String, Expr[Any]], name: String): Expr[CallByNeed[Option[Any]]] = 
-      dict.get(name) match 
-        case Some(e) => '{ new CallByNeed(() => Some($e)) }
-        case None => '{ new CallByNeed(() => None) }
+  inline def anns[T]: List[Any] = 
+    ${ anns[T] }
 
+  inline def inheritedAnns[T]: List[Any] = 
+    ${ inheritedAnns[T] }
 
-    extension (term: Term)
-      def asCallByNeed(tpe: TypeRepr): Term = 
-        Select(
-          '{CallByNeed}.asTerm, 
-          TypeRepr.of[CallByNeed.type].termSymbol.declaredMethod("apply").head
-          )
-          .appliedToType(tpe)
-          .appliedTo(term)
+  inline def typeAnns[T]: List[Any] = 
+    ${ typeAnns[T] }
 
-    // TODO most likely to be deleted
-    extension (tpe: TypeRepr)
-      def defaultValues: Map[String, Expr[Any]] = 
-        val sym = tpe.typeSymbol
-        val compModule = Ref(sym.companionModule)
-        val names = 
-          for 
-            a <- sym.caseFields if a.flags.is(Flags.HasDefault)
-          yield a.name
-        val statements = sym.companionClass.tree.asInstanceOf[ClassDef].body
-        val refs: List[Ref] = 
-          for 
-            case defdef @ DefDef(name, _, _, _) <- statements if name.startsWith("$lessinit$greater$default")
-          yield compModule.select(defdef.symbol)
+  inline def paramAnns[T]: List[(String, List[Any])] = 
+    ${ paramAnns[T] }
 
-        val refsTerms = refs.map(_.asExpr)
+  inline def inheritedParamAnns[T]: List[(String, List[Any])] = 
+    ${ inheritedParamAnns[T] }
 
-        (names zip refsTerms).toMap 
+  inline def isValueClass[T]: Boolean = 
+    ${ isValueClass[T] }
 
-    extension [B: Type](e: Expr[B])
-      def asCallByNeedExpr: Expr[CallByNeed[B]] = 
-        '{ new CallByNeed[B](() => $e) }
-        
+  inline def defaultValue[T]: List[(String, Option[() => Any])] = 
+    ${ defaultValue[T] }
 
-    val tpe: TypeRepr = TypeRepr.of[A]
-    val sym: Symbol = tpe.typeSymbol
-    val ctor: Symbol = sym.primaryConstructor
-    val defaultValuesDict = tpe.defaultValues
+  inline def paramTypeAnns[T]: List[(String, List[Any])] = 
+    ${ paramTypeAnns[T] }
 
-    ctor.paramSymss match 
-      case List(paramSymbol: Symbol) :: Nil => 
-        val paramTypeTree = 
-          paramSymbol.tree match 
-            case v: ValDef => v.tpt
-            case _ => report.errorAndAbort("Error handling param symbol tree '${paramSymbol.tree}'")
-        val paramTypeTpe = paramTypeTree.tpe
+  inline def repeated[T]: List[(String, Boolean)] = 
+    ${ repeated[T] }
 
-        // instance of TC[P]
-        val tcOfParamType = AppliedType(TypeRepr.of[TC], List(paramTypeTpe))
-        val paramCallByNeed = tcOfParamType.asType match 
-          case '[t] => 
-            // Debug.printTypeStruct[t]
-            Expr.summon[t].map{ e => Debug.printTreeImpl(e); e.asCallByNeedExpr }.getOrElse {
-              report.errorAndAbort(s"Cannot summon instance for ${Type.show[t]}")
-          }
+  inline def typeInfo[T]: TypeInfo = 
+    ${ typeInfo[T] }
 
-        // default value
-        val dv = getDefaultValue(defaultValuesDict, paramSymbol.name)
-
-        val applyFuncTerm = 
-          '{CaseClass.Param}
-            .asTerm
-            .select(TypeRepr.of[CaseClass.Param.type].termSymbol.declaredMethod("apply").head)
-            .appliedToTypes(TypeRepr.of[TC] :: TypeRepr.of[A] :: paramTypeTree.tpe :: Nil)
-
-        val args = List(
-          Expr(paramSymbol.name).asTerm,            // name
-          Expr(0).asTerm,                           // index
-          Expr(false).asTerm,                       // repeated
-          paramCallByNeed.asTerm,                   // call-by-need instance of TC[P]: CallByNeed[TC[P]]
-          dv.asTerm,                                // call-by-need isntance of maybe default value: CallByNeed[Option[P]]
-          Expr.ofList(List.empty).asTerm,           // annotations TODO 
-          Expr.ofList(List.empty).asTerm,           // inherited annotations TODO 
-          Expr.ofList(List.empty).asTerm            // type annotations TODO
-        )
-
-        val app = 
-          Apply(
-            fun = applyFuncTerm, 
-            args = args
-            )
-
-        app.asExprOf[CaseClass.Param[TC, A]]
-      
-      case _ => report.errorAndAbort("Error handling symbol '${sym.name}'")
-    
   def isObject[T: Type](using Quotes): Expr[Boolean] =
     import quotes.reflect.*
 
@@ -134,7 +61,7 @@ object Macro:
 
   def typeAnns[T: Type](using Quotes): Expr[List[Any]] =
     new CollectAnnotations[T].typeAnns
-
+  
   def paramAnns[T: Type](using Quotes): Expr[List[(String, List[Any])]] =
     new CollectAnnotations[T].paramAnns
 
@@ -176,7 +103,7 @@ object Macro:
     Expr.ofList(terms)
 
   def paramTypeAnns[T: Type](using Quotes): Expr[List[(String, List[Any])]] =
-    import quotes.reflect._
+    import quotes.reflect.*
 
     def getAnnotations(t: TypeRepr): List[Term] = t match
       case AnnotatedType(inner, ann) => ann :: getAnnotations(inner)
@@ -264,7 +191,7 @@ object Macro:
 
     typeInfo(TypeRepr.of[T])
 
-  private class CollectAnnotations[T: Type](using val quotes: Quotes) {
+  private class CollectAnnotations[T: Type](using val quotes: Quotes):
     import quotes.reflect.*
 
     private val tpe: TypeRepr = TypeRepr.of[T]
@@ -355,7 +282,7 @@ object Macro:
         .groupBy { case (name, _) => name }
         .toList
         .map { case (name, l) => name -> l.flatMap(_._2) }
-        .map { (name, anns) => Expr.ofTuple(Expr(name), Expr.ofList(anns)) }
+        .map { case (name, anns) => Expr.ofTuple(Expr(name), Expr.ofList(anns)) }
 
     private def isObjectOrScala(bc: Symbol) =
       bc.name.contains("java.lang.Object") || bc.fullName.startsWith("scala.")
@@ -363,4 +290,215 @@ object Macro:
     private def filterAnnotation(a: Term): Boolean =
       a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
         a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
-  }
+
+object MirrorlessMacro:
+  
+  object ValueClassDerivation:
+
+    inline def getValueClassParam[TC[_], V]: CaseClass.Param[TC, V] = 
+     ${ getValueClassParamImpl[TC, V] }
+
+    inline def rawContructByMacro[V](as: List[Any]): V = 
+      ${ rawContructByMacroImpl[V]('as) } 
+
+    def getValueClassParamImpl[TC[_]: Type, A: Type](using Quotes): Expr[CaseClass.Param[TC, A]] = 
+      import quotes.reflect.* 
+      
+      // repeated
+      def isObjectOrScala(bc: Symbol) =
+        bc.name.contains("java.lang.Object") || bc.fullName.startsWith("scala.")
+
+      def fromConstructor(from: Symbol): List[(String, List[Term])] = 
+        from.primaryConstructor.paramSymss.flatten.map { field =>
+          field.name -> field.annotations
+            .filter(filterAnnotation)
+        }
+
+      def fromDeclarations(from: Symbol): List[(String, List[Term])] = 
+        from.declarations.collect {
+          case field: Symbol if field.isValDef => 
+            field.name -> field.annotations.filter(filterAnnotation)
+        }
+
+      def groupTermsByName(tss: List[(String, List[Term])]): List[(String, List[Term])] = 
+        tss
+          .groupBy { case (name, _) => name }
+          .toList
+          .map { case (name, l) => name -> l.flatMap(_._2) }
+
+      def selectTermsByName(tss: List[(String, List[Term])], name: String): List[Term] = 
+        tss
+          .toMap
+          .getOrElse(name, Nil)
+      
+      def filterAnnotation(annTerm: Term): Boolean =
+        annTerm.tpe.typeSymbol.maybeOwner.isNoSymbol ||
+          annTerm.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
+
+      def getAnnsDict(typeRepr: TypeRepr): List[(String, List[Term])] = 
+        val annTerms: List[(String, List[Term])] = 
+          (fromConstructor(typeRepr.typeSymbol) ++ fromDeclarations(typeRepr.typeSymbol))
+            .filter {case (_, ts) => ts.nonEmpty}
+        groupTermsByName(annTerms)
+
+      def getInheritedAnnsDict(typeRepr: TypeRepr): List[(String, List[Term])] = 
+        val annTerms: List[(String, List[Term])] = 
+          typeRepr.baseClasses
+          .filterNot(isObjectOrScala)
+          .collect {
+            case s if s != typeRepr.typeSymbol =>
+              (fromConstructor(s) ++ fromDeclarations(s)).filter {
+                case (_, anns) => anns.nonEmpty
+              }
+            }
+          .flatten
+        groupTermsByName(annTerms)
+
+      def accumulateTypeAnnotations(typeRepr: TypeRepr): List[Term] = typeRepr match
+        case AnnotatedType(inner, ann) => ann :: accumulateTypeAnnotations(inner)
+        case _                         => Nil
+
+      def getTypeAnnsDict(typeRepr: TypeRepr): List[(String, List[Term])] = 
+        typeRepr
+          .typeSymbol
+          .caseFields
+          .map { field => 
+            val tpeRepr = field.tree match
+              case v: ValDef => v.tpt.tpe
+              case d: DefDef => d.returnTpt.tpe
+            
+            field.name -> accumulateTypeAnnotations(tpeRepr).filter { a =>
+              a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
+              a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
+            }
+
+          }
+          .filter(_._2.nonEmpty)
+
+      def getDefaultValue[P: Type](dict: Map[String, Expr[Any]], name: String): Expr[CallByNeed[Option[Any]]] = 
+        dict.get(name) match 
+          case Some(e) => '{ new CallByNeed(() => Some( ($e).asInstanceOf[P] )) }
+          case None => '{ new CallByNeed(() => None) }
+
+      extension (term: Term)
+        def asCallByNeed(tpe: TypeRepr): Term = 
+          Select(
+            '{CallByNeed}.asTerm, 
+            TypeRepr.of[CallByNeed.type].termSymbol.declaredMethod("apply").head
+            )
+            .appliedToType(tpe)
+            .appliedTo(term)
+
+      extension (tpe: TypeRepr)
+        def defaultValues: Map[String, Expr[Any]] = 
+          val sym = tpe.typeSymbol
+          val compModule = Ref(sym.companionModule)
+          val names = 
+            for 
+              a <- sym.caseFields if a.flags.is(Flags.HasDefault)
+            yield a.name
+          val statements = sym.companionClass.tree.asInstanceOf[ClassDef].body
+          val refs: List[Ref] = 
+            for 
+              case defdef @ DefDef(name, _, _, _) <- statements if name.startsWith("$lessinit$greater$default")
+            yield compModule.select(defdef.symbol)
+
+          val refsTerms = refs.map(_.asExpr)
+
+          (names zip refsTerms).toMap 
+
+      extension [B: Type](e: Expr[B])
+        def asCallByNeedExpr: Expr[CallByNeed[B]] = 
+          '{ new CallByNeed[B](() => $e) }
+          
+
+      val aTpe: TypeRepr = TypeRepr.of[A]
+      val aSym: Symbol = aTpe.typeSymbol
+      val aCtor: Symbol = aSym.primaryConstructor
+
+      val defaultValuesDict = aTpe.defaultValues
+      val annsDict = getAnnsDict(aTpe)
+      val inheritedAnnsDict = getInheritedAnnsDict(aTpe)
+      val typeAnnsDict = getTypeAnnsDict(aTpe)
+
+      aCtor.paramSymss match 
+        case List(paramSymbol: Symbol) :: Nil => 
+          val paramTypeTree = 
+            paramSymbol.tree match 
+              case v: ValDef => v.tpt
+              case _ => report.errorAndAbort("Error handling param symbol tree '${paramSymbol.tree}'")
+          
+          val paramTypeTpe = paramTypeTree.tpe
+          val paramTC = TypeRepr.of[TC].appliedTo(paramTypeTpe)
+
+          val paramCallByNeed = paramTC.asType match 
+            case '[t] => 
+              Expr
+                .summon[t]
+                .map{ e => e.asCallByNeedExpr }
+                .getOrElse { report.errorAndAbort(s"Cannot summon instance for ${Type.show[t]}") }
+
+          val defaultValue = paramTypeTpe.asType match 
+            case '[p] => getDefaultValue[p](defaultValuesDict, paramSymbol.name)
+          
+          val typeAnnsExpr = Expr.ofList(selectTermsByName(typeAnnsDict, paramSymbol.name).map(_.asExpr))
+          val paramAnnsExpr = Expr.ofList(selectTermsByName(annsDict, paramSymbol.name).map(_.asExpr))
+          val inheritedAnnsExpr = Expr.ofList(selectTermsByName(inheritedAnnsDict, paramSymbol.name).map(_.asExpr))
+
+          val applyFuncTerm = 
+            '{CaseClass.Param}
+              .asTerm
+              .select(TypeRepr.of[CaseClass.Param.type].termSymbol.declaredMethod("apply").head)
+              .appliedToTypes(TypeRepr.of[TC] :: TypeRepr.of[A] :: paramTypeTree.tpe :: Nil)
+
+          val args = List(
+            Expr(paramSymbol.name).asTerm,            
+            Expr(0).asTerm,                           
+            Expr(false).asTerm,                       
+            paramCallByNeed.asTerm,                   
+            defaultValue.asTerm,                                
+            paramAnnsExpr.asTerm,           
+            inheritedAnnsExpr.asTerm,           
+            typeAnnsExpr.asTerm            
+          )
+
+          val app = 
+            Apply(
+              fun = applyFuncTerm, 
+              args = args
+              )
+
+          app.asExprOf[CaseClass.Param[TC, A]]
+        
+        case _ => report.errorAndAbort("Error handling symbol '${sym.name}'")
+
+    def rawContructByMacroImpl[V: Type](es: Expr[List[Any]])(using Quotes): Expr[V] = 
+      import quotes.reflect.* 
+
+      val vTpe = TypeRepr.of[V]
+      val vCtor = vTpe.typeSymbol.primaryConstructor
+      val vApp = New(Inferred(vTpe)).select(vCtor)
+
+      val argsTerm: Term = es.asTerm
+      val appl = argsTerm.tpe.typeSymbol.methodMember("apply").head
+      val argApp = argsTerm.select(appl).appliedTo(Literal(IntConstant(0)))
+      val as = argApp.tpe.typeSymbol.methodMember("asInstanceOf").head
+
+      val arg = 
+        vCtor.paramSymss match 
+          case List(paramSymbol: Symbol) :: Nil => 
+            val paramTypeTree = 
+              paramSymbol.tree match 
+                case v: ValDef => v.tpt
+                case _ => report.errorAndAbort("Error handling param symbol tree '${paramSymbol.tree}'")
+            val aTpe = paramTypeTree.tpe
+            argApp.select(as).appliedToType(aTpe)
+
+          case _ => report.errorAndAbort("Error handling param symbol tree '${paramSymbol.tree}'")
+
+      vApp.appliedToArgs(arg :: Nil).asExprOf[V]
+
+  end ValueClassDerivation
+
+end MirrorlessMacro
+  
