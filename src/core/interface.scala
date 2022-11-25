@@ -50,21 +50,21 @@ object CaseClass:
         repeated: Boolean,
         cbn: CallByNeed[F[P]],
         defaultVal: CallByNeed[Option[P]],
-        annotations: IArray[Any],
-        inheritedAnns: IArray[Any],
-        typeAnnotations: IArray[Any]
+        annotations: List[Any],
+        inheritedAnns: List[Any],
+        typeAnnotations: List[Any]
     ): Param[F, T] =
       new CaseClass.Param[F, T](
         name,
         idx,
         repeated,
-        annotations,
-        typeAnnotations
+        IArray.from(annotations),
+        IArray.from(typeAnnotations)
       ):
         type PType = P
         def default: Option[PType] = defaultVal.value
         def typeclass: F[PType] = cbn.value
-        override def inheritedAnnotations = inheritedAnns
+        override def inheritedAnnotations = IArray.from(inheritedAnns)
         def deref(value: T): P =
           value.asInstanceOf[Product].productElement(idx).asInstanceOf[P]
 
