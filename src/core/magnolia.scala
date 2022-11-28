@@ -115,7 +115,7 @@ trait Derivation[TypeClass[_]]
   inline def derivedMirrorless[A]: Typeclass[A] = 
     inline if Macro.isValueClass[A] then 
       derivedValueClass[A]
-    else error("Mirrorless derivation not implemented.")
+    else error("Mirrrorful derivation not posiible, mirrorless derivation either not possible or not implemented yet.")
 
   inline def derived[A]: Typeclass[A] = 
     summonFrom {
