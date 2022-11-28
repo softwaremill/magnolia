@@ -47,7 +47,6 @@ object ScopesTests:
 
   case class Address(line1: String, occupant: Person)
 
-
   case class Fruit(name: String)
 
   object Fruit:

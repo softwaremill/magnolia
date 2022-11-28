@@ -188,11 +188,8 @@ object SumsTests:
   enum Size:
     case S, M, L
 
-  @MyAnnotation(0)
   sealed trait Sport
-  @MyAnnotation(1)
   case object Boxing extends Sport
-  @MyAnnotation(2)
   case class Soccer(players: Int) extends Sport
 
   sealed trait Complex
