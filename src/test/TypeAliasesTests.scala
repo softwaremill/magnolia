@@ -4,7 +4,7 @@ import magnolia1.*
 import magnolia1.examples.*
 
 class TypeAliasesTests extends munit.FunSuite:
-  
+
   import TypeAliasesTests.*
 
   // TODO not working: Cannot get a tree of no symbol

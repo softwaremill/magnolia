@@ -98,12 +98,12 @@ class SumsTests extends munit.FunSuite:
 
   test("report an error when an abstract member of a sealed hierarchy is not sealed") {
     val error = compileErrors("Show.derived[Parent]")
-    // TODO - maybe refactor the general derivation flow so that we can retain error messages from both mirrorful and mirrorless branches as they seem quite meaningful. 
+    // TODO - maybe refactor the general derivation flow so that we can retain error messages from both mirrorful and mirrorless branches as they seem quite meaningful.
     // For example errors could be:
-    // Error: 
+    // Error:
     //  mirrorful approach failed with [...]
     //  mirrorless approach failed with [...]
-    // 
+    //
     // assert(
     //   error contains "No given instance of type deriving.Mirror.Of[magnolia1.tests.SumsTests.Parent] was found for parameter x$1 of method derived in trait Derivation."
     // )
@@ -162,7 +162,6 @@ class SumsTests extends munit.FunSuite:
     val res = summon[NoCombine[Halfy]].nameOf(Righty())
     assertEquals(res, "Righty")
   }
-
 
 object SumsTests:
 
@@ -230,4 +229,3 @@ object SumsTests:
   final case class Righty() extends Halfy
   object Righty:
     given NoCombine[Righty] = NoCombine.instance(_ => "Righty")
-

@@ -16,12 +16,16 @@ class ModifiersTests extends munit.FunSuite:
     assertEquals(res, "ProtectedCons(name=dada phil)")
   }
 
-  test("read-only typeclass can serialize case class with protected constructor") {
+  test(
+    "read-only typeclass can serialize case class with protected constructor"
+  ) {
     val res = summon[Print[ProtectedCons]].print(ProtectedCons("dada", "phil"))
     assertEquals(res, "ProtectedCons(dada phil)")
   }
 
-  test("read-only typeclass can serialize case class with inaccessible private constructor") {
+  test(
+    "read-only typeclass can serialize case class with inaccessible private constructor"
+  ) {
     val res = summon[Print[PrivateCons]].print(PrivateCons("dada", "phil"))
     assertEquals(res, "PrivateCons(dada phil)")
   }

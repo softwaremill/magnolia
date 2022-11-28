@@ -89,7 +89,9 @@ class RecursiveTypesTests extends munit.FunSuite:
     assertEquals(res, "Recursive(children=[Recursive(children=[])])")
   }
 
-  test("no support for arbitrary derivation result type for recursive classes yet") {
+  test(
+    "no support for arbitrary derivation result type for recursive classes yet"
+  ) {
     val error = compileErrors("ExportedTypeclass.derived[Recursive]")
     val expectedError =
       """|No given instance of type magnolia1.examples.ExportedTypeclass[
@@ -102,30 +104,19 @@ class RecursiveTypesTests extends munit.FunSuite:
 object RecursiveTypesTests:
 
   sealed trait Tree[+T] derives Eq
-
   object Tree:
     given [T: [X] =>> Show[String, X]]: Show[String, Tree[T]] = Show.derived
-
   case class Leaf[+L](value: L) extends Tree[L]
-
   case class Branch[+B](left: Tree[B], right: Tree[B]) extends Tree[B]
 
-
   case class RPerson(age: Int, name: String, children: Seq[RPerson])
-
   object RPerson:
     given Show[String, RPerson] = Show.derived
-
   case class GPerson(children: Seq[RPerson])
 
-
   case class Recursive(children: Seq[Recursive])
-
   object Recursive:
     given showRecursive: Show[String, Recursive] = Show.derived[Recursive]
 
-
   case class KArray(value: List[KArray]) derives Eq
-
-
   case class Wrapper(v: Option[KArray])

@@ -4,7 +4,7 @@ import magnolia1.*
 import magnolia1.examples.*
 
 class VarianceTests extends munit.FunSuite:
-  
+
   import VarianceTests.*
 
   // Corrupt being covariant in L <: Seq[Company] enables the derivation for Corrupt[String, _]
@@ -82,7 +82,6 @@ object VarianceTests:
     case object Int extends Exactly[Int]
     case object Nothing extends Exactly[Nothing]
     case object String extends Exactly[String]
-
 
   sealed trait Politician[+S]
   case class Accountable[+S](slogan: S) extends Politician[S]
