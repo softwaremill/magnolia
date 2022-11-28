@@ -1,7 +1,6 @@
 package magnolia1
 
 import scala.quoted.*
-import scala.reflect.ClassTag
 import scala.annotation.meta.field
 import scala.annotation.Annotation
 
@@ -80,7 +79,7 @@ object Macro:
   def defaultValue[T: Type](using
       Quotes
   ): Expr[List[(String, Option[() => Any])]] =
-    import quotes.reflect._
+    import quotes.reflect.*
     def exprOfOption(
         oet: (Expr[String], Option[Expr[Any]])
     ): Expr[(String, Option[() => Any])] = oet match {
@@ -156,7 +155,7 @@ object Macro:
     Expr(areRepeated)
 
   def typeInfo[T: Type](using Quotes): Expr[TypeInfo] =
-    import quotes.reflect._
+    import quotes.reflect.*
 
     def normalizedName(s: Symbol): String =
       if s.flags.is(Flags.Module) then s.name.stripSuffix("$") else s.name

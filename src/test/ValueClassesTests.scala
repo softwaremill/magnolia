@@ -4,8 +4,10 @@ import magnolia1.*
 import magnolia1.examples.*
 import scala.annotation.StaticAnnotation
 
-/** TODO: Support for value classes is missing for scala3 branch. Eventually
-  * refactor and uncomment the tests below once the feature is implemented.
+/** Supports mirrorless value classes derivation for non-generic products with annotations.
+ * TODO:
+    1) non-product derivation
+    2) generic derivation
   */
 class ValueClassesTests extends munit.FunSuite:
   import ValueClassesTests.*
@@ -58,7 +60,6 @@ class ValueClassesTests extends munit.FunSuite:
 
   // test("serialize a value class") {
   //   val res = Show.derived[Length].show(new Length(100))
-  //   println(s"-------- Length : $res")
   //   assertEquals(res, "100")
   // }
 
