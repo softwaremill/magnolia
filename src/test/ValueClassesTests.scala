@@ -8,6 +8,7 @@ import scala.annotation.StaticAnnotation
  * TODO:
     1) non-product derivation
     2) generic derivation
+    3) access modifiers
   */
 class ValueClassesTests extends munit.FunSuite:
   import ValueClassesTests.*
