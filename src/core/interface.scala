@@ -2,6 +2,7 @@ package magnolia1
 
 import scala.annotation.tailrec
 import scala.reflect.*
+import scala.quoted.ToExpr.IArrayToExpr
 
 case class TypeInfo(
     owner: String,
@@ -33,6 +34,7 @@ object CaseClass:
     override def toString: String = s"Param($label)"
 
   object Param:
+
     def apply[F[_], T, P](
         name: String,
         idx: Int,
@@ -42,18 +44,39 @@ object CaseClass:
         annotations: List[Any],
         inheritedAnns: List[Any],
         typeAnnotations: List[Any]
+    ): Param[F, T] = 
+      apply(
+        name = name,
+        idx = idx,
+        repeated = repeated,
+        cbn = cbn,
+        defaultVal = defaultVal,
+        annotations = IArray.from(annotations),
+        inheritedAnns = IArray.from(inheritedAnns),
+        typeAnnotations = IArray.from(typeAnnotations)
+      )
+
+    def apply[F[_], T, P](
+        name: String,
+        idx: Int,
+        repeated: Boolean,
+        cbn: CallByNeed[F[P]],
+        defaultVal: CallByNeed[Option[P]],
+        annotations: IArray[Any],
+        inheritedAnns: IArray[Any],
+        typeAnnotations: IArray[Any]
     ): Param[F, T] =
       new CaseClass.Param[F, T](
         name,
         idx,
         repeated,
-        IArray.from(annotations),
-        IArray.from(typeAnnotations)
+        annotations,
+        typeAnnotations
       ):
         type PType = P
         def default: Option[PType] = defaultVal.value
         def typeclass: F[PType] = cbn.value
-        override def inheritedAnnotations = IArray.from(inheritedAnns)
+        override def inheritedAnnotations = inheritedAnns
         def deref(value: T): P =
           value.asInstanceOf[Product].productElement(idx).asInstanceOf[P]
 
