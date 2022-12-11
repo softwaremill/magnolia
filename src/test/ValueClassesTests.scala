@@ -3,62 +3,66 @@ package magnolia1.tests
 import magnolia1.*
 import magnolia1.examples.*
 import scala.annotation.StaticAnnotation
+import scala.runtime.Static
 
-/** Supports mirrorless value classes derivation for non-generic products with annotations.
- * TODO:
-    1) non-product derivation
-    2) generic derivation
-    3) access modifiers
+/** Supports mirrorless value classes derivation for non-generic products with
+  * annotations. TODO: 1) non-product derivation 2) generic derivation 3) access
+  * modifiers
   */
 class ValueClassesTests extends munit.FunSuite:
   import ValueClassesTests.*
 
-  test("Print foo") {
+  test("Derive Print TC for simple value class") {
     given Print[Int] = _.toString
-    val res = Print.derived[VC].print(VC(555))
-    assertEquals(res, "VC(555)")
+    val res = Print.derived[SimpleVC].print(SimpleVC(555))
+    assertEquals(res, "SimpleVC(555)")
   }
 
-  test("Print bar") {
-    given Print[Int] = _.toString
-    val res = Print.derived[Bar].print(Bar(666))
-    assertEquals(res, "Bar(666)")
+  test("Derive SemiDefault TC for simple value class") {
+    given SemiDefault[SimpleVC] = SemiDefault.derived
+    val res = summon[SemiDefault[SimpleVC]].default
+    assertEquals(res, SimpleVC(0))
   }
 
-  test("semi default for VC") {
-    given SemiDefault[VC] = SemiDefault.derived
-    val res = summon[SemiDefault[VC]].default
-    assertEquals(res, VC(0))
-  }
-
-  test("SemiDefault for BigBox value class") {
+  test("Derive SemiDefault for nested BigBox value class") {
     given SemiDefault[BigBox] = SemiDefault.derived
-    val res = summon[SemiDefault[BigBox]].default 
+    val res = summon[SemiDefault[BigBox]].default
     assertEquals(res, BigBox(NormalBox(SmallBox(TinyBox(0)))))
   }
 
-  test("Semi default for Foo") {
-    given SemiDefault[Foo] = SemiDefault.derived
-    val res = summon[SemiDefault[Foo]].default
-    assertEquals(res, Foo(0))
+  test("Derive SemiDefault for heavily annotated value class") {
+    given SemiDefault[HeavilyAnnotated] = SemiDefault.derived
+    val res = summon[SemiDefault[HeavilyAnnotated]].default
+    assertEquals(res, HeavilyAnnotated(0))
   }
 
-  test("show for Foo") {
-    val res = Show.derived[Foo].show(Foo(33))
-    assertEquals(res, "Foo{MyAnnotation(0)}(k{MyAnnotation(1)}{MyAnnotation(2)}=33)")
+  test("Derive Show for heavily annotated value class") {
+    val res = Show.derived[HeavilyAnnotated].show(HeavilyAnnotated(33))
+    assertEquals(
+      res,
+      "HeavilyAnnotated{MyAnnotation(0)}{MyTypeAnnotation(3)}(k{MyParamAnnotation(1)}{MyTypeAnnotation(2)}=33)"
+    )
   }
 
-  test("Print default") {
+  test("Derive Print for a value class with default value") {
     given Print[Int] = _.toString
     val res = Print.derived[WithDefault].print(WithDefault())
     assertEquals(res, "WithDefault(123)")
   }
 
-  test("Semi default") {
+  test("Derive SemiDefault for a value class with default value") {
     val res = SemiDefault.derived[WithDefault].default
     assertEquals(res, WithDefault(123))
   }
 
+  test("Derive Show for a value class with nested annotations") {
+    val res = Show.derived[BigBox].show(BigBox(NormalBox(SmallBox(TinyBox(7)))))
+    val expected =
+      "BigBox(normalBox=NormalBox{MyAnnotation(4)}(smallBox{MyAnnotation(5)}{MyAnnotation(6)}=SmallBox(tinyBox=TinyBox{MyAnnotation(1),MyAnnotation(0)}(size{MyAnnotation(2)}{MyAnnotation(3)}=7))))"
+    assertEquals(res, expected)
+  }
+
+  // support for non-product value classes is not yet supported
   // test("serialize a value class") {
   //   val res = Show.derived[Length].show(new Length(100))
   //   assertEquals(res, "100")
@@ -104,35 +108,52 @@ class ValueClassesTests extends munit.FunSuite:
 
 object ValueClassesTests:
 
-  case class TinyBox(size: Int)
+  case class SimpleVC(k: Int) extends AnyVal
+
+  @MyAnnotation(200)
+  sealed trait Whiz
+
+  @MyAnnotation(300)
+  sealed trait Kid
+
+  @MyAnnotation(100)
+  case class Barr(@MyParamAnnotation(101) k: Int @MyTypeAnnotation(102))
+      extends Whiz @MyTypeAnnotation(103)
+
+  @MyAnnotation(0)
+  case class Fooo(@MyParamAnnotation(1) barr: Barr @MyTypeAnnotation(2))
+      extends AnyVal @MyTypeAnnotation(3)
+
+  @MyAnnotation(0)
+  @MyAnnotation(1)
+  case class TinyBox(@MyAnnotation(2) size: Int @MyAnnotation(3))
+
   case class SmallBox(tinyBox: TinyBox)
-  case class NormalBox(smallBox: SmallBox)
+
+  @MyAnnotation(4)
+  case class NormalBox(@MyAnnotation(5) smallBox: SmallBox @MyAnnotation(6))
+
   case class BigBox(normalBox: NormalBox) extends AnyVal
-
-  case class Bar(k: Int) 
-
-  case class WrappedVC(bar: Bar) extends AnyVal
-
-  case class MyAnnotation(order: Int) extends scala.annotation.Annotation
-
-  case class MyTypeAnnotation(order: Int) extends StaticAnnotation
-
-  case class VC(k: Int) extends AnyVal
 
   case class WithDefault(k: Int = 123) extends AnyVal
 
   @MyAnnotation(0)
-  case class Foo(
-    @MyAnnotation(1) k: Int @MyAnnotation(2)
-    ) extends AnyVal
+  case class HeavilyAnnotated(
+      @MyParamAnnotation(1) k: Int @MyTypeAnnotation(2)
+  ) extends AnyVal @MyTypeAnnotation(3)
 
   class Length(val value: Int) extends AnyVal
 
   final case class ServiceName1(value: String) extends AnyVal
 
   class PrivateValueClass private (val value: Int) extends AnyVal
-  object PrivateValueClass {
+
+  object PrivateValueClass:
     def apply(l: Int) = new PrivateValueClass(l)
     // given Show[String, PrivateValueClass] = Show.derived
-  }
 
+  case class MyAnnotation(order: Int) extends scala.annotation.Annotation
+
+  case class MyParamAnnotation(order: Int) extends StaticAnnotation
+
+  case class MyTypeAnnotation(order: Int) extends StaticAnnotation

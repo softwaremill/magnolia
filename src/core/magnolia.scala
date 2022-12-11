@@ -25,7 +25,7 @@ trait CommonDerivation[TypeClass[_]]:
    */
   def join[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T]
 
-  inline def derivedMirrorProduct[A](
+  protected inline def derivedMirrorProduct[A](
       product: Mirror.ProductOf[A]
   ): Typeclass[A] = join(CaseClassDerivation.fromMirror(product))
 
@@ -65,15 +65,15 @@ trait CommonDerivation[TypeClass[_]]:
 
 end CommonDerivation
 
-
 trait ProductDerivation[TypeClass[_]] extends CommonDerivation[TypeClass]:
-  inline def derivedMirror[A](using mirror: Mirror.Of[A]): Typeclass[A] =
+  private inline def derivedMirror[A](using
+      mirror: Mirror.Of[A]
+  ): Typeclass[A] =
     inline mirror match
       case product: Mirror.ProductOf[A] => derivedMirrorProduct[A](product)
 
   inline given derived[A](using Mirror.Of[A]): Typeclass[A] = derivedMirror[A]
 end ProductDerivation
-
 
 trait Derivation[TypeClass[_]]
     extends CommonDerivation[TypeClass]
@@ -102,26 +102,35 @@ trait Derivation[TypeClass[_]]
   ): List[SealedTrait.Subtype[Typeclass, T, _]] =
     subtypesFromMirror[T, SubtypeTuple](m, idx)
 
-  inline def derivedMirrorSum[A](sum: Mirror.SumOf[A]): Typeclass[A] =
+  private inline def derivedMirrorSum[A](sum: Mirror.SumOf[A]): Typeclass[A] =
     split(sealedTraitFromMirror(sum))
 
-  inline def derivedMirror[A](using mirror: Mirror.Of[A]): Typeclass[A] =
+  private inline def derivedMirror[A](using
+      mirror: Mirror.Of[A]
+  ): Typeclass[A] =
     inline mirror match
       case sum: Mirror.SumOf[A]         => derivedMirrorSum[A](sum)
       case product: Mirror.ProductOf[A] => derivedMirrorProduct[A](product)
 
-  inline def derivedValueClass[A]: Typeclass[A] = join(CaseClassDerivation.valueClassDerivation)
+  private inline def derivedValueClass[A]: Typeclass[A] = join(
+    CaseClassDerivation.valueClassDerivation
+  )
 
-  inline def derivedMirrorless[A]: Typeclass[A] = 
-    inline if Macro.isValueClass[A] then 
-      derivedValueClass[A]
-    else error("Mirrrorful derivation not posiible, mirrorless derivation either not possible or not implemented yet.")
+  private inline def derivedMirrorless[A]: Typeclass[A] =
+    inline if Macro.isValueClass[A] then derivedValueClass[A]
+    else
+      error(
+        "Deriving the typeclass based on mirrors or directly is not possible for " + codeOf(
+          Macro.showType[A]
+        ) +
+          ". Please refer to the documentation or report a feature request."
+      )
 
-  inline def derived[A]: Typeclass[A] = 
+  inline def derived[A]: Typeclass[A] =
     summonFrom {
       case prod: Mirror.ProductOf[A] => derivedMirrorProduct[A](prod)
-      case sum: Mirror.SumOf[A] => derivedMirrorSum[A](sum)
-      case _ => derivedMirrorless[A]
+      case sum: Mirror.SumOf[A]      => derivedMirrorSum[A](sum)
+      case _                         => derivedMirrorless[A]
     }
 
   protected override inline def deriveSubtype[s](
@@ -129,8 +138,6 @@ trait Derivation[TypeClass[_]]
   ): Typeclass[s] = derivedMirror[s](using m)
 end Derivation
 
-
 trait AutoDerivation[TypeClass[_]] extends Derivation[TypeClass]:
-  inline given autoDerived[A]: TypeClass[A] = 
+  inline given autoDerived[A]: TypeClass[A] =
     derived
-
