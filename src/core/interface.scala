@@ -44,7 +44,7 @@ object CaseClass:
         annotations: List[Any],
         inheritedAnns: List[Any],
         typeAnnotations: List[Any]
-    ): Param[F, T] = 
+    ): Param[F, T] =
       apply(
         name = name,
         idx = idx,

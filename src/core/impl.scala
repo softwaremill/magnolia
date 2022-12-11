@@ -5,42 +5,50 @@ import scala.deriving.Mirror
 import scala.reflect.*
 
 import Macro.*
-import MirrorlessMacro.*
 
 object CaseClassDerivation:
 
   inline def valueClassDerivation[TC[_], V]: CaseClass[TC, V] =
 
-    val theParam: CaseClass.Param[TC, V] = ValueClassDerivation.getValueClassParam[TC, V]
+    val theParam: CaseClass.Param[TC, V] =
+      Macro.ValueClassDerivation.getValueClassParam[TC, V]
 
     new CaseClass[TC, V](
       typeInfo = typeInfo[V],
       isObject = isObject[V],
-      isValueClass = isValueClass[V], // just true?
+      isValueClass = true,
       params = IArray.from(theParam :: Nil),
       annotations = IArray.from(anns[V]),
       inheritedAnnotations = IArray.from(inheritedAnns[V]),
       typeAnnotations = IArray.from(typeAnns[V])
     ):
 
-      def rawConstruct(fieldValues: Seq[Any]): V = 
-        ValueClassDerivation.rawContructByMacro[V](fieldValues.toList)
-    
-      def construct[PType: ClassTag](makeParam: Param => PType): V = 
-        ValueClassDerivation.rawContructByMacro[V](params.map(makeParam).toList)
-    
-      def constructEither[Err, PType: ClassTag](makeParam: Param => Either[Err, PType]): Either[List[Err], V] = 
-        params
-        .map(makeParam)
-        .foldLeft[Either[List[Err], Array[PType]]](Right(Array())) { 
-          case (Left(errs), Left(err)) => Left(errs ++ List(err))
-          case (Right(acc), Right(param)) => Right(acc ++ Array(param))
-          case (errs @ Left(_), _)        => errs
-          case (_, Left(err))             => Left(List(err))
-        }
-        .map { params => ValueClassDerivation.rawContructByMacro[V](params.toList) }
+      def rawConstruct(fieldValues: Seq[Any]): V =
+        Macro.ValueClassDerivation.rawContructByMacro[V](fieldValues.toList)
 
-      def constructMonadic[M[_]: Monadic, PType: ClassTag](makeParam: Param => M[PType]): M[V] = 
+      def construct[PType: ClassTag](makeParam: Param => PType): V =
+        Macro.ValueClassDerivation.rawContructByMacro[V](
+          params.map(makeParam).toList
+        )
+
+      def constructEither[Err, PType: ClassTag](
+          makeParam: Param => Either[Err, PType]
+      ): Either[List[Err], V] =
+        params
+          .map(makeParam)
+          .foldLeft[Either[List[Err], Array[PType]]](Right(Array())) {
+            case (Left(errs), Left(err))    => Left(errs ++ List(err))
+            case (Right(acc), Right(param)) => Right(acc ++ Array(param))
+            case (errs @ Left(_), _)        => errs
+            case (_, Left(err))             => Left(List(err))
+          }
+          .map { params =>
+            Macro.ValueClassDerivation.rawContructByMacro[V](params.toList)
+          }
+
+      def constructMonadic[M[_]: Monadic, PType: ClassTag](
+          makeParam: Param => M[PType]
+      ): M[V] =
         val m = summon[Monadic[M]]
         m.map {
           params.map(makeParam).foldLeft(m.point(Array())) { (accM, paramM) =>
@@ -48,8 +56,9 @@ object CaseClassDerivation:
               m.map(paramM)(acc ++ List(_))
             }
           }
-        } { params => ValueClassDerivation.rawContructByMacro[V](params.toList) }
-
+        } { params =>
+          Macro.ValueClassDerivation.rawContructByMacro[V](params.toList)
+        }
 
   inline def fromMirror[Typeclass[_], A](
       product: Mirror.ProductOf[A]
@@ -195,4 +204,3 @@ trait SealedTraitDerivation:
         }
         (sub ::: subtypesFromMirror[A, tail](m, idx + 1)).distinctBy(_.typeInfo)
 end SealedTraitDerivation
-
