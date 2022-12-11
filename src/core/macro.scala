@@ -9,9 +9,6 @@ object Macro:
   inline def showType[A]: String =
     ${ showTypeImpl[A] }
 
-  private def showTypeImpl[A: Type](using Quotes): Expr[String] =
-    Expr(Type.show[A])
-
   inline def isObject[T]: Boolean =
     ${ isObject[T] }
 
@@ -25,7 +22,7 @@ object Macro:
     ${ inheritedAnns[T] }
 
   inline def typeAnns[T]: List[Any] =
-    ${ typeAnnsImpl[T] }
+    ${ typeAnns[T] }
 
   inline def paramAnns[T]: List[(String, List[Any])] =
     ${ paramAnns[T] }
@@ -40,7 +37,7 @@ object Macro:
     ${ defaultValue[T] }
 
   inline def paramTypeAnns[T]: List[(String, List[Any])] =
-    ${ paramTypeAnnsImpl[T] }
+    ${ paramTypeAnns[T] }
 
   inline def repeated[T]: List[(String, Boolean)] =
     ${ repeated[T] }
@@ -48,48 +45,51 @@ object Macro:
   inline def typeInfo[T]: TypeInfo =
     ${ typeInfo[T] }
 
-  private def isObject[T: Type](using Quotes): Expr[Boolean] =
+  private def showTypeImpl[A: Type](using Quotes): Expr[String] =
+    Expr(Type.show[A])
+
+  def isObject[T: Type](using Quotes): Expr[Boolean] =
     import quotes.reflect.*
 
     Expr(TypeRepr.of[T].typeSymbol.flags.is(Flags.Module))
 
-  private def isEnum[T: Type](using Quotes): Expr[Boolean] =
+  def isEnum[T: Type](using Quotes): Expr[Boolean] =
     import quotes.reflect.*
 
     Expr(TypeRepr.of[T].typeSymbol.flags.is(Flags.Enum))
 
-  private def paramTypeAnnsImpl[T: Type](using
+  def paramTypeAnns[T: Type](using
       q: Quotes
   ): Expr[List[(String, List[Any])]] =
     new CollectAnnotations[q.type, T].paramTypeAnns
 
-  private def anns[T: Type](using q: Quotes): Expr[List[Any]] =
+  def anns[T: Type](using q: Quotes): Expr[List[Any]] =
     new CollectAnnotations[q.type, T].anns
 
-  private def inheritedAnns[T: Type](using q: Quotes): Expr[List[Any]] =
+  def inheritedAnns[T: Type](using q: Quotes): Expr[List[Any]] =
     new CollectAnnotations[q.type, T].inheritedAnns
 
-  private def typeAnnsImpl[T: Type](using q: Quotes): Expr[List[Any]] =
+  def typeAnns[T: Type](using q: Quotes): Expr[List[Any]] =
     new CollectAnnotations[q.type, T].typeAnns
 
-  private def paramAnns[T: Type](using
+  def paramAnns[T: Type](using
       q: Quotes
   ): Expr[List[(String, List[Any])]] =
     new CollectAnnotations[q.type, T].paramAnns
 
-  private def inheritedParamAnns[T: Type](using
+  def inheritedParamAnns[T: Type](using
       q: Quotes
   ): Expr[List[(String, List[Any])]] =
     new CollectAnnotations[q.type, T].inheritedParamAnns
 
-  private def isValueClass[T: Type](using Quotes): Expr[Boolean] =
+  def isValueClass[T: Type](using Quotes): Expr[Boolean] =
     import quotes.reflect.*
 
     Expr(
       TypeRepr.of[T].baseClasses.contains(Symbol.classSymbol("scala.AnyVal"))
     )
 
-  private def defaultValue[T: Type](using
+  def defaultValue[T: Type](using
       Quotes
   ): Expr[List[(String, Option[() => Any])]] =
     import quotes.reflect.*
@@ -114,7 +114,7 @@ object Macro:
       }
     Expr.ofList(terms)
 
-  private def repeated[T: Type](using Quotes): Expr[List[(String, Boolean)]] =
+  def repeated[T: Type](using Quotes): Expr[List[(String, Boolean)]] =
     import quotes.reflect.*
 
     def isRepeated[T](tpeRepr: TypeRepr): Boolean = tpeRepr match
@@ -139,7 +139,7 @@ object Macro:
 
     Expr(areRepeated)
 
-  private def typeInfo[T: Type](using Quotes): Expr[TypeInfo] =
+  def typeInfo[T: Type](using Quotes): Expr[TypeInfo] =
     import quotes.reflect.*
 
     def normalizedName(s: Symbol): String =
