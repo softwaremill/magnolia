@@ -34,7 +34,7 @@ object Macro:
     ${ isValueClass[T] }
 
   inline def defaultValue[T]: List[(String, Option[() => Any])] =
-    ${ defaultValue2[T] }
+    ${ defaultValue[T] }
 
   inline def paramTypeAnns[T]: List[(String, List[Any])] =
     ${ paramTypeAnns[T] }
@@ -89,7 +89,7 @@ object Macro:
       TypeRepr.of[T].baseClasses.contains(Symbol.classSymbol("scala.AnyVal"))
     )
 
-  def defaultValue2[T: Type](using
+  def defaultValue[T: Type](using
       Quotes
   ): Expr[List[(String, Option[() => Any])]] =
     import quotes.reflect.*
