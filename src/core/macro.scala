@@ -370,15 +370,6 @@ object Macro:
           case Some(e) => '{ new CallByNeed(() => Some(($e).asInstanceOf[P])) }
           case None    => '{ new CallByNeed(() => None) }
 
-      extension (term: Term)
-        def asCallByNeed(tpe: TypeRepr): Term =
-          Select(
-            '{ CallByNeed }.asTerm,
-            TypeRepr.of[CallByNeed.type].termSymbol.declaredMethod("apply").head
-          )
-            .appliedToType(tpe)
-            .appliedTo(term)
-
       extension (tpe: TypeRepr)
         def defaultValues: Map[String, Expr[Any]] =
           val sym = tpe.typeSymbol
@@ -422,7 +413,7 @@ object Macro:
             case '[t] =>
               Expr
                 .summon[t]
-                .map { e => e.asCallByNeedExpr }
+                .map { _.asCallByNeedExpr }
                 .getOrElse {
                   report.errorAndAbort(
                     s"Cannot summon instance for ${Type.show[t]}."
@@ -433,16 +424,17 @@ object Macro:
             case '[p] =>
               getDefaultValue[p](aTpe.defaultValues, paramSymbol.name)
 
-          def selectFromDictAsTerm(dict: List[(String, List[Term])]) =
+          def selectFromDictAsTerm(
+              dict: List[(String, List[Term])]
+          ) = 
             Expr
-              .ofList(
+              .ofList {
                 selectTermsByName(
                   dict,
                   paramSymbol.name
                 )
                   .map(_.asExpr)
-              )
-              .asTerm
+              }
 
           val applyFuncTerm =
             '{ CaseClass.Param }.asTerm
@@ -465,13 +457,13 @@ object Macro:
             defaultValue.asTerm,
             selectFromDictAsTerm(
               new CollectAnnotations[q.type, A].paramAnnsOnTerms
-            ),
+            ).asTerm,
             selectFromDictAsTerm(
               new CollectAnnotations[q.type, A].inheritedParamAnnsOnTerms
-            ),
+            ).asTerm,
             selectFromDictAsTerm(
               new CollectAnnotations[q.type, A].paramTypeAnnsOnTerms
-            )
+            ).asTerm
           )
 
           val app =
