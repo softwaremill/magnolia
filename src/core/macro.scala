@@ -34,7 +34,7 @@ object Macro:
     ${ isValueClass[T] }
 
   inline def defaultValue[T]: List[(String, Option[() => Any])] =
-    ${ defaultValue[T] }
+    ${ defaultValue2[T] }
 
   inline def paramTypeAnns[T]: List[(String, List[Any])] =
     ${ paramTypeAnns[T] }
@@ -89,30 +89,42 @@ object Macro:
       TypeRepr.of[T].baseClasses.contains(Symbol.classSymbol("scala.AnyVal"))
     )
 
-  def defaultValue[T: Type](using
+  def defaultValue2[T: Type](using
       Quotes
   ): Expr[List[(String, Option[() => Any])]] =
     import quotes.reflect.*
+
     def exprOfOption(
         oet: (Expr[String], Option[Expr[Any]])
-    ): Expr[(String, Option[() => Any])] = oet match {
-      case (label, None)     => Expr(label.valueOrAbort -> None)
-      case (label, Some(et)) => '{ $label -> Some(() => $et) }
+    ): Expr[(String, Option[() => Any])] =
+      oet match
+        case (label, None)     => Expr(label.valueOrAbort -> None)
+        case (label, Some(et)) => '{ $label -> Some(() => $et) }
+
+    Expr.ofList {
+      defaultValueOnTerms
+        .map { p =>
+          exprOfOption(Expr(p._1) -> p._2)
+        }
     }
+
+  private def defaultValueOnTerms[T: Type](using
+      Quotes
+  ): List[(String, Option[Expr[Any]])] =
+    import quotes.reflect.*
+
     val tpe = TypeRepr.of[T].typeSymbol
-    val terms = tpe.primaryConstructor.paramSymss.flatten
+
+    tpe.primaryConstructor.paramSymss.flatten
       .filter(_.isValDef)
       .zipWithIndex
       .map { case (field, i) =>
-        exprOfOption {
-          Expr(field.name) -> tpe.companionClass
-            .declaredMethod(s"$$lessinit$$greater$$default$$${i + 1}")
-            .headOption
-            .flatMap(_.tree.asInstanceOf[DefDef].rhs)
-            .map(_.asExprOf[Any])
-        }
+        field.name -> tpe.companionClass
+          .declaredMethod(s"$$lessinit$$greater$$default$$${i + 1}")
+          .headOption
+          .flatMap(_.tree.asInstanceOf[DefDef].rhs)
+          .map(_.asExprOf[Any])
       }
-    Expr.ofList(terms)
 
   def repeated[T: Type](using Quotes): Expr[List[(String, Boolean)]] =
     import quotes.reflect.*
@@ -217,7 +229,7 @@ object Macro:
                 case Apply(Select(New(a), _), _) => a.tpe
               }
               .flatMap { tpe =>
-                val anns = getAnnotations(tpe); anns
+                val anns = loopForAnnotations(tpe); anns
               }
               .filter(filterAnnotation)
               .map { _.asExpr.asInstanceOf[Expr[Any]] }
@@ -233,7 +245,7 @@ object Macro:
             case v: ValDef => v.tpt.tpe
             case d: DefDef => d.returnTpt.tpe
 
-          field.name -> getAnnotations(tpeRepr).filter { a =>
+          field.name -> loopForAnnotations(tpeRepr).filter { a =>
             a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
             a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
           }
@@ -275,9 +287,9 @@ object Macro:
     def inheritedParamAnns: Expr[List[(String, List[Any])]] =
       liftTermsDict(inheritedParamAnnsOnTerms)
 
-    private def getAnnotations(t: TypeRepr): List[Term] =
+    private def loopForAnnotations(t: TypeRepr): List[Term] =
       t match
-        case AnnotatedType(inner, ann) => ann :: getAnnotations(inner)
+        case AnnotatedType(inner, ann) => ann :: loopForAnnotations(inner)
         case _                         => Nil
 
     private def liftTermsDict(
@@ -362,31 +374,18 @@ object Macro:
         tss.toMap
           .getOrElse(name, Nil)
 
-      def getDefaultValue[P: Type](
-          dict: Map[String, Expr[Any]],
+      def getDefault[P: Type](
+          os: List[(String, Option[Expr[Any]])],
           name: String
-      ): Expr[CallByNeed[Option[Any]]] =
-        dict.get(name) match
-          case Some(e) => '{ new CallByNeed(() => Some(($e).asInstanceOf[P])) }
-          case None    => '{ new CallByNeed(() => None) }
+      )(using Quotes): Expr[CallByNeed[Option[Any]]] =
+        import quotes.reflect.*
 
-      extension (tpe: TypeRepr)
-        def defaultValues: Map[String, Expr[Any]] =
-          val sym = tpe.typeSymbol
-          val compModule = Ref(sym.companionModule)
-          val names =
-            for a <- sym.caseFields if a.flags.is(Flags.HasDefault)
-            yield a.name
-          val statements = sym.companionClass.tree.asInstanceOf[ClassDef].body
-          val refs: List[Ref] =
-            for
-              case defdef @ DefDef(name, _, _, _) <- statements
-              if name.startsWith("$lessinit$greater$default")
-            yield compModule.select(defdef.symbol)
-
-          val refsTerms = refs.map(_.asExpr)
-
-          (names zip refsTerms).toMap
+        os.toMap
+          .get(name)
+          .flatten match
+          case None => '{ new CallByNeed(() => None) }
+          case Some(expr) =>
+            '{ new CallByNeed(() => Some(($expr).asInstanceOf[P])) }
 
       extension [B: Type](e: Expr[B])
         def asCallByNeedExpr: Expr[CallByNeed[B]] =
@@ -420,13 +419,13 @@ object Macro:
                   )
                 }
 
-          val defaultValue = paramTypeTpe.asType match
-            case '[p] =>
-              getDefaultValue[p](aTpe.defaultValues, paramSymbol.name)
+          val defaultValue = (aTpe.asType, paramTypeTpe.asType) match
+            case ('[a], '[p]) =>
+              getDefault[p](defaultValueOnTerms[a], paramSymbol.name)
 
           def selectFromDictAsTerm(
               dict: List[(String, List[Term])]
-          ) = 
+          ) =
             Expr
               .ofList {
                 selectTermsByName(

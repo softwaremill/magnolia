@@ -18,7 +18,9 @@ class ValueClassesTests extends munit.FunSuite:
     assertEquals(res, "SimpleVC(555)")
   }
 
-  test("Derive SemiDefault TC for simple value class") {
+  test(
+    "Derive SemiDefault TC for simple value class with no default argument"
+  ) {
     given SemiDefault[SimpleVC] = SemiDefault.derived
     val res = summon[SemiDefault[SimpleVC]].default
     assertEquals(res, SimpleVC(0))
@@ -44,15 +46,38 @@ class ValueClassesTests extends munit.FunSuite:
     )
   }
 
-  test("Derive Print for a value class with default value") {
+  test(
+    "Derive Print for a value class with default argument value of basic type"
+  ) {
     given Print[Int] = _.toString
-    val res = Print.derived[WithDefault].print(WithDefault())
-    assertEquals(res, "WithDefault(123)")
+    val res =
+      Print.derived[ValueClassWithDefault].print(ValueClassWithDefault())
+    assertEquals(res, "ValueClassWithDefault(123)")
   }
 
-  test("Derive SemiDefault for a value class with default value") {
-    val res = SemiDefault.derived[WithDefault].default
-    assertEquals(res, WithDefault(123))
+  test(
+    "Derive SemiDefault for a value class with default value of basic type"
+  ) {
+    val res = SemiDefault.derived[ValueClassWithDefault].default
+    assertEquals(res, ValueClassWithDefault(123))
+  }
+
+  test("Derive SemiDefault for a wrapped value class with default") {
+    val res = SemiDefault[WrappedValueClassWithDefault].default
+    assertEquals(res, WrappedValueClassWithDefault(ValueClassWithDefault(123)))
+  }
+
+  test(
+    "Derive SemiDefault for a value class wrapper of plain case class with default "
+  ) {
+    val res = SemiDefault[WrappedPlainWithDefault].default
+    assertEquals(res, WrappedPlainWithDefault(PlainWithDefault("abrakadabra")))
+
+  }
+
+  test("Derive HasDefault for a value class with default value") {
+    val res = HasDefault.derived[ValueClassWithDefault].defaultValue
+    assertEquals(res, Right(ValueClassWithDefault()))
   }
 
   test("Derive Show for a value class with nested annotations") {
@@ -135,7 +160,14 @@ object ValueClassesTests:
 
   case class BigBox(normalBox: NormalBox) extends AnyVal
 
-  case class WithDefault(k: Int = 123) extends AnyVal
+  case class ValueClassWithDefault(k: Int = 123) extends AnyVal
+
+  case class PlainWithDefault(name: String = "abrakadabra")
+
+  case class WrappedValueClassWithDefault(withDefault: ValueClassWithDefault)
+
+  case class WrappedPlainWithDefault(PlainWithDefault: PlainWithDefault)
+      extends AnyVal
 
   @MyAnnotation(0)
   case class HeavilyAnnotated(
