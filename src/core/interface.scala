@@ -2,7 +2,6 @@ package magnolia1
 
 import scala.annotation.tailrec
 import scala.reflect.*
-import scala.quoted.ToExpr.IArrayToExpr
 
 case class TypeInfo(
     owner: String,
