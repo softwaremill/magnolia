@@ -41,27 +41,6 @@ object CaseClass:
         repeated: Boolean,
         cbn: CallByNeed[F[P]],
         defaultVal: CallByNeed[Option[P]],
-        annotations: List[Any],
-        inheritedAnns: List[Any],
-        typeAnnotations: List[Any]
-    ): Param[F, T] =
-      apply(
-        name = name,
-        idx = idx,
-        repeated = repeated,
-        cbn = cbn,
-        defaultVal = defaultVal,
-        annotations = IArray.from(annotations),
-        inheritedAnns = IArray.from(inheritedAnns),
-        typeAnnotations = IArray.from(typeAnnotations)
-      )
-
-    def apply[F[_], T, P](
-        name: String,
-        idx: Int,
-        repeated: Boolean,
-        cbn: CallByNeed[F[P]],
-        defaultVal: CallByNeed[Option[P]],
         annotations: IArray[Any],
         inheritedAnns: IArray[Any],
         typeAnnotations: IArray[Any]

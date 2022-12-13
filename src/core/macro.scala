@@ -374,7 +374,7 @@ object Macro:
         tss.toMap
           .getOrElse(name, Nil)
 
-      def getDefault[P: Type](
+      def selectDefault[P: Type](
           os: List[(String, Option[Expr[Any]])],
           name: String
       )(using Quotes): Expr[CallByNeed[Option[Any]]] =
@@ -383,9 +383,26 @@ object Macro:
         os.toMap
           .get(name)
           .flatten match
-          case None => '{ new CallByNeed(() => None) }
+          case None => 
+            '{ new CallByNeed(() => None) }
           case Some(expr) =>
             '{ new CallByNeed(() => Some(($expr).asInstanceOf[P])) }
+
+      def selectFromDict(
+          dict: List[(String, List[Term])],
+          name: String
+      ) =
+        Expr
+          .ofList {
+            selectTermsByName(
+              dict,
+              name
+            )
+              .map(_.asExpr)
+          }
+
+      def toIArray(es: Expr[List[Any]]): Expr[IArray[Any]] =
+        '{ IArray($es: _*) }
 
       extension [B: Type](e: Expr[B])
         def asCallByNeedExpr: Expr[CallByNeed[B]] =
@@ -419,21 +436,34 @@ object Macro:
                   )
                 }
 
-          val defaultValue = (aTpe.asType, paramTypeTpe.asType) match
-            case ('[a], '[p]) =>
-              getDefault[p](defaultValueOnTerms[a], paramSymbol.name)
+          val defaultValue =
+            (aTpe.asType, paramTypeTpe.asType) match
+              case ('[a], '[p]) =>
+                selectDefault[p](defaultValueOnTerms[a], paramSymbol.name)
 
-          def selectFromDictAsTerm(
-              dict: List[(String, List[Term])]
-          ) =
-            Expr
-              .ofList {
-                selectTermsByName(
-                  dict,
-                  paramSymbol.name
-                )
-                  .map(_.asExpr)
-              }
+          val annotations =
+            toIArray(
+              selectFromDict(
+                new CollectAnnotations[q.type, A].paramAnnsOnTerms,
+                paramSymbol.name
+              )
+            )
+
+          val inheritedAnnotations =
+            toIArray(
+              selectFromDict(
+                new CollectAnnotations[q.type, A].inheritedParamAnnsOnTerms,
+                paramSymbol.name
+              )
+            )
+
+          val typeAnnotations =
+            toIArray(
+              selectFromDict(
+                new CollectAnnotations[q.type, A].paramTypeAnnsOnTerms,
+                paramSymbol.name
+              )
+            )
 
           val applyFuncTerm =
             '{ CaseClass.Param }.asTerm
@@ -454,15 +484,9 @@ object Macro:
             Expr(false).asTerm,
             paramCallByNeed.asTerm,
             defaultValue.asTerm,
-            selectFromDictAsTerm(
-              new CollectAnnotations[q.type, A].paramAnnsOnTerms
-            ).asTerm,
-            selectFromDictAsTerm(
-              new CollectAnnotations[q.type, A].inheritedParamAnnsOnTerms
-            ).asTerm,
-            selectFromDictAsTerm(
-              new CollectAnnotations[q.type, A].paramTypeAnnsOnTerms
-            ).asTerm
+            annotations.asTerm,
+            inheritedAnnotations.asTerm,
+            typeAnnotations.asTerm
           )
 
           val app =

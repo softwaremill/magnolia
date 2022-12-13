@@ -138,9 +138,9 @@ object CaseClassDerivation:
           repeated.getOrElse(label, false),
           CallByNeed(summonInline[Typeclass[p]]),
           CallByNeed(defaults.get(label).flatten.map(_.apply.asInstanceOf[p])),
-          annotations.getOrElse(label, List()),
-          inheritedAnnotations.getOrElse(label, List()),
-          typeAnnotations.getOrElse(label, List())
+          IArray.from(annotations.getOrElse(label, List())),
+          IArray.from(inheritedAnnotations.getOrElse(label, List())),
+          IArray.from(typeAnnotations.getOrElse(label, List()))
         ) ::
           paramsFromMaps[Typeclass, A, ltail, ptail](
             annotations,
