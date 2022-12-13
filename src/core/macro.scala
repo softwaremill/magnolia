@@ -201,15 +201,14 @@ object Macro:
 
     def inheritedAnns: Expr[List[Any]] =
       Expr.ofList {
-        val what = tpe.baseClasses
+        tpe.baseClasses
           .filterNot(isObjectOrScala)
           .collect {
             case s if s != tpe.typeSymbol => s.annotations
           } // skip self
           .flatten
           .filter(filterAnnotation)
-
-        what.map(_.asExpr.asInstanceOf[Expr[Any]])
+          .map(_.asExpr.asInstanceOf[Expr[Any]])
       }
 
     def typeAnns: Expr[List[Any]] =
@@ -217,25 +216,25 @@ object Macro:
         if tpe.typeSymbol.isNoSymbol then None else Some(tpe.typeSymbol)
 
       Expr.ofList {
-        symbol.toList.map(_.tree).flatMap {
-          case ClassDef(_, _, parents, _, _) =>
-            parents
-              .collect {
+        symbol.toList
+          .map(_.tree)
+          .flatMap {
+            case ClassDef(_, _, parents, _, _) =>
+              parents
+                .collect {
 
-                case t: TypeTree => t.tpe
+                  case t: TypeTree => t.tpe
 
-                // case for AnyVal type annotations: with "-Yretain-trees" scalac option, the TypeTree of the annotation gets erased,
-                // so we need to extract the annotations from apply
-                case Apply(Select(New(a), _), _) => a.tpe
-              }
-              .flatMap { tpe =>
-                val anns = loopForAnnotations(tpe); anns
-              }
-              .filter(filterAnnotation)
-              .map { _.asExpr.asInstanceOf[Expr[Any]] }
-          case e =>
-            List.empty
-        }
+                  // case for AnyVal type annotations: with "-Yretain-trees" scalac option, the TypeTree of the annotation gets erased,
+                  // so we need to extract the annotations from apply
+                  case Apply(Select(New(a), _), _) => a.tpe
+                }
+                .flatMap(loopForAnnotations)
+                .filter(filterAnnotation)
+                .map { _.asExpr.asInstanceOf[Expr[Any]] }
+            case _ =>
+              List.empty
+          }
       }
 
     def paramTypeAnnsOnTerms: List[(String, List[Term])] =
@@ -245,11 +244,7 @@ object Macro:
             case v: ValDef => v.tpt.tpe
             case d: DefDef => d.returnTpt.tpe
 
-          field.name -> loopForAnnotations(tpeRepr).filter { a =>
-            a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
-            a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
-          }
-
+          field.name -> loopForAnnotations(tpeRepr).filter(filterAnnotation)
         }
         .filter(_._2.nonEmpty)
 
@@ -383,7 +378,7 @@ object Macro:
         os.toMap
           .get(name)
           .flatten match
-          case None => 
+          case None =>
             '{ new CallByNeed(() => None) }
           case Some(expr) =>
             '{ new CallByNeed(() => Some(($expr).asInstanceOf[P])) }
