@@ -89,9 +89,8 @@ trait Derivation[TypeClass[_]]
     inline if Macro.isValueClass[A] then derivedValueClass[A]
     else
       error(
-        "Deriving the typeclass based on mirrors or directly is not possible for " + codeOf(
-          Macro.showType[A]
-        ) +
+        "Deriving the typeclass based on mirrors or directly is not possible for " + Macro
+          .showType[A] +
           ". Please refer to the documentation or report a feature request."
       )
 

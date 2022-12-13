@@ -101,7 +101,7 @@ class SumsTests extends munit.FunSuite:
   ) {
     val error = compileErrors("Show.derived[Parent]")
     assert(
-      error contains "Deriving the typeclass based on mirrors or directly is not possible for \"magnolia1.tests.SumsTests.Parent\":String. Please refer to the documentation or report a feature request."
+      error contains "Deriving the typeclass based on mirrors or directly is not possible for magnolia1.tests.SumsTests.Parent. Please refer to the documentation or report a feature request."
     )
   }
 
@@ -110,7 +110,7 @@ class SumsTests extends munit.FunSuite:
   ) {
     val error = compileErrors("Show.derived[GoodChild]")
     assert(
-      error contains "Deriving the typeclass based on mirrors or directly is not possible for \"magnolia1.tests.SumsTests.GoodChild\":String. Please refer to the documentation or report a feature request."
+      error contains "Deriving the typeclass based on mirrors or directly is not possible for magnolia1.tests.SumsTests.GoodChild. Please refer to the documentation or report a feature request."
     )
   }
 
