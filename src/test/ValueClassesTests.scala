@@ -87,35 +87,30 @@ class ValueClassesTests extends munit.FunSuite:
     assertEquals(res, expected)
   }
 
+  test("Construct a Show instance for a final value case class") {
+    val res = Show.derived[ServiceName].show(ServiceName("service"))
+    assertEquals(res, "ServiceName(value=service)")
+  }
+
+  test("Assume full auto derivation of external value classes") {
+    case class LogingConfig(n: ServiceName)
+    val res = SemiDefault[LogingConfig].default
+    assertEquals(res, LogingConfig(ServiceName("")))
+  }
+
   // support for non-product value classes is not yet supported
   // test("serialize a value class") {
   //   val res = Show.derived[Length].show(new Length(100))
   //   assertEquals(res, "100")
   // }
 
-  // test("construct a Show instance for value case class") {
-  //   val res = Show.derived[ServiceName1].show(ServiceName1("service"))
-  //   assertEquals(res, "service")
-  // }
-
+  // support for non-product value classes is not yet supported
   // test("read-only typeclass can serialize value case class with inaccessible private constructor") {
   //   val res = implicitly[Print[PrivateValueClass]].print(PrivateValueClass(42))
   //   assertEquals(res, "42")
   // }
 
-  // test("not assume full auto derivation of external value classes") {
-  //   val error = compileErrors("""
-  //     case class LoggingConfig(n: ServiceName1)
-  //     object LoggingConfig {
-  //       implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
-  //     }
-  //   """)
-  //   assert(error contains """
-  //     |magnolia: could not find SemiDefault.Typeclass for type magnolia1.tests.ServiceName1
-  //     |    in parameter 'n' of product type LoggingConfig
-  //     |""".stripMargin)
-  // }
-
+  // support for non-product value classes is not yet supported
   //   test("serialize value case class with accessible private constructor") {
   //   class PrivateValueClass private (val value: Int) extends AnyVal
   //   object PrivateValueClass {
@@ -134,20 +129,6 @@ class ValueClassesTests extends munit.FunSuite:
 object ValueClassesTests:
 
   case class SimpleVC(k: Int) extends AnyVal
-
-  @MyAnnotation(200)
-  sealed trait Whiz
-
-  @MyAnnotation(300)
-  sealed trait Kid
-
-  @MyAnnotation(100)
-  case class Barr(@MyParamAnnotation(101) k: Int @MyTypeAnnotation(102))
-      extends Whiz @MyTypeAnnotation(103)
-
-  @MyAnnotation(0)
-  case class Fooo(@MyParamAnnotation(1) barr: Barr @MyTypeAnnotation(2))
-      extends AnyVal @MyTypeAnnotation(3)
 
   @MyAnnotation(0)
   @MyAnnotation(1)
@@ -176,7 +157,7 @@ object ValueClassesTests:
 
   class Length(val value: Int) extends AnyVal
 
-  final case class ServiceName1(value: String) extends AnyVal
+  final case class ServiceName(value: String) extends AnyVal
 
   class PrivateValueClass private (val value: Int) extends AnyVal
 
