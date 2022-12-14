@@ -79,8 +79,7 @@ lazy val test = (projectMatrix in file(".test"))
     ),
     testFrameworks += new TestFramework("munit.Framework"),
     Test / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "test",
-    publishArtifact := false,
-    scalaJSModuleKind
+    publishArtifact := false
   )
   .jvmPlatform(scalaVersions = List(scala3))
   .jsPlatform(scalaVersions = List(scala3))
