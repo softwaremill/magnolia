@@ -53,12 +53,7 @@ lazy val core = (projectMatrix in file(".core"))
     versionScheme := Some("early-semver")
   )
   .jvmPlatform(scalaVersions = List(scala3))
-  .jsPlatform(
-    scalaVersions = List(scala3),
-    settings = {
-      Compile / scalacOptions ++= Seq("-scalajs")
-    }
-  )
+  .jsPlatform(scalaVersions = List(scala3))
   .nativePlatform(scalaVersions = List(scala3))
 
 lazy val examples = (projectMatrix in file(".examples"))
@@ -70,12 +65,7 @@ lazy val examples = (projectMatrix in file(".examples"))
     publishArtifact := false
   )
   .jvmPlatform(scalaVersions = List(scala3))
-  .jsPlatform(
-    scalaVersions = List(scala3),
-    settings = {
-      Compile / scalacOptions ++= Seq("-scalajs")
-    }
-  )
+  .jsPlatform(scalaVersions = List(scala3))
   .nativePlatform(scalaVersions = List(scala3))
 
 lazy val test = (projectMatrix in file(".test"))
@@ -89,13 +79,9 @@ lazy val test = (projectMatrix in file(".test"))
     ),
     testFrameworks += new TestFramework("munit.Framework"),
     Test / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "test",
-    publishArtifact := false
+    publishArtifact := false,
+    scalaJSModuleKind
   )
   .jvmPlatform(scalaVersions = List(scala3))
-  .jsPlatform(
-    scalaVersions = List(scala3),
-    settings = {
-      Compile / scalacOptions ++= Seq("-scalajs")
-    }
-  )
+  .jsPlatform(scalaVersions = List(scala3))
   .nativePlatform(scalaVersions = List(scala3))
