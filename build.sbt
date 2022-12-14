@@ -70,7 +70,12 @@ lazy val examples = (projectMatrix in file(".examples"))
     publishArtifact := false
   )
   .jvmPlatform(scalaVersions = List(scala3))
-  .jsPlatform(scalaVersions = List(scala3))
+  .jsPlatform(
+    scalaVersions = List(scala3),
+    settings = {
+      Compile / scalacOptions ++= Seq("-scalajs")
+    }
+  )
   .nativePlatform(scalaVersions = List(scala3))
 
 lazy val test = (projectMatrix in file(".test"))
@@ -87,5 +92,10 @@ lazy val test = (projectMatrix in file(".test"))
     publishArtifact := false
   )
   .jvmPlatform(scalaVersions = List(scala3))
-  .jsPlatform(scalaVersions = List(scala3))
+  .jsPlatform(
+    scalaVersions = List(scala3),
+    settings = {
+      Compile / scalacOptions ++= Seq("-scalajs")
+    }
+  )
   .nativePlatform(scalaVersions = List(scala3))
