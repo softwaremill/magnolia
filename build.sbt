@@ -53,7 +53,12 @@ lazy val core = (projectMatrix in file(".core"))
     versionScheme := Some("early-semver")
   )
   .jvmPlatform(scalaVersions = List(scala3))
-  .jsPlatform(scalaVersions = List(scala3))
+  .jsPlatform(
+    scalaVersions = List(scala3),
+    settings = {
+      Compile / scalacOptions ++= Seq("-scalajs")
+    }
+  )
   .nativePlatform(scalaVersions = List(scala3))
 
 lazy val examples = (projectMatrix in file(".examples"))
