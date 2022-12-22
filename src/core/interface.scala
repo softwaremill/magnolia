@@ -44,7 +44,6 @@ object CaseClass:
     override def toString: String = s"Param($label)"
 
   object Param:
-
     def apply[F[_], T, P](
         name: String,
         idx: Int,
@@ -64,7 +63,7 @@ object CaseClass:
       ):
         type PType = P
         def default: Option[PType] = defaultVal.value
-        def typeclass: F[PType] = cbn.value
+        def typeclass = cbn.value
         override def inheritedAnnotations = inheritedAnns
         def deref(value: T): P =
           value.asInstanceOf[Product].productElement(idx).asInstanceOf[P]
