@@ -1,7 +1,7 @@
 ![Magnolia](https://github.com/softwaremill/magnolia/raw/scala3/banner.jpg)
 
 [<img alt="GitHub Workflow" src="https://img.shields.io/github/workflow/status/softwaremill/magnolia/CI/scala3?style=for-the-badge" height="24">](https://github.com/softwaremill/magnolia/actions)
-[<img src="https://img.shields.io/badge/Discourse-ask%20question-blue?style=for-the-badge" height="24">](https://softwaremill.community/c/magnolia)
+[<img src="https://img.shields.io/badge/gitter-discuss-f00762?style=for-the-badge" height="24">](https://gitter.im/softwaremill/magnolia)
 [<img src="https://index.scala-lang.org/softwaremill/magnolia/magnolia/latest-by-scala-version.svg?color=2465cd&style=for-the-badge" height="24">](https://index.scala-lang.org/softwaremill/magnolia/magnolia)
 
 # Magnolia
@@ -25,7 +25,7 @@ enum Tree[+T] derives Print:
   case Branch(left: Tree[T], right: Tree[T])
   case Leaf(value: T)
 ```
-and provided a given instance of `Print[Int]` is in scope, and a Magnolia derivation for the `Print` typeclass
+and provided an given instance of `Print[Int]` is in scope, and a Magnolia derivation for the `Print` typeclass
 has been provided, we can automatically derive given typeclass instances of `Print[Tree[Int]]` on-demand, like
 so,
 ```scala
@@ -34,19 +34,7 @@ Tree.Branch(Tree.Branch(Tree.Leaf(1), Tree.Leaf(2)), Tree.Leaf(3)).print
 Typeclass authors may provide Magnolia derivations in the typeclass's companion object, but it is easy to create
 your own.
 
-Creating a generic derivation with Magnolia requires implementing two methods on `magnolia1.Derivation`:
-
-* `join()` : create typeclasses for case classes ('product types')
-* `split()` : create typeclasses for sealed-traits/enums ('sum types')
-
-### Example derivations
-
-There are many examples in the [`src/examples`](src/examples) folder.
-
-The definition of a `Print` typeclass with generic derivation might look like this
-(note we're using the [Lambda syntax for Single Abstract Method types](https://www.scala-lang.org/news/2.12.0/#lambda-syntax-for-sam-types)
-to instantiate the `Print` instances in `join` & `split` - that's possible because
-`Print` has only a single abstract method, `print`):
+The definition of a `Print` typeclass with generic derivation defined with Magnolia might look like this:
 ```scala
 import magnolia1.*
 
@@ -88,7 +76,7 @@ given instance: SemiPrint[Recursive] = SemiPrint.derived
 For Scala 3:
 
 ```scala
-val magnolia = "com.softwaremill.magnolia1_3" %% "magnolia" % "1.2.6"
+val magnolia = "com.softwaremill.magnolia1_3" %% "magnolia" % "1.2.0"
 ```
 
 For Scala 2, see the [scala2 branch](https://github.com/softwaremill/magnolia/tree/scala2).

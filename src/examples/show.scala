@@ -18,48 +18,44 @@ trait GenericShow[Out] extends AutoDerivation[[X] =>> Show[Out, X]] {
     * the result of showing each parameter, and prefixing it with the class name
     */
   def join[T](ctx: CaseClass[Typeclass, T]): Show[Out, T] = { value =>
-    if ctx.isValueClass then
-      val param = ctx.params.head
-      param.typeclass.show(param.deref(value))
-    else
-      val paramStrings = ctx.params.map { param =>
-        val attribStr =
-          if (param.annotations.isEmpty && param.inheritedAnnotations.isEmpty)
-            ""
-          else {
-            (param.annotations ++ param.inheritedAnnotations).distinct
-              .mkString("{", ",", "}")
-          }
+    val paramStrings = ctx.params.map { param =>
+      val attribStr =
+        if (param.annotations.isEmpty && param.inheritedAnnotations.isEmpty)
+          ""
+        else {
+          (param.annotations ++ param.inheritedAnnotations).distinct
+            .mkString("{", ",", "}")
+        }
 
-        val tpeAttribStr =
-          if (param.typeAnnotations.isEmpty) ""
-          else {
-            param.typeAnnotations.mkString("{", ",", "}")
-          }
+      val tpeAttribStr =
+        if (param.typeAnnotations.isEmpty) ""
+        else {
+          param.typeAnnotations.mkString("{", ",", "}")
+        }
 
-        s"${param.label}$attribStr$tpeAttribStr=${param.typeclass.show(param.deref(value))}"
-      }
+      s"${param.label}$attribStr$tpeAttribStr=${param.typeclass.show(param.deref(value))}"
+    }
 
-      val anns = (ctx.annotations ++ ctx.inheritedAnnotations).distinct
-      val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
+    val anns = (ctx.annotations ++ ctx.inheritedAnnotations).distinct
+    val annotationStr = if (anns.isEmpty) "" else anns.mkString("{", ",", "}")
 
-      val tpeAnns = ctx.typeAnnotations
-      val typeAnnotationStr =
-        if (tpeAnns.isEmpty) "" else tpeAnns.mkString("{", ",", "}")
+    val tpeAnns = ctx.typeAnnotations
+    val typeAnnotationStr =
+      if (tpeAnns.isEmpty) "" else tpeAnns.mkString("{", ",", "}")
 
-      def typeArgsString(typeInfo: TypeInfo): String =
-        if typeInfo.typeParams.isEmpty then ""
-        else
-          typeInfo.typeParams
-            .map(arg => s"${arg.short}${typeArgsString(arg)}")
-            .mkString("[", ",", "]")
+    def typeArgsString(typeInfo: TypeInfo): String =
+      if typeInfo.typeParams.isEmpty then ""
+      else
+        typeInfo.typeParams
+          .map(arg => s"${arg.short}${typeArgsString(arg)}")
+          .mkString("[", ",", "]")
 
-      joinElems(
-        ctx.typeInfo.short + typeArgsString(
-          ctx.typeInfo
-        ) + annotationStr + typeAnnotationStr,
-        paramStrings
-      )
+    joinElems(
+      ctx.typeInfo.short + typeArgsString(
+        ctx.typeInfo
+      ) + annotationStr + typeAnnotationStr,
+      paramStrings
+    )
   }
 
   /** choose which typeclass to use based on the subtype of the sealed trait and
