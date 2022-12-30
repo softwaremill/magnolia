@@ -1,6 +1,6 @@
-package magnolia1.examples
+package magnolia2.examples
 
-import magnolia1._
+import magnolia2._
 
 /** typeclass for providing a default value for a particular type */
 trait HasDefault[T]:

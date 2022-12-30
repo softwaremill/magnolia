@@ -1,7 +1,7 @@
-package magnolia1.tests
+package magnolia2.tests
 
-import magnolia1.*
-import magnolia1.examples.*
+import magnolia2.*
+import magnolia2.examples.*
 
 class ModifiersTests extends munit.FunSuite:
   import ModifiersTests.*

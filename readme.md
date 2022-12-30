@@ -34,7 +34,7 @@ Tree.Branch(Tree.Branch(Tree.Leaf(1), Tree.Leaf(2)), Tree.Leaf(3)).print
 Typeclass authors may provide Magnolia derivations in the typeclass's companion object, but it is easy to create
 your own.
 
-Creating a generic derivation with Magnolia requires implementing two methods on `magnolia1.Derivation`:
+Creating a generic derivation with Magnolia requires implementing two methods on `magnolia2.Derivation`:
 
 * `join()` : create typeclasses for case classes ('product types')
 * `split()` : create typeclasses for sealed-traits/enums ('sum types')
@@ -48,7 +48,7 @@ The definition of a `Print` typeclass with generic derivation might look like th
 to instantiate the `Print` instances in `join` & `split` - that's possible because
 `Print` has only a single abstract method, `print`):
 ```scala
-import magnolia1.*
+import magnolia2.*
 
 trait Print[T] {
   extension (x: T) def print: String
@@ -88,14 +88,14 @@ given instance: SemiPrint[Recursive] = SemiPrint.derived
 For Scala 3:
 
 ```scala
-val magnolia = "com.softwaremill.magnolia1_3" %% "magnolia" % "1.2.6"
+val magnolia = "com.softwaremill.magnolia2_3" %% "magnolia" % "1.2.6"
 ```
 
 For Scala 2, see the [scala2 branch](https://github.com/softwaremill/magnolia/tree/scala2).
 
 ## Package and artifact naming, versioning
 
-The main magnolia package is `magnolia1`, so that magnolia 1.x can be used alongside magnolia 0.17 (which are binary-incompatible).
+The main magnolia package is `magnolia2`, so that magnolia 1.x can be used alongside magnolia 0.17 (which are binary-incompatible).
 Future major releases of magnolia can change the package name for the same reason.
 
 The group id for magnolia follows the naming scheme: `com.softwaremill.magnolia[major version]_[scala major version]`.

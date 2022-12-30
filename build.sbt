@@ -8,7 +8,7 @@ ThisBuild / dynverTagPrefix := "scala3-v" // a custom prefix is needed to differ
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   scalaVersion := scala3,
-  organization := "com.softwaremill.magnolia1_3",
+  organization := "com.softwaremill.magnolia2_3",
   description := "Fast, easy and transparent typeclass derivation for Scala 3",
   updateDocs := UpdateVersionInDocs(
     sLog.value,

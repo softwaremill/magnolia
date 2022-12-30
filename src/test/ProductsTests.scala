@@ -1,7 +1,7 @@
-package magnolia1.tests
+package magnolia2.tests
 
-import magnolia1.*
-import magnolia1.examples.*
+import magnolia2.*
+import magnolia2.examples.*
 import java.time.LocalDate
 
 class ProductsTests extends munit.FunSuite:
@@ -59,7 +59,7 @@ class ProductsTests extends munit.FunSuite:
   test("decode a product nested in objects") {
     import Obj1.Obj2.*
     val res = summon[Decoder[NestedInObjects]].decode(
-      """magnolia1.tests.Obj1.Obj2.NestedInObjects(i=42)"""
+      """magnolia2.tests.Obj1.Obj2.NestedInObjects(i=42)"""
     )
     assertEquals(res, NestedInObjects(42))
   }
@@ -177,20 +177,20 @@ class ProductsTests extends munit.FunSuite:
       def subtypeNames = ???
     }
     val res = TypeNameInfo.derived[Fruit].name
-    assertEquals(res.full, "magnolia1.tests.ProductsTests.Fruit")
+    assertEquals(res.full, "magnolia2.tests.ProductsTests.Fruit")
   }
 
   test("show chained error stack when leaf instance is missing") {
     val error = compileErrors("Show.derived[Schedule]")
     assert(
-      error contains "No given instance of type magnolia1.examples.Show[String, Seq[magnolia1.tests.ProductsTests.Event]] was found."
+      error contains "No given instance of type magnolia2.examples.Show[String, Seq[magnolia2.tests.ProductsTests.Event]] was found."
     )
   }
 
   test("show chained error stack") {
     val error = compileErrors("Show.derived[(Int, Seq[(Double, String)])]")
     assert(
-      error contains "No given instance of type magnolia1.examples.Show[String, Seq[(Double, String)]] was found."
+      error contains "No given instance of type magnolia2.examples.Show[String, Seq[(Double, String)]] was found."
     )
   }
 

@@ -1,6 +1,6 @@
-package magnolia1.examples
+package magnolia2.examples
 
-import magnolia1.*
+import magnolia2.*
 
 trait NoCombine[A]:
   def nameOf(value: A): String
@@ -8,7 +8,7 @@ trait NoCombine[A]:
 object NoCombine extends AutoDerivation[NoCombine]:
   type Typeclass[T] = NoCombine[T]
 
-  def join[T](ctx: CaseClass[magnolia1.examples.NoCombine, T]): NoCombine[T] =
+  def join[T](ctx: CaseClass[magnolia2.examples.NoCombine, T]): NoCombine[T] =
     instance { value =>
       ctx.typeInfo.short
     }

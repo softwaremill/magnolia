@@ -1,6 +1,6 @@
-package magnolia1.examples
+package magnolia2.examples
 
-import magnolia1.*
+import magnolia2.*
 
 trait PrintRepeated[T]:
   def print(t: T): String
