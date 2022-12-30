@@ -184,26 +184,26 @@ end SealedTrait
 
 object SealedTrait:
 
-  /**
-   * @tparam Type the type of the Sealed Trait or Scala 3 Enum, eg 'Suit'
-   * @tparam SType the type of the subtype, eg 'Diamonds' or 'Clubs'
-   */
+  /** @tparam Type
+    *   the type of the Sealed Trait or Scala 3 Enum, eg 'Suit'
+    * @tparam SType
+    *   the type of the subtype, eg 'Diamonds' or 'Clubs'
+    */
   class Subtype[Typeclass[_], Type, SType](
       val typeInfo: TypeInfo,
       val annotations: IArray[Any],
       val inheritedAnnotations: IArray[Any],
       val typeAnnotations: IArray[Any],
       val isObject: Boolean,
-      val index: Int,
       callByNeed: CallByNeed[Typeclass[SType]],
       isType: Type => Boolean,
       asType: Type => SType & Type
   ) extends PartialFunction[Type, SType & Type],
         Serializable:
 
-    /**
-     * @return the already-constructed typeclass instance for this subtype
-     */
+    /** @return
+      *   the already-constructed typeclass instance for this subtype
+      */
     def typeclass: Typeclass[SType & Type] =
       callByNeed.value.asInstanceOf[Typeclass[SType & Type]]
     def cast: PartialFunction[Type, SType & Type] = this

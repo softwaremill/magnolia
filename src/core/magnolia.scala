@@ -77,10 +77,9 @@ trait Derivation[TypeClass[_]]
   def split[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T]
 
   transparent inline def subtypes[T, SubtypeTuple <: Tuple](
-      m: Mirror.SumOf[T],
-      idx: Int = 0 // no longer used, kept for bincompat
+      m: Mirror.SumOf[T]
   ): List[SealedTrait.Subtype[Typeclass, T, _]] =
-    subtypesFromMirror[T, SubtypeTuple](m, idx)
+    subtypesFromMirror[T, SubtypeTuple](m)
 
   private inline def derivedMirrorSum[A](sum: Mirror.SumOf[A]): Typeclass[A] =
     split(sealedTraitFromMirror(sum))
