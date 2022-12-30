@@ -44,25 +44,6 @@ trait CommonDerivation[TypeClass[_]]:
     defaults
   )
 
-  // for backward compatibility with v1.1.1
-  inline def getParams_[T, Labels <: Tuple, Params <: Tuple](
-      annotations: Map[String, List[Any]],
-      inheritedAnnotations: Map[String, List[Any]],
-      typeAnnotations: Map[String, List[Any]],
-      repeated: Map[String, Boolean],
-      idx: Int = 0
-  ): List[CaseClass.Param[Typeclass, T]] =
-    getParams__(annotations, Map.empty, typeAnnotations, repeated, Map(), idx)
-
-  // for backward compatibility with v1.0.0
-  inline def getParams[T, Labels <: Tuple, Params <: Tuple](
-      annotations: Map[String, List[Any]],
-      typeAnnotations: Map[String, List[Any]],
-      repeated: Map[String, Boolean],
-      idx: Int = 0
-  ): List[CaseClass.Param[Typeclass, T]] =
-    getParams__(annotations, Map.empty, typeAnnotations, repeated, Map(), idx)
-
 end CommonDerivation
 
 trait ProductDerivation[TypeClass[_]] extends CommonDerivation[TypeClass]:
