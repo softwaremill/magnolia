@@ -1,7 +1,6 @@
 package magnolia2.examples
 
-import scala.language.experimental.macros
-import magnolia2._
+import magnolia2.*
 
 trait SemiPrint[A]:
   def print(a: A): String

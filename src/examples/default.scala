@@ -1,6 +1,6 @@
 package magnolia2.examples
 
-import magnolia2._
+import magnolia2.*
 
 /** typeclass for providing a default value for a particular type */
 trait HasDefault[T]:

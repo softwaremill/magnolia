@@ -1,6 +1,6 @@
 package magnolia2.examples
 
-import magnolia2._
+import magnolia2.*
 
 trait SubtypeInfo[T] {
   def subtypeIsObject: Seq[Boolean]

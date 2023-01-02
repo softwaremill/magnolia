@@ -1,6 +1,6 @@
 package magnolia2.examples
 
-import magnolia2._
+import magnolia2.*
 
 case class Passthrough[T](
     ctx: Option[Either[CaseClass[_, T], SealedTrait[_, T]]]

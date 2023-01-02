@@ -16,6 +16,7 @@ __Magnolia__ is a generic macro for automatic materialization of typeclasses for
  - works with recursive and mutually-recursive definitions
  - supports parameterized ADTs (GADTs), including those in recursive types
  - supports typeclasses whose generic type parameter is used in either covariant and contravariant positions
+ - supports value classes of non-parametrized case classes in version `v2`
 
 ## Getting Started
 
@@ -85,17 +86,19 @@ given instance: SemiPrint[Recursive] = SemiPrint.derived
 ```  
 ## Availability
 
-For Scala 3:
+For Scala 3 `v2` branch:
 
 ```scala
 val magnolia = "com.softwaremill.magnolia2_3" %% "magnolia" % "1.2.6"
 ```
 
+For Scala 3 main branch of full mirror-based derivation, see the [scala3 branch](https://github.com/softwaremill/magnolia/tree/scala3). 
+
 For Scala 2, see the [scala2 branch](https://github.com/softwaremill/magnolia/tree/scala2).
 
 ## Package and artifact naming, versioning
 
-The main magnolia package is `magnolia2`, so that magnolia 1.x can be used alongside magnolia 0.17 (which are binary-incompatible).
+The main magnolia package is full mirror-based `magnolia1`, so that magnolia 1.x can be used alongside magnolia 0.17 (which are binary-incompatible). The package `magnolia2` has been introduced to account for mirror-less cases as the implmentation is not binary-compatible with 1.x series.
 Future major releases of magnolia can change the package name for the same reason.
 
 The group id for magnolia follows the naming scheme: `com.softwaremill.magnolia[major version]_[scala major version]`.
