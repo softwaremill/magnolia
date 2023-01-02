@@ -71,28 +71,6 @@ object CaseClass:
         def deref(value: T): P =
           value.asInstanceOf[Product].productElement(idx).asInstanceOf[P]
 
-    // for backward compatibility with v1.0.0
-    def apply[F[_], T, P](
-        name: String,
-        idx: Int,
-        repeated: Boolean,
-        cbn: CallByNeed[F[P]],
-        defaultVal: CallByNeed[Option[P]],
-        annotations: IArray[Any],
-        typeAnnotations: IArray[Any]
-    ): Param[F, T] =
-      new CaseClass.Param[F, T](
-        name,
-        idx,
-        repeated,
-        annotations,
-        typeAnnotations
-      ):
-        type PType = P
-        def default: Option[PType] = defaultVal.value
-        def typeclass = cbn.value
-        def deref(value: T): P =
-          value.asInstanceOf[Product].productElement(idx).asInstanceOf[P]
   end Param
 end CaseClass
 
@@ -115,24 +93,6 @@ abstract class CaseClass[Typeclass[_], Type](
     val inheritedAnnotations: IArray[Any] = IArray.empty[Any],
     val typeAnnotations: IArray[Any]
 ) extends Serializable:
-
-  // for backward compatibility with v1.0.0
-  def this(
-      typeInfo: TypeInfo,
-      isObject: Boolean,
-      isValueClass: Boolean,
-      params: IArray[CaseClass.Param[Typeclass, Type]],
-      annotations: IArray[Any],
-      typeAnnotations: IArray[Any]
-  ) = this(
-    typeInfo,
-    isObject,
-    isValueClass,
-    params,
-    annotations,
-    IArray.empty[Any],
-    typeAnnotations
-  )
 
   type Param = CaseClass.Param[Typeclass, Type]
 
@@ -171,26 +131,6 @@ abstract class CaseClass[Typeclass[_], Type](
       def deref(value: Type): P =
         value.asInstanceOf[Product].productElement(idx).asInstanceOf[P]
 
-  // for backward compatibility with v1.0.0
-  def param[P](
-      name: String,
-      idx: Int,
-      repeated: Boolean,
-      cbn: CallByNeed[Typeclass[P]],
-      defaultVal: CallByNeed[Option[P]],
-      annotations: IArray[Any],
-      typeAnnotations: IArray[Any]
-  ): Param = param(
-    name,
-    idx,
-    repeated,
-    cbn,
-    defaultVal,
-    annotations,
-    IArray.empty[Any],
-    typeAnnotations
-  )
-
 end CaseClass
 
 /** Represents a Sealed-Trait or a Scala 3 Enum.
@@ -206,38 +146,6 @@ case class SealedTrait[Typeclass[_], Type](
     isEnum: Boolean,
     inheritedAnnotations: IArray[Any]
 ) extends Serializable:
-
-  // for backward compatibility with v1.0.0
-  def this(
-      typeInfo: TypeInfo,
-      subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
-      annotations: IArray[Any],
-      typeAnnotations: IArray[Any],
-      isEnum: Boolean
-  ) = this(
-    typeInfo,
-    subtypes,
-    annotations,
-    typeAnnotations,
-    isEnum,
-    IArray.empty[Any]
-  )
-
-  // for backward compatibility with v1.0.0
-  def copy(
-      typeInfo: TypeInfo,
-      subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
-      annotations: IArray[Any],
-      typeAnnotations: IArray[Any],
-      isEnum: Boolean
-  ): SealedTrait[Typeclass, Type] = this.copy(
-    typeInfo,
-    subtypes,
-    annotations,
-    typeAnnotations,
-    isEnum,
-    this.inheritedAnnotations
-  )
 
   type Subtype[S] = SealedTrait.SubtypeValue[Typeclass, Type, S]
 
@@ -276,22 +184,6 @@ end SealedTrait
 
 object SealedTrait:
 
-  // for backward compatibility with v1.0.0
-  def apply[Typeclass[_], Type](
-      typeInfo: TypeInfo,
-      subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
-      annotations: IArray[Any],
-      typeAnnotations: IArray[Any],
-      isEnum: Boolean
-  ) = new SealedTrait[Typeclass, Type](
-    typeInfo,
-    subtypes,
-    annotations,
-    typeAnnotations,
-    isEnum,
-    IArray.empty[Any]
-  )
-
   /** @tparam Type
     *   the type of the Sealed Trait or Scala 3 Enum, eg 'Suit'
     * @tparam SType
@@ -303,34 +195,11 @@ object SealedTrait:
       val inheritedAnnotations: IArray[Any],
       val typeAnnotations: IArray[Any],
       val isObject: Boolean,
-      val index: Int,
       callByNeed: CallByNeed[Typeclass[SType]],
       isType: Type => Boolean,
       asType: Type => SType & Type
   ) extends PartialFunction[Type, SType & Type],
         Serializable:
-
-    // for backward compatibility with v1.0.0
-    def this(
-        typeInfo: TypeInfo,
-        annotations: IArray[Any],
-        typeAnnotations: IArray[Any],
-        isObject: Boolean,
-        index: Int,
-        callByNeed: CallByNeed[Typeclass[SType]],
-        isType: Type => Boolean,
-        asType: Type => SType & Type
-    ) = this(
-      typeInfo,
-      annotations,
-      IArray.empty[Any],
-      typeAnnotations,
-      isObject,
-      index,
-      callByNeed,
-      isType,
-      asType
-    )
 
     /** @return
       *   the already-constructed typeclass instance for this subtype
