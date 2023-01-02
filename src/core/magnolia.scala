@@ -9,20 +9,20 @@ import Macro.*
 trait CommonDerivation[TypeClass[_]]:
   type Typeclass[T] = TypeClass[T]
 
-  /**
-   * Must be implemented by the user of Magnolia to construct a
-   * typeclass for case class `T` using the provided type info.
-   * E.g. if we are deriving `Show[T]` typeclasses, and `T`
-   * is a case class `Foo(...)`, we need to constuct `Show[Foo]`.
-   *
-   * This method is called 'join' because typically it will _join_
-   * together the typeclasses for all the parameters of the case class,
-   * into a single typeclass for the case class itself. The field
-   * [[CaseClass.params]] can provide useful information for doing this.
-   *
-   * @param caseClass information about the case class `T`, its parameters,
-   *                  and _their_ typeclasses
-   */
+  /** Must be implemented by the user of Magnolia to construct a typeclass for
+    * case class `T` using the provided type info. E.g. if we are deriving
+    * `Show[T]` typeclasses, and `T` is a case class `Foo(...)`, we need to
+    * constuct `Show[Foo]`.
+    *
+    * This method is called 'join' because typically it will _join_ together the
+    * typeclasses for all the parameters of the case class, into a single
+    * typeclass for the case class itself. The field [[CaseClass.params]] can
+    * provide useful information for doing this.
+    *
+    * @param caseClass
+    *   information about the case class `T`, its parameters, and _their_
+    *   typeclasses
+    */
   def join[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T]
 
   protected inline def derivedMirrorProduct[A](
@@ -79,21 +79,20 @@ trait Derivation[TypeClass[_]]
     extends CommonDerivation[TypeClass]
     with SealedTraitDerivation:
 
-  /**
-   * This must be implemented by the user of Magnolia to construct a Typeclass
-   * for 'T', where 'T' is a Sealed Trait or Scala 3 Enum, using the provided
-   * type info. E.g. if we are deriving 'Show[T]' typeclasses, and T
-   * is an enum 'Suit' (eg with values Diamonds, Clubs, etc), we need to
-   * constuct 'Show[Suit]'.
-   *
-   * This method is called 'split' because it will ''split'' the different
-   * possible types of the SealedTrait, and handle each one to finally
-   * produce a typeclass capable of handling any possible subtype of the trait.
-   *
-   * A useful function for implementing this method is [[SealedTrait#choose]],
-   * which can take a value instance and provide information on the specific
-   * subtype of the sealedTrait which that value is.
-   */
+  /** This must be implemented by the user of Magnolia to construct a Typeclass
+    * for 'T', where 'T' is a Sealed Trait or Scala 3 Enum, using the provided
+    * type info. E.g. if we are deriving 'Show[T]' typeclasses, and T is an enum
+    * 'Suit' (eg with values Diamonds, Clubs, etc), we need to constuct
+    * 'Show[Suit]'.
+    *
+    * This method is called 'split' because it will ''split'' the different
+    * possible types of the SealedTrait, and handle each one to finally produce
+    * a typeclass capable of handling any possible subtype of the trait.
+    *
+    * A useful function for implementing this method is [[SealedTrait#choose]],
+    * which can take a value instance and provide information on the specific
+    * subtype of the sealedTrait which that value is.
+    */
   def split[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T]
 
   transparent inline def subtypes[T, SubtypeTuple <: Tuple](

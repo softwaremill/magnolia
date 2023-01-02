@@ -1,6 +1,6 @@
 package magnolia2.examples
 
-import magnolia2._
+import magnolia2.*
 
 /** decoder for converting strings to other types providing good error messages
   */
