@@ -1,6 +1,6 @@
-package magnolia1.examples
+package magnolia2.examples
 
-import magnolia1.*
+import magnolia2.*
 
 trait WeakHash[T]:
   def hash(value: T): Int

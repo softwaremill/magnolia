@@ -1,4 +1,4 @@
-package magnolia1
+package magnolia2
 
 import scala.quoted.*
 import scala.annotation.meta.field

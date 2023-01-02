@@ -1,6 +1,6 @@
-package magnolia1.examples
+package magnolia2.examples
 
-import magnolia1._
+import magnolia2.*
 
 /** Type class for copying an instance of some type `T`, thereby replacing
   * certain fields with other values.
