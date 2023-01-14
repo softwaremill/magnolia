@@ -903,8 +903,8 @@ private[magnolia1] object CompileTimeState {
       val depth = c.enclosingMacros.count(m => workSet(m.macroApplication.symbol))
       try fn(stack.asInstanceOf[Stack[c.type]], depth)
       finally if (depth <= 1) {
-        stack.clear()
-        workSet.clear()
+        threadLocalStack.remove()
+        threadLocalWorkSet.remove()
       }
     }
   }
