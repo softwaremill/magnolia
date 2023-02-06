@@ -1,6 +1,6 @@
-package magnolia1.examples
+package magnolia2.examples
 
-import magnolia1.*
+import magnolia2.*
 
 trait Eq[T]:
   def equal(value: T, value2: T): Boolean

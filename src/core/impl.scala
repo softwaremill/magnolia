@@ -1,4 +1,4 @@
-package magnolia1
+package magnolia2
 
 import scala.compiletime.*
 import scala.deriving.Mirror
@@ -7,6 +7,59 @@ import scala.reflect.*
 import Macro.*
 
 object CaseClassDerivation:
+
+  inline def valueClassDerivation[TC[_], V]: CaseClass[TC, V] =
+
+    val theParam: CaseClass.Param[TC, V] =
+      Macro.ValueClassDerivation.getValueClassParam[TC, V]
+
+    new CaseClass[TC, V](
+      typeInfo = typeInfo[V],
+      isObject = isObject[V],
+      isValueClass = true,
+      params = IArray.from(theParam :: Nil),
+      annotations = IArray.from(anns[V]),
+      inheritedAnnotations = IArray.from(inheritedAnns[V]),
+      typeAnnotations = IArray.from(typeAnns[V])
+    ):
+
+      def rawConstruct(fieldValues: Seq[Any]): V =
+        Macro.ValueClassDerivation.rawContructByMacro[V](fieldValues.toList)
+
+      def construct[PType: ClassTag](makeParam: Param => PType): V =
+        Macro.ValueClassDerivation.rawContructByMacro[V](
+          params.map(makeParam).toList
+        )
+
+      def constructEither[Err, PType: ClassTag](
+          makeParam: Param => Either[Err, PType]
+      ): Either[List[Err], V] =
+        params
+          .map(makeParam)
+          .foldLeft[Either[List[Err], Array[PType]]](Right(Array())) {
+            case (Left(errs), Left(err))    => Left(errs ++ List(err))
+            case (Right(acc), Right(param)) => Right(acc ++ Array(param))
+            case (errs @ Left(_), _)        => errs
+            case (_, Left(err))             => Left(List(err))
+          }
+          .map { params =>
+            Macro.ValueClassDerivation.rawContructByMacro[V](params.toList)
+          }
+
+      def constructMonadic[M[_]: Monadic, PType: ClassTag](
+          makeParam: Param => M[PType]
+      ): M[V] =
+        val m = summon[Monadic[M]]
+        m.map {
+          params.map(makeParam).foldLeft(m.point(Array())) { (accM, paramM) =>
+            m.flatMap(accM) { acc =>
+              m.map(paramM)(acc ++ List(_))
+            }
+          }
+        } { params =>
+          Macro.ValueClassDerivation.rawContructByMacro[V](params.toList)
+        }
+
   inline def fromMirror[Typeclass[_], A](
       product: Mirror.ProductOf[A]
   ): CaseClass[Typeclass, A] =
@@ -97,6 +150,7 @@ object CaseClassDerivation:
             defaults,
             idx + 1
           )
+
 end CaseClassDerivation
 
 trait SealedTraitDerivation:
@@ -118,8 +172,7 @@ trait SealedTraitDerivation:
     )
 
   protected transparent inline def subtypesFromMirror[A, SubtypeTuple <: Tuple](
-      m: Mirror.SumOf[A],
-      idx: Int = 0 // no longer used, kept for bincompat
+      m: Mirror.SumOf[A]
   ): List[SealedTrait.Subtype[Typeclass, A, _]] =
     inline erasedValue[SubtypeTuple] match
       case _: EmptyTuple =>
@@ -128,8 +181,7 @@ trait SealedTraitDerivation:
         val sub = summonFrom {
           case mm: Mirror.SumOf[`s`] =>
             subtypesFromMirror[A, mm.MirroredElemTypes](
-              mm.asInstanceOf[m.type],
-              0
+              mm.asInstanceOf[m.type]
             )
           case _ =>
             List(
@@ -139,7 +191,6 @@ trait SealedTraitDerivation:
                 IArray.from(inheritedAnns[s]),
                 IArray.from(paramTypeAnns[A]),
                 isObject[s],
-                idx,
                 CallByNeed(summonFrom {
                   case tc: Typeclass[`s`] => tc
                   case _ => deriveSubtype(summonInline[Mirror.Of[s]])
@@ -149,5 +200,5 @@ trait SealedTraitDerivation:
               )
             )
         }
-        (sub ::: subtypesFromMirror[A, tail](m, idx + 1)).distinctBy(_.typeInfo)
+        (sub ::: subtypesFromMirror[A, tail](m)).distinctBy(_.typeInfo)
 end SealedTraitDerivation

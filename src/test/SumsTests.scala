@@ -1,7 +1,7 @@
-package magnolia1.tests
+package magnolia2.tests
 
-import magnolia1.*
-import magnolia1.examples.*
+import magnolia2.*
+import magnolia2.examples.*
 import scala.annotation.StaticAnnotation
 
 class SumsTests extends munit.FunSuite:
@@ -25,7 +25,7 @@ class SumsTests extends munit.FunSuite:
 
   test("decode a Person as an Entity") {
     val res = summon[Decoder[Entity]].decode(
-      """magnolia1.tests.SumsTests.Person(name=John Smith,age=32)"""
+      """magnolia2.tests.SumsTests.Person(name=John Smith,age=32)"""
     )
     assertEquals(res, Person("John Smith", 32))
   }
@@ -104,7 +104,7 @@ class SumsTests extends munit.FunSuite:
 
   test("sealed trait typeName should be complete and unchanged") {
     val res = TypeNameInfo.derived[Color].name
-    assertEquals(res.full, "magnolia1.tests.SumsTests.Color")
+    assertEquals(res.full, "magnolia2.tests.SumsTests.Color")
   }
 
   test(
@@ -112,10 +112,7 @@ class SumsTests extends munit.FunSuite:
   ) {
     val error = compileErrors("Show.derived[Parent]")
     assert(
-      error contains "No given instance of type deriving.Mirror.Of[magnolia1.tests.SumsTests.Parent] was found for parameter x$1 of method derived in trait Derivation."
-    )
-    assert(
-      error contains "trait Parent is not a generic sum because its child trait BadChild is not a generic product because it is not a case class"
+      error contains "Deriving the typeclass based on mirrors or directly is not possible for magnolia2.tests.SumsTests.Parent. Please refer to the documentation or report a feature request."
     )
   }
 
@@ -124,7 +121,7 @@ class SumsTests extends munit.FunSuite:
   ) {
     val error = compileErrors("Show.derived[GoodChild]")
     assert(
-      error contains "trait GoodChild is not a generic sum because its child class Dewey is not a generic product because it is not a case class"
+      error contains "Deriving the typeclass based on mirrors or directly is not possible for magnolia2.tests.SumsTests.GoodChild. Please refer to the documentation or report a feature request."
     )
   }
 

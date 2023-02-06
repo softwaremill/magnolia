@@ -1,6 +1,6 @@
-package magnolia1.examples
+package magnolia2.examples
 
-import magnolia1._
+import magnolia2.*
 
 // Prints a type, only requires read access to fields
 trait Print[T] {
@@ -9,15 +9,11 @@ trait Print[T] {
 
 trait GenericPrint extends AutoDerivation[Print]:
   def join[T](ctx: CaseClass[Typeclass, T]): Print[T] = value =>
-    if ctx.isValueClass then
-      val param = ctx.params.head
-      param.typeclass.print(param.deref(value))
-    else
-      ctx.params
-        .map { param =>
-          param.typeclass.print(param.deref(value))
-        }
-        .mkString(s"${ctx.typeInfo.short}(", ",", ")")
+    ctx.params
+      .map { param =>
+        param.typeclass.print(param.deref(value))
+      }
+      .mkString(s"${ctx.typeInfo.short}(", ",", ")")
 
   override def split[T](ctx: SealedTrait[Print, T]): Print[T] =
     ctx.choose(_) { sub => sub.typeclass.print(sub.value) }

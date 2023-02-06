@@ -1,7 +1,7 @@
-package magnolia1.tests
+package magnolia2.tests
 
-import magnolia1.*
-import magnolia1.examples.*
+import magnolia2.*
+import magnolia2.examples.*
 import scala.util.control.NonFatal
 
 class OtherTests extends munit.FunSuite:
@@ -15,7 +15,7 @@ class OtherTests extends munit.FunSuite:
       Show.derived[Beta]
     """)
     assert(
-      error contains "No given instance of type magnolia1.examples.Show[String, Alpha] was found."
+      error contains "No given instance of type magnolia2.examples.Show[String, Alpha] was found."
     )
   }
 
@@ -25,14 +25,14 @@ class OtherTests extends munit.FunSuite:
       Show.derived[Gamma]
     """)
     assert(
-      error contains "No given instance of type magnolia1.examples.Show[String, Unit] was found."
+      error contains "No given instance of type magnolia2.examples.Show[String, Unit] was found."
     )
   }
 
   test("not attempt to derive instances for refined types") {
     val error = compileErrors("Show.derived[Character]")
     assert(
-      error contains "No given instance of type magnolia1.examples.Show[String, Long & magnolia1.tests.OtherTests.Character.Tag] was found."
+      error contains "No given instance of type magnolia2.examples.Show[String, Long & magnolia2.tests.OtherTests.Character.Tag] was found."
     )
   }
 
@@ -44,7 +44,7 @@ class OtherTests extends munit.FunSuite:
   // TODO - not working: "Maximal number of successive inlines (32) exceeded"
 //  test("not attempt to derive instances for Java enums") {
 //    val error = compileErrors("Show.derived[WeekDay]")
-//    assert(error contains "No given instance of type deriving.Mirror.Of[magnolia1.tests.WeekDay] was found for parameter x$1 of method derived in trait Derivation.")
+//    assert(error contains "No given instance of type deriving.Mirror.Of[magnolia2.tests.WeekDay] was found for parameter x$1 of method derived in trait Derivation.")
 //  }
 
 // TODO - not working: java.lang.IllegalArgumentException: Cannot patch single value `Person(Bob,42)` with patch sequence of size 2
