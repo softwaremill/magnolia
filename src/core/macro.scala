@@ -33,7 +33,9 @@ object Macro:
   
   def isSingletonCasesEnum[T: Type](using Quotes): Expr[Boolean] =
     import quotes.reflect.*
-    Expr(TypeRepr.of[T].typeSymbol.companionClass.methodMember("values").nonEmpty)
+
+    val ts = TypeRepr.of[T].typeSymbol
+    Expr(ts.flags.is(Flags.Enum) && ts.companionClass.methodMember("values").nonEmpty)
 
   def anns[T: Type](using Quotes): Expr[List[Any]] =
     new CollectAnnotations[T].anns
