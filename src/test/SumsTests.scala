@@ -50,6 +50,17 @@ class SumsTests extends munit.FunSuite:
     assertEquals(derivedSubtypeInfo.isEnum, false)
   }
 
+  test("isSingletonCasesEnum field in SubtypeInfo should be true for singleton cases only enum") {
+    assertEquals(SubtypeInfo.derived[Size].isSingletonCasesEnum, true)
+    assertEquals(SubtypeInfo.derived[Planet].isSingletonCasesEnum, true)
+    assertEquals(SubtypeInfo.derived[ExtendingTraits].isSingletonCasesEnum, true)
+  }
+
+  test("isSingletonCasesEnum field in SubtypeInfo should be false for enum with non-singleton cases") {
+    assertEquals(SubtypeInfo.derived[Sport].isSingletonCasesEnum, false)
+    assertEquals(SubtypeInfo.derived[OptInt].isSingletonCasesEnum, false)
+  }
+
   test("construct a Show instance for an enum") {
     val res = Show.derived[Size].show(Size.S)
     assertEquals(res, "S()")
@@ -178,7 +189,15 @@ object SumsTests:
 
   enum Size:
     case S, M, L
+  
+  enum Planet(mass: Double, radius: Double):
+    case Earth extends Planet(5.976e+24, 6.37814e6)
+    case Mars extends Planet(6.421e+23, 3.3972e6)
 
+  enum OptInt:
+    case Some(x: Int)
+    case None
+ 
   sealed trait Sport
   case object Boxing extends Sport
   case class Soccer(players: Int) extends Sport

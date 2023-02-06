@@ -144,6 +144,7 @@ case class SealedTrait[Typeclass[_], Type](
     annotations: IArray[Any],
     typeAnnotations: IArray[Any],
     isEnum: Boolean,
+    isSingletonCasesEnum: Boolean,
     inheritedAnnotations: IArray[Any]
 ) extends Serializable:
 

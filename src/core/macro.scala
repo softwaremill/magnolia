@@ -14,6 +14,9 @@ object Macro:
 
   inline def isEnum[T]: Boolean =
     ${ isEnum[T] }
+  
+  inline def isSingletonCasesEnum[T]: Boolean =
+    ${ isSingletonCasesEnum[T] }
 
   inline def anns[T]: List[Any] =
     ${ anns[T] }
@@ -57,6 +60,12 @@ object Macro:
     import quotes.reflect.*
 
     Expr(TypeRepr.of[T].typeSymbol.flags.is(Flags.Enum))
+  
+  def isSingletonCasesEnum[T: Type](using Quotes): Expr[Boolean] =
+    import quotes.reflect.*
+
+    val ts = TypeRepr.of[T].typeSymbol
+    Expr(ts.flags.is(Flags.Enum) && ts.companionClass.methodMember("values").nonEmpty)
 
   def paramTypeAnns[T: Type](using
       q: Quotes
