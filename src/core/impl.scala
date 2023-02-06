@@ -113,6 +113,7 @@ trait SealedTraitDerivation:
       IArray.from(anns[A]),
       IArray(paramTypeAnns[A]*),
       isEnum[A],
+      isSingletonCasesEnum[A],
       IArray.from(inheritedAnns[A])
     )
 

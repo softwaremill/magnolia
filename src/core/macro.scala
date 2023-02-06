@@ -5,6 +5,7 @@ import scala.quoted.*
 object Macro:
   inline def isObject[T]: Boolean = ${ isObject[T] }
   inline def isEnum[T]: Boolean = ${ isEnum[T] }
+  inline def isSingletonCasesEnum[T]: Boolean = ${ isSingletonCasesEnum[T] }
   inline def anns[T]: List[Any] = ${ anns[T] }
   inline def inheritedAnns[T]: List[Any] = ${ inheritedAnns[T] }
   inline def typeAnns[T]: List[Any] = ${ typeAnns[T] }
@@ -29,6 +30,10 @@ object Macro:
     import quotes.reflect.*
 
     Expr(TypeRepr.of[T].typeSymbol.flags.is(Flags.Enum))
+  
+  def isSingletonCasesEnum[T: Type](using Quotes): Expr[Boolean] =
+    import quotes.reflect.*
+    Expr(TypeRepr.of[T].typeSymbol.companionClass.methodMember("values").nonEmpty)
 
   def anns[T: Type](using Quotes): Expr[List[Any]] =
     new CollectAnnotations[T].anns

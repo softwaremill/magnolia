@@ -201,6 +201,7 @@ case class SealedTrait[Typeclass[_], Type](
     annotations: IArray[Any],
     typeAnnotations: IArray[Any],
     isEnum: Boolean,
+    isSingletonCasesEnum: Boolean,
     inheritedAnnotations: IArray[Any]
 ) extends Serializable:
 
@@ -217,6 +218,7 @@ case class SealedTrait[Typeclass[_], Type](
     annotations,
     typeAnnotations,
     isEnum,
+    false,
     IArray.empty[Any]
   )
 
@@ -233,6 +235,7 @@ case class SealedTrait[Typeclass[_], Type](
     annotations,
     typeAnnotations,
     isEnum,
+    false,
     this.inheritedAnnotations
   )
 
@@ -283,6 +286,7 @@ object SealedTrait:
     annotations,
     typeAnnotations,
     isEnum,
+    false,
     IArray.empty[Any]
   )
 
