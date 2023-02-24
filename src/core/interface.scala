@@ -97,7 +97,7 @@ end CaseClass
 /**
  * In the terminology of Algebraic Data Types (ADTs), case classes are known as 'product types'.
  *
- * @param params an array giving information about the parameters of the case class. Each [[Param]] element
+ * @param parameters an array giving information about the parameters of the case class. Each [[Param]] element
  *               has a very useful [[CaseClass.Param.typeclass]] field giving the constructed typeclass for the
  *               parameter's type. Eg for a `case class Foo(bar: String, baz: Int)`, you can
  *               obtain `Typeclass[String]`, `Typeclass[Int]`.
@@ -106,7 +106,7 @@ abstract class CaseClass[Typeclass[_], Type](
     val typeInfo: TypeInfo,
     val isObject: Boolean,
     val isValueClass: Boolean,
-    val params: IArray[CaseClass.Param[Typeclass, Type]],
+    val parameters: IArray[CaseClass.Param[Typeclass, Type]],
     val annotations: IArray[Any],
     val inheritedAnnotations: IArray[Any] = IArray.empty[Any],
     val typeAnnotations: IArray[Any]
@@ -117,23 +117,25 @@ abstract class CaseClass[Typeclass[_], Type](
       typeInfo: TypeInfo,
       isObject: Boolean,
       isValueClass: Boolean,
-      params: IArray[CaseClass.Param[Typeclass, Type]],
+      parameters: IArray[CaseClass.Param[Typeclass, Type]],
       annotations: IArray[Any],
       typeAnnotations: IArray[Any]
   ) = this(
     typeInfo,
     isObject,
     isValueClass,
-    params,
+    parameters,
     annotations,
     IArray.empty[Any],
     typeAnnotations
   )
 
+  def params: IArray[CaseClass.Param[Typeclass, Type]] = parameters
+
   type Param = CaseClass.Param[Typeclass, Type]
 
   override def toString: String =
-    s"CaseClass(${typeInfo.full}, ${params.mkString(",")})"
+    s"CaseClass(${typeInfo.full}, ${parameters.mkString(",")})"
   def construct[PType](makeParam: Param => PType)(using ClassTag[PType]): Type
   def constructMonadic[Monad[_]: Monadic, PType: ClassTag](
       make: Param => Monad[PType]

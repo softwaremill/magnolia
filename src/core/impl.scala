@@ -10,7 +10,7 @@ object CaseClassDerivation:
   inline def fromMirror[Typeclass[_], A](
       product: Mirror.ProductOf[A]
   ): CaseClass[Typeclass, A] =
-    val parameters = IArray(
+    val params = IArray(
       paramsFromMaps[
         Typeclass,
         A,
@@ -29,13 +29,13 @@ object CaseClassDerivation:
       typeInfo[A],
       isObject[A],
       isValueClass[A],
-      parameters,
+      params,
       IArray(anns[A]*),
       IArray(inheritedAnns[A]*),
       IArray[Any](typeAnns[A]*)
     ):
       def construct[PType: ClassTag](makeParam: Param => PType): A =
-        product.fromProduct(Tuple.fromArray(params.map(makeParam).to(Array)))
+        product.fromProduct(Tuple.fromArray(parameters.map(makeParam).to(Array)))
 
       def rawConstruct(fieldValues: Seq[Any]): A =
         product.fromProduct(Tuple.fromArray(fieldValues.to(Array)))
@@ -43,7 +43,7 @@ object CaseClassDerivation:
       def constructEither[Err, PType: ClassTag](
           makeParam: Param => Either[Err, PType]
       ): Either[List[Err], A] =
-        params
+        parameters
           .map(makeParam)
           .foldLeft[Either[List[Err], Array[PType]]](Right(Array())) {
             case (Left(errs), Left(err))    => Left(errs ++ List(err))
@@ -58,7 +58,7 @@ object CaseClassDerivation:
       ): M[A] = {
         val m = summon[Monadic[M]]
         m.map {
-          params.map(makeParam).foldLeft(m.point(Array())) { (accM, paramM) =>
+          parameters.map(makeParam).foldLeft(m.point(Array())) { (accM, paramM) =>
             m.flatMap(accM) { acc =>
               m.map(paramM)(acc ++ List(_))
             }
