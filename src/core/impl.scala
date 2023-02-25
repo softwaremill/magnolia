@@ -35,7 +35,9 @@ object CaseClassDerivation:
       IArray[Any](typeAnns[A]*)
     ):
       def construct[PType: ClassTag](makeParam: Param => PType): A =
-        product.fromProduct(Tuple.fromArray(parameters.map(makeParam).to(Array)))
+        product.fromProduct(
+          Tuple.fromArray(parameters.map(makeParam).to(Array))
+        )
 
       def rawConstruct(fieldValues: Seq[Any]): A =
         product.fromProduct(Tuple.fromArray(fieldValues.to(Array)))
@@ -58,10 +60,11 @@ object CaseClassDerivation:
       ): M[A] = {
         val m = summon[Monadic[M]]
         m.map {
-          parameters.map(makeParam).foldLeft(m.point(Array())) { (accM, paramM) =>
-            m.flatMap(accM) { acc =>
-              m.map(paramM)(acc ++ List(_))
-            }
+          parameters.map(makeParam).foldLeft(m.point(Array())) {
+            (accM, paramM) =>
+              m.flatMap(accM) { acc =>
+                m.map(paramM)(acc ++ List(_))
+              }
           }
         } { params => product.fromProduct(Tuple.fromArray(params)) }
       }
