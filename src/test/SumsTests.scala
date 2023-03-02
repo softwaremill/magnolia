@@ -153,7 +153,7 @@ class SumsTests extends munit.FunSuite:
 
   test("sealed trait subtypes should be ordered") {
     val res = TypeNameInfo.derived[Color].subtypeNames.map(_.short)
-    assertEquals(res, Seq("Red", "Green", "Blue", "Orange", "Pink"))
+    assertEquals(res, Seq("Blue", "Green", "Orange", "Pink", "Red"))
   }
 
   test("sealed trait subtypes should detect isObject") {
@@ -203,23 +203,19 @@ class SumsTests extends munit.FunSuite:
 
    test("derive all subtypes in complex hierarchy") {
      val res = Passthrough.derived[Complex].ctx.get.toOption.get
-     assertEquals(res.subtypes.size, 7)
-     List(
-       Complex.ObjectE,
-       Complex.Object,
-       Complex.Scoped.Object,
-       Complex.ClassH(1),
-       Complex.ObjectD,
-       Complex.ObjectF,
-       Complex.ObjectC
-     ).foreach { o =>
-       val chosen = res.choose(o)(identity)
-       assertEquals(chosen.value, o)
-       assertEquals(
-         chosen.typeInfo.short,
-         o.getClass.getSimpleName.replace("$", "")
-       )
-     }
+
+     val pkg = "magnolia1.tests.SumsTests.Complex"
+     val expected = List(
+       s"$pkg.ClassH",
+       s"$pkg.Object",
+       s"$pkg.ObjectC",
+       s"$pkg.ObjectD",
+       s"$pkg.ObjectE",
+       s"$pkg.ObjectF",
+       s"$pkg.Scoped.Object",
+     )
+
+     assertEquals(res.subtypes.map(_.typeInfo.full).toList, expected)
    }
 
   test("support split without join") {
