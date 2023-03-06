@@ -4,6 +4,76 @@ import magnolia1.*
 import magnolia1.examples.*
 import scala.annotation.StaticAnnotation
 
+object SumsTests:
+
+  case class MyAnnotation(order: Int) extends StaticAnnotation
+  case class MyTypeAnnotation(order: Int) extends StaticAnnotation
+
+  sealed trait Entity
+  case class Company(name: String) extends Entity
+  case class Person(name: String, age: Int) extends Entity
+  case class Address(line1: String, occupant: Person)
+
+  sealed trait Color
+  case object Red extends Color
+  case object Green extends Color
+  case object Blue extends Color
+  case object Orange extends Color
+  case object Pink extends Color
+
+  sealed trait Y
+  case object A extends Y
+  case class B(s: String) extends Y
+
+  enum Size:
+    case S, M, L
+
+
+  sealed trait Sport
+  case object Boxing extends Sport
+  case class Soccer(players: Int) extends Sport
+
+  sealed trait Complex
+  object Complex:
+    case object Object extends G
+    sealed trait A extends Complex
+    sealed trait B extends A
+    case object ObjectC extends Complex
+    case object ObjectD extends A
+    case object ObjectE extends B
+    case object ObjectF extends A with Complex
+    sealed trait G extends B
+    case class ClassH(i: Int) extends A with G
+    object Scoped:
+      case object Object extends A
+  end Complex
+
+  object ExtendingTraits:
+    trait One
+    trait Two
+
+  enum ExtendingTraits:
+    case A extends ExtendingTraits with ExtendingTraits.One
+    case B extends ExtendingTraits with ExtendingTraits.Two
+    case C extends ExtendingTraits with ExtendingTraits.Two
+
+  sealed trait Parent
+  trait BadChild extends Parent // escape hatch!
+  sealed trait GoodChild extends Parent
+  final case class Huey(height: Int) extends GoodChild
+  class Dewey(val height: Int) extends GoodChild
+  final case class Louie(height: Int) extends BadChild
+
+  sealed abstract class Halfy
+  final case class Lefty() extends Halfy
+  object Lefty:
+    given NoCombine[Lefty] = NoCombine.instance(_ => "Lefty")
+  final case class Righty() extends Halfy
+  object Righty:
+    given NoCombine[Righty] = NoCombine.instance(_ => "Righty")
+
+end SumsTests
+
 class SumsTests extends munit.FunSuite:
 
   import SumsTests.*
@@ -83,7 +153,7 @@ class SumsTests extends munit.FunSuite:
 
   test("sealed trait subtypes should be ordered") {
     val res = TypeNameInfo.derived[Color].subtypeNames.map(_.short)
-    assertEquals(res, Seq("Red", "Green", "Blue", "Orange", "Pink"))
+    assertEquals(res, Seq("Blue", "Green", "Orange", "Pink", "Red"))
   }
 
   test("sealed trait subtypes should detect isObject") {
@@ -131,97 +201,24 @@ class SumsTests extends munit.FunSuite:
     assertEquals(res, Lefty())
   }
 
-  // TODO: not working - children of trait A were already queried before object Object was discovered.
-  // test("derive all subtypes in complex hierarchy") {
-  //   val res = Passthrough.derived[Complex].ctx.get.toOption.get
-  //   assertEquals(res.subtypes.size, 7)
-  //   List(
-  //     Complex.ObjectE,
-  //     Complex.Object,
-  //     Complex.Scoped.Object,
-  //     Complex.ClassH(1),
-  //     Complex.ObjectD,
-  //     Complex.ObjectF,
-  //     Complex.ObjectC
-  //   ).foreach { o =>
-  //     val chosen = res.choose(o)(identity)
-  //     assertEquals(chosen.value, o)
-  //     assertEquals(
-  //       chosen.typeInfo.short,
-  //       o.getClass.getSimpleName.replace("$", "")
-  //     )
-  //   }
-  // }
+   test("derive all subtypes in complex hierarchy") {
+     val res = Passthrough.derived[Complex].ctx.get.toOption.get
+
+     val pkg = "magnolia1.tests.SumsTests.Complex"
+     val expected = List(
+       s"$pkg.ClassH",
+       s"$pkg.Object",
+       s"$pkg.ObjectC",
+       s"$pkg.ObjectD",
+       s"$pkg.ObjectE",
+       s"$pkg.ObjectF",
+       s"$pkg.Scoped.Object",
+     )
+
+     assertEquals(res.subtypes.map(_.typeInfo.full).toList, expected)
+   }
 
   test("support split without join") {
     val res = summon[NoCombine[Halfy]].nameOf(Righty())
     assertEquals(res, "Righty")
   }
-
-object SumsTests:
-
-  case class MyAnnotation(order: Int) extends StaticAnnotation
-  case class MyTypeAnnotation(order: Int) extends StaticAnnotation
-
-  sealed trait Entity
-  case class Company(name: String) extends Entity
-  case class Person(name: String, age: Int) extends Entity
-  case class Address(line1: String, occupant: Person)
-
-  sealed trait Color
-  case object Red extends Color
-  case object Green extends Color
-  case object Blue extends Color
-  case object Orange extends Color
-  case object Pink extends Color
-
-  sealed trait Y
-  case object A extends Y
-  case class B(s: String) extends Y
-
-  enum Size:
-    case S, M, L
-
- 
-  sealed trait Sport
-  case object Boxing extends Sport
-  case class Soccer(players: Int) extends Sport
-
-  sealed trait Complex
-  object Complex:
-    case object ObjectC extends Complex
-    case object Object extends G
-    sealed trait A extends Complex
-    case object ObjectD extends A
-    sealed trait B extends A
-
-    case object ObjectE extends B
-    case object ObjectF extends A with Complex
-    sealed trait G extends B
-    case class ClassH(i: Int) extends A with G
-    object Scoped:
-      case object Object extends A
-
-  object ExtendingTraits:
-    trait One
-    trait Two
-
-  enum ExtendingTraits:
-    case A extends ExtendingTraits with ExtendingTraits.One
-    case B extends ExtendingTraits with ExtendingTraits.Two
-    case C extends ExtendingTraits with ExtendingTraits.Two
-
-  sealed trait Parent
-  trait BadChild extends Parent // escape hatch!
-  sealed trait GoodChild extends Parent
-  final case class Huey(height: Int) extends GoodChild
-  class Dewey(val height: Int) extends GoodChild
-  final case class Louie(height: Int) extends BadChild
-
-  sealed abstract class Halfy
-  final case class Lefty() extends Halfy
-  object Lefty:
-    given NoCombine[Lefty] = NoCombine.instance(_ => "Lefty")
-  final case class Righty() extends Halfy
-  object Righty:
-    given NoCombine[Righty] = NoCombine.instance(_ => "Righty")
