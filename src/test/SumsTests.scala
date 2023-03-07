@@ -182,6 +182,7 @@ object SumsTests:
   enum Size:
     case S, M, L
 
+ 
   sealed trait Sport
   case object Boxing extends Sport
   case class Soccer(players: Int) extends Sport
