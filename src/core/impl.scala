@@ -148,5 +148,5 @@ trait SealedTraitDerivation:
               )
             )
         }
-        (sub ::: subtypesFromMirror[A, tail](m, idx + 1)).distinctBy(_.typeInfo)
+        (sub ::: subtypesFromMirror[A, tail](m, idx + 1)).distinctBy(_.typeInfo).sortBy(_.typeInfo.full)
 end SealedTraitDerivation
