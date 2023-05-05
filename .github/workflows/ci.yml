@@ -23,6 +23,8 @@ jobs:
         uses: coursier/cache-action@v6
         with:
           extraKey: sbt-cache-${{ runner.os }}
+      - name: Check formatting
+        run: sbt -v scalafmtCheckAll
       - name: Compile
         run: sbt -v compile
       - name: Test
