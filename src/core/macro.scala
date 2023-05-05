@@ -229,8 +229,8 @@ object Macro:
             .filterNot(isObjectOrScala)
             .collect {
               case s if s != tpe.typeSymbol =>
-                (fromConstructor(s) ++ fromDeclarations(s)).filter {
-                  case (_, anns) => anns.nonEmpty
+                (fromConstructor(s) ++ fromDeclarations(s)).filter { case (_, anns) =>
+                  anns.nonEmpty
                 }
             }
             .flatten
