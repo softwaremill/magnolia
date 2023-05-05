@@ -9,8 +9,7 @@ trait HasDefault[T]:
 /** companion object and derivation object for [[HasDefault]] */
 object HasDefault extends AutoDerivation[HasDefault]:
 
-  /** constructs a default for each parameter, using the constructor default (if
-    * provided), otherwise using a typeclass-provided default
+  /** constructs a default for each parameter, using the constructor default (if provided), otherwise using a typeclass-provided default
     */
   def join[T](ctx: CaseClass[HasDefault, T]): HasDefault[T] =
     new HasDefault[T] {

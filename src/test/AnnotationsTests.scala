@@ -147,8 +147,7 @@ object AnnotationsTests:
   }
 
   @MyTypeAnnotation(2)
-  case class Dog(name: String, age: Int, @MyAnnotation(3) likesMeat: Boolean)
-      extends Pet
+  case class Dog(name: String, age: Int, @MyAnnotation(3) likesMeat: Boolean) extends Pet
 
   sealed trait Rodent extends Pet {
     @MyAnnotation(3)
