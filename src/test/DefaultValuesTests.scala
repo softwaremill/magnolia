@@ -37,11 +37,10 @@ class DefaultValuesTests extends munit.FunSuite:
     assertEquals(res, Right(Item("", 1, 0)))
   }
 
-  // TODO - not working
-  // test("construct a HasDefault instance for a generic product with default values") {
-  //   val res = HasDefault.derived[ParamsWithDefaultGeneric[String, Int]].defaultValue
-  //   assertEquals(res, Right(ParamsWithDefaultGeneric("A", 0)))
-  // }
+  test("construct a HasDefault instance for a generic product with default values") {
+    val res = HasDefault.derived[ParamsWithDefaultGeneric[String, Int]].defaultValue
+    assertEquals(res, Right(ParamsWithDefaultGeneric("A", 0)))
+  }
 
 object DefaultValuesTests:
 
