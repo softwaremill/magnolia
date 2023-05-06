@@ -170,10 +170,14 @@ class SumsTests extends munit.FunSuite:
   ) {
     val error = compileErrors("Show.derived[Parent]")
     assert(
-      error contains "No given instance of type deriving.Mirror.Of[magnolia1.tests.SumsTests.Parent] was found for parameter x$1 of method derived in trait Derivation."
+      clue(
+        error
+      ) contains "No given instance of type deriving.Mirror.Of[magnolia1.tests.SumsTests.Parent] was found for parameter x$1 of method derived in trait Derivation."
     )
     assert(
-      error contains "trait Parent is not a generic sum because its child trait BadChild is not a generic product because it is not a case class"
+      clue(
+        error
+      ) contains "trait Parent is not a generic sum because its child trait BadChild is not a generic product because it is not a case class"
     )
   }
 
@@ -182,7 +186,9 @@ class SumsTests extends munit.FunSuite:
   ) {
     val error = compileErrors("Show.derived[GoodChild]")
     assert(
-      error contains "trait GoodChild is not a generic sum because its child class Dewey is not a generic product because it is not a case class"
+      clue(
+        error
+      ) contains "trait GoodChild is not a generic sum because its child class Dewey is not a generic product because it is not a case class"
     )
   }
 

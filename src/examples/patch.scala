@@ -13,7 +13,7 @@ sealed abstract class Patcher[T]:
     */
   def patch(value: T, fieldValues: Seq[Any]): T
 
-object Patcher extends LowerPriorityPatcher with Derivation[Patcher]:
+object Patcher extends LowerPriorityPatcher with AutoDerivation[Patcher]:
   def join[T](ctx: CaseClass[Patcher, T]): Patcher[T] =
     new Patcher[T]:
       def patch(value: T, fieldValues: Seq[Any]): T =
@@ -48,4 +48,4 @@ sealed abstract class LowerPriorityPatcher:
         head
       }
 
-  given forSingleValue[T]: Patcher[T] = _forSingleValue.asInstanceOf[Patcher[T]]
+  def forSingleValue[T]: Patcher[T] = _forSingleValue.asInstanceOf[Patcher[T]]
