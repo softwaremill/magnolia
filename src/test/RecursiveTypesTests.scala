@@ -98,7 +98,15 @@ class RecursiveTypesTests extends munit.FunSuite:
          |  Seq[magnolia1.tests.RecursiveTypesTests.Recursive]
          |] was found.
          |""".stripMargin
-    assert(error contains expectedError)
+    assert(clue(error) contains expectedError)
+  }
+
+  test("serialize a CeList") {
+    val printResult = summon[Print[CeList]].print(CeColon(3, CeColon(2, CeNil(2))))
+    val showResult = summon[Show[String, CeList]].show(CeColon(3, CeColon(2, CeNil(2))))
+
+    assert(clue(printResult) == "CeColon(3,CeColon(2,CeNil(2)))")
+    assert(clue(showResult) == "CeColon(head=3,tail=CeColon(head=2,tail=CeNil(head=2)))")
   }
 
 object RecursiveTypesTests:
@@ -120,3 +128,11 @@ object RecursiveTypesTests:
 
   case class KArray(value: List[KArray]) derives Eq
   case class Wrapper(v: Option[KArray])
+
+  sealed trait CeList
+  case class CeColon(head: Int, tail: CeList) extends CeList
+  case class CeNil(head: Int) extends CeList
+
+  object CeList:
+    given Show[String, CeList] = Show.derived
+    given Print[CeList] = Print.derived[CeList]
