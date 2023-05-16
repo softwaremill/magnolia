@@ -6,8 +6,7 @@ trait Eq[T]:
   def equal(value: T, value2: T): Boolean
 
 object Eq extends AutoDerivation[Eq]:
-  def join[T](ctx: CaseClass[Eq, T]): Eq[T] = (v1, v2) =>
-    ctx.params.forall { p => p.typeclass.equal(p.deref(v1), p.deref(v2)) }
+  def join[T](ctx: CaseClass[Eq, T]): Eq[T] = (v1, v2) => ctx.params.forall { p => p.typeclass.equal(p.deref(v1), p.deref(v2)) }
 
   override def split[T](ctx: SealedTrait[Eq, T]): Eq[T] = (v1, v2) =>
     ctx.choose(v1) { sub =>

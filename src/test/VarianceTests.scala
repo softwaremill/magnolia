@@ -85,8 +85,7 @@ object VarianceTests:
 
   sealed trait Politician[+S]
   case class Accountable[+S](slogan: S) extends Politician[S]
-  case class Corrupt[+S, +L <: Seq[Company]](slogan: S, lobby: L)
-      extends Politician[S]
+  case class Corrupt[+S, +L <: Seq[Company]](slogan: S, lobby: L) extends Politician[S]
 
   sealed trait Entity
   case class Company(name: String) extends Entity

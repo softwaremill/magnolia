@@ -26,8 +26,7 @@ object DecoderSafe extends Derivation[DecoderSafe]:
       .left
       .map(_.reduce(_ + "\n" + _))
 
-  /** defines how to choose which subtype of the sealed trait to use for
-    * decoding
+  /** defines how to choose which subtype of the sealed trait to use for decoding
     */
   override def split[T](ctx: SealedTrait[DecoderSafe, T]): DecoderSafe[T] =
     param =>
@@ -36,8 +35,7 @@ object DecoderSafe extends Derivation[DecoderSafe]:
 
       subtype.typeclass.decode(param)
 
-  /** very simple extractor for grabbing an entire parameter value, assuming
-    * matching parentheses
+  /** very simple extractor for grabbing an entire parameter value, assuming matching parentheses
     */
   private def parse(value: String): (String, Map[String, String]) =
     val end = value.indexOf('(')

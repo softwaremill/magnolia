@@ -28,7 +28,6 @@ object SumsTests:
   enum Size:
     case S, M, L
 
-
   sealed trait Sport
   case object Boxing extends Sport
   case class Soccer(players: Int) extends Sport
@@ -171,10 +170,14 @@ class SumsTests extends munit.FunSuite:
   ) {
     val error = compileErrors("Show.derived[Parent]")
     assert(
-      error contains "No given instance of type deriving.Mirror.Of[magnolia1.tests.SumsTests.Parent] was found for parameter x$1 of method derived in trait Derivation."
+      clue(
+        error
+      ) contains "No given instance of type deriving.Mirror.Of[magnolia1.tests.SumsTests.Parent] was found for parameter x$1 of method derived in trait Derivation."
     )
     assert(
-      error contains "trait Parent is not a generic sum because its child trait BadChild is not a generic product because it is not a case class"
+      clue(
+        error
+      ) contains "trait Parent is not a generic sum because its child trait BadChild is not a generic product because it is not a case class"
     )
   }
 
@@ -183,7 +186,9 @@ class SumsTests extends munit.FunSuite:
   ) {
     val error = compileErrors("Show.derived[GoodChild]")
     assert(
-      error contains "trait GoodChild is not a generic sum because its child class Dewey is not a generic product because it is not a case class"
+      clue(
+        error
+      ) contains "trait GoodChild is not a generic sum because its child class Dewey is not a generic product because it is not a case class"
     )
   }
 
@@ -201,22 +206,22 @@ class SumsTests extends munit.FunSuite:
     assertEquals(res, Lefty())
   }
 
-   test("derive all subtypes in complex hierarchy") {
-     val res = Passthrough.derived[Complex].ctx.get.toOption.get
+  test("derive all subtypes in complex hierarchy") {
+    val res = Passthrough.derived[Complex].ctx.get.toOption.get
 
-     val pkg = "magnolia1.tests.SumsTests.Complex"
-     val expected = List(
-       s"$pkg.ClassH",
-       s"$pkg.Object",
-       s"$pkg.ObjectC",
-       s"$pkg.ObjectD",
-       s"$pkg.ObjectE",
-       s"$pkg.ObjectF",
-       s"$pkg.Scoped.Object",
-     )
+    val pkg = "magnolia1.tests.SumsTests.Complex"
+    val expected = List(
+      s"$pkg.ClassH",
+      s"$pkg.Object",
+      s"$pkg.ObjectC",
+      s"$pkg.ObjectD",
+      s"$pkg.ObjectE",
+      s"$pkg.ObjectF",
+      s"$pkg.Scoped.Object"
+    )
 
-     assertEquals(res.subtypes.map(_.typeInfo.full).toList, expected)
-   }
+    assertEquals(res.subtypes.map(_.typeInfo.full).toList, expected)
+  }
 
   test("support split without join") {
     val res = summon[NoCombine[Halfy]].nameOf(Righty())

@@ -23,8 +23,7 @@ object Decoder extends AutoDerivation[Decoder]:
         .getOrElse(sys.error(s"missing ${param.label}"))
     }
 
-  /** defines how to choose which subtype of the sealed trait to use for
-    * decoding
+  /** defines how to choose which subtype of the sealed trait to use for decoding
     */
   override def split[T](ctx: SealedTrait[Decoder, T]): Decoder[T] = param =>
     val (name, _) = parse(param)
@@ -32,8 +31,7 @@ object Decoder extends AutoDerivation[Decoder]:
 
     subtype.typeclass.decode(param)
 
-  /** very simple extractor for grabbing an entire parameter value, assuming
-    * matching parentheses
+  /** very simple extractor for grabbing an entire parameter value, assuming matching parentheses
     */
   private def parse(value: String): (String, Map[String, String]) =
     val end = value.indexOf('(')

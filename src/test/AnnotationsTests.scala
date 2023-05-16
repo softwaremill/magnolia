@@ -17,8 +17,8 @@ class AnnotationsTests extends munit.FunSuite:
 
   test("show the scala.deprecated annotation on a field") {
     val res = summon[Show[String, Deprecated]].show(Deprecated(10))
-    assert(res.contains("MyAnnotation(0)"))
-    assert(res.contains("scala.deprecated"))
+    assert(clue(res).contains("MyAnnotation(0)"))
+    assert(clue(res).contains("scala.deprecated"))
   }
 
   test("inherit annotations from parent trait") {
@@ -74,17 +74,17 @@ class AnnotationsTests extends munit.FunSuite:
     assertEquals(subtypeAnnotations(1).mkString, "MyAnnotation(2)")
   }
 
-  // TODO - not compiling
-  // test("serialize case class with Java annotations by skipping them") {
-  //   val res = Show.derived[MyDto].show(MyDto("foo", 42))
-  //   assertEquals(res, "MyDto{MyAnnotation(0)}(foo=foo,bar=42)")
-  // }
+// TODO - not compiling
+// test("serialize case class with Java annotations by skipping them") {
+//   val res = Show.derived[MyDto].show(MyDto("foo", 42))
+//   assertEquals(res, "MyDto{MyAnnotation(0)}(foo=foo,bar=42)")
+// }
 
-  // TODO - not compiling
-  // test("serialize case class with Java annotations which comes from external module by skipping them") {
-  //   val res = Show.derived[JavaAnnotatedCase].show(JavaAnnotatedCase(1))
-  //   assertEquals(res, "JavaAnnotatedCase(v=1)")
-  // }
+// TODO - not compiling
+// test("serialize case class with Java annotations which comes from external module by skipping them") {
+//   val res = Show.derived[JavaAnnotatedCase].show(JavaAnnotatedCase(1))
+//   assertEquals(res, "JavaAnnotatedCase(v=1)")
+// }
 
 object AnnotationsTests:
 
@@ -147,8 +147,7 @@ object AnnotationsTests:
   }
 
   @MyTypeAnnotation(2)
-  case class Dog(name: String, age: Int, @MyAnnotation(3) likesMeat: Boolean)
-      extends Pet
+  case class Dog(name: String, age: Int, @MyAnnotation(3) likesMeat: Boolean) extends Pet
 
   sealed trait Rodent extends Pet {
     @MyAnnotation(3)

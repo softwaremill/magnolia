@@ -78,13 +78,15 @@ object CaseClassDerivation:
       case _: (EmptyTuple, EmptyTuple) =>
         Nil
       case _: ((l *: ltail), (p *: ptail)) =>
+        def safeCast(any: Any) = Option.when(any == null || any.isInstanceOf[p])(any.asInstanceOf[p])
+
         val label = constValue[l].asInstanceOf[String]
         CaseClass.Param[Typeclass, A, p](
           label,
           idx,
           repeated.getOrElse(label, false),
           CallByNeed(summonInline[Typeclass[p]]),
-          CallByNeed(defaults.get(label).flatten.map(_.apply.asInstanceOf[p])),
+          CallByNeed(defaults.get(label).flatten.flatMap(d => safeCast(d.apply))),
           IArray.from(annotations.getOrElse(label, List())),
           IArray.from(inheritedAnnotations.getOrElse(label, List())),
           IArray.from(typeAnnotations.getOrElse(label, List()))
@@ -141,7 +143,7 @@ trait SealedTraitDerivation:
                 idx,
                 CallByNeed(summonFrom {
                   case tc: Typeclass[`s`] => tc
-                  case _ => deriveSubtype(summonInline[Mirror.Of[s]])
+                  case _                  => deriveSubtype(summonInline[Mirror.Of[s]])
                 }),
                 x => x.isInstanceOf[s & A],
                 _.asInstanceOf[s & A]

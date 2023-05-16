@@ -13,8 +13,7 @@ object Csv extends Derivation[Csv]:
       acc ++ p.typeclass(p.deref(a))
     }
 
-  def split[A](ctx: SealedTrait[Csv, A]): Csv[A] = a =>
-    ctx.choose(a) { sub => sub.typeclass(sub.value) }
+  def split[A](ctx: SealedTrait[Csv, A]): Csv[A] = a => ctx.choose(a) { sub => sub.typeclass(sub.value) }
 
   given Csv[String] = List(_)
   given Csv[Int] = i => List(i.toString)
