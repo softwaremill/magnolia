@@ -288,5 +288,3 @@ object ProductsTests:
 
   object Fruit:
     given showFruit: Show[String, Fruit] = (f: Fruit) => f.name
-
-
