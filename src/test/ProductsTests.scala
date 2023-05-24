@@ -180,6 +180,18 @@ class ProductsTests extends munit.FunSuite:
     assertEquals(res.full, "magnolia1.tests.ProductsTests.Fruit")
   }
 
+  test("case class parameter typeName should be dealiased") {
+    given stringTypeName: TypeNameInfo[String] with {
+      def name = ???
+
+      def subtypeNames = ???
+    }
+    val res1 = TypeNameInfo.derived[Parameterized[Domain1.Type]].name
+    val res2 = TypeNameInfo.derived[Parameterized[Domain2.Type]].name
+    assertEquals(res1.typeParams.head.short, "Int")
+    assertEquals(res2.typeParams.head.short, "String")
+  }
+
   test("show chained error stack when leaf instance is missing") {
     val error = compileErrors("Show.derived[Schedule]")
     assert(
@@ -266,5 +278,15 @@ object ProductsTests:
 
   case class Fruit(name: String)
 
+  case class Parameterized[T](t: T)
+
+  object Domain1:
+    type Type = Int
+
+  object Domain2:
+    type Type = String
+
   object Fruit:
     given showFruit: Show[String, Fruit] = (f: Fruit) => f.name
+
+
