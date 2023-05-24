@@ -164,7 +164,7 @@ object Macro:
           )
         }
       case _ =>
-        '{ TypeInfo(${ owner(tpe) }, ${ name(tpe.dealias) }, Nil) }
+        '{ TypeInfo(${ owner(tpe) }, ${ name(tpe) }, Nil) }
 
     typeInfo(TypeRepr.of[T])
 
