@@ -2,7 +2,7 @@ import com.softwaremill.UpdateVersionInDocs
 import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
 import com.softwaremill.Publish.{updateDocs, ossPublishSettings}
 
-val scala3 = "3.2.2"
+val scala3 = "3.3.0"
 
 ThisBuild / dynverTagPrefix := "scala3-v" // a custom prefix is needed to differentiate tags between scala2 & scala3 versions
 
