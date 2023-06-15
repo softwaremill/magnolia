@@ -78,7 +78,7 @@ object CaseClassDerivation:
       case _: (EmptyTuple, EmptyTuple) =>
         Nil
       case _: ((l *: ltail), (p *: ptail)) =>
-        def safeCast(any: Any) = Option.when(any == null || any.isInstanceOf[p])(any.asInstanceOf[p])
+        def safeCast(any: Any) = Option.when(any == null || (any: @unchecked).isInstanceOf[p])(any.asInstanceOf[p])
 
         val label = constValue[l].asInstanceOf[String]
         CaseClass.Param[Typeclass, A, p](
