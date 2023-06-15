@@ -78,7 +78,7 @@ object CaseClassDerivation:
       case _: (EmptyTuple, EmptyTuple) =>
         Nil
       case _: ((l *: ltail), (p *: ptail)) =>
-        def safeCast(any: Any) = Option.when(any == null || (any: @unchecked).isInstanceOf[p])(any.asInstanceOf[p])
+        def unsafeCast(any: Any) = Option.when(any == null || (any: @unchecked).isInstanceOf[p])(any.asInstanceOf[p])
 
         val label = constValue[l].asInstanceOf[String]
         CaseClass.Param[Typeclass, A, p](
@@ -86,7 +86,7 @@ object CaseClassDerivation:
           idx,
           repeated.getOrElse(label, false),
           CallByNeed(summonInline[Typeclass[p]]),
-          CallByNeed(defaults.get(label).flatten.flatMap(d => safeCast(d.apply))),
+          CallByNeed(defaults.get(label).flatten.flatMap(d => unsafeCast(d.apply))),
           IArray.from(annotations.getOrElse(label, List())),
           IArray.from(inheritedAnnotations.getOrElse(label, List())),
           IArray.from(typeAnnotations.getOrElse(label, List()))

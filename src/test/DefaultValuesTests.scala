@@ -42,7 +42,7 @@ class DefaultValuesTests extends munit.FunSuite:
     assertEquals(res, Right(ParamsWithDefaultGeneric("A", 0)))
   }
 
-  // Fails because safeCast in impl works on Any, which casts Option[Int] to Option[String]
+  // Fails because unsafeCast in impl works on Any, which casts Option[Int] to Option[String]
   // test("construct a HasDefault instance for a generic product with default generic values") {
   //   val res = HasDefault.derived[ParamsWithDefaultDeepGeneric[String, Int]].defaultValue
   //   assertEquals(res, Right(ParamsWithDefaultDeepGeneric(Some("A"), None)))
