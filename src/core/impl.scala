@@ -24,47 +24,66 @@ object CaseClassDerivation:
         defaultValue[A].to(Map)
       )*
     )
-
-    new CaseClass(
+    ProductCaseClass(
       typeInfo[A],
       isObject[A],
       isValueClass[A],
       params,
       IArray(anns[A]*),
       IArray(inheritedAnns[A]*),
-      IArray[Any](typeAnns[A]*)
-    ):
-      def construct[PType: ClassTag](makeParam: Param => PType): A =
-        product.fromProduct(Tuple.fromArray(parameters.map(makeParam).to(Array)))
+      IArray[Any](typeAnns[A]*),
+      product
+    )
 
-      def rawConstruct(fieldValues: Seq[Any]): A =
-        product.fromProduct(Tuple.fromArray(fieldValues.to(Array)))
+  class ProductCaseClass[Typeclass[_], A](
+      typeInfo: TypeInfo,
+      isObject: Boolean,
+      isValueClass: Boolean,
+      parameters: IArray[CaseClass.Param[Typeclass, A]],
+      annotations: IArray[Any],
+      inheritedAnnotations: IArray[Any],
+      typeAnnotations: IArray[Any],
+      product: Mirror.ProductOf[A]
+  ) extends CaseClass[Typeclass, A](
+        typeInfo,
+        isObject,
+        isValueClass,
+        parameters,
+        annotations,
+        inheritedAnnotations,
+        typeAnnotations
+      ):
+    def construct[PType: ClassTag](makeParam: Param => PType): A =
+      product.fromProduct(Tuple.fromArray(parameters.map(makeParam).to(Array)))
 
-      def constructEither[Err, PType: ClassTag](
-          makeParam: Param => Either[Err, PType]
-      ): Either[List[Err], A] =
-        parameters
-          .map(makeParam)
-          .foldLeft[Either[List[Err], Array[PType]]](Right(Array())) {
-            case (Left(errs), Left(err))    => Left(errs ++ List(err))
-            case (Right(acc), Right(param)) => Right(acc ++ Array(param))
-            case (errs @ Left(_), _)        => errs
-            case (_, Left(err))             => Left(List(err))
+    def rawConstruct(fieldValues: Seq[Any]): A =
+      product.fromProduct(Tuple.fromArray(fieldValues.to(Array)))
+
+    def constructEither[Err, PType: ClassTag](
+        makeParam: Param => Either[Err, PType]
+    ): Either[List[Err], A] =
+      parameters
+        .map(makeParam)
+        .foldLeft[Either[List[Err], Array[PType]]](Right(Array())) {
+          case (Left(errs), Left(err))    => Left(errs ++ List(err))
+          case (Right(acc), Right(param)) => Right(acc ++ Array(param))
+          case (errs @ Left(_), _)        => errs
+          case (_, Left(err))             => Left(List(err))
+        }
+        .map { params => product.fromProduct(Tuple.fromArray(params)) }
+
+    def constructMonadic[M[_]: Monadic, PType: ClassTag](
+        makeParam: Param => M[PType]
+    ): M[A] = {
+      val m = summon[Monadic[M]]
+      m.map {
+        parameters.map(makeParam).foldLeft(m.point(Array())) { (accM, paramM) =>
+          m.flatMap(accM) { acc =>
+            m.map(paramM)(acc ++ List(_))
           }
-          .map { params => product.fromProduct(Tuple.fromArray(params)) }
-
-      def constructMonadic[M[_]: Monadic, PType: ClassTag](
-          makeParam: Param => M[PType]
-      ): M[A] = {
-        val m = summon[Monadic[M]]
-        m.map {
-          parameters.map(makeParam).foldLeft(m.point(Array())) { (accM, paramM) =>
-            m.flatMap(accM) { acc =>
-              m.map(paramM)(acc ++ List(_))
-            }
-          }
-        } { params => product.fromProduct(Tuple.fromArray(params)) }
-      }
+        }
+      } { params => product.fromProduct(Tuple.fromArray(params)) }
+    }
 
   inline def paramsFromMaps[Typeclass[_], A, Labels <: Tuple, Params <: Tuple](
       annotations: Map[String, List[Any]],
@@ -79,17 +98,16 @@ object CaseClassDerivation:
         Nil
       case _: ((l *: ltail), (p *: ptail)) =>
         def unsafeCast(any: Any) = Option.when(any == null || (any: @unchecked).isInstanceOf[p])(any.asInstanceOf[p])
-
         val label = constValue[l].asInstanceOf[String]
-        CaseClass.Param[Typeclass, A, p](
+        paramFromMaps[Typeclass, A, p](
           label,
-          idx,
-          repeated.getOrElse(label, false),
           CallByNeed(summonInline[Typeclass[p]]),
           CallByNeed(defaults.get(label).flatten.flatMap(d => unsafeCast(d.apply))),
-          IArray.from(annotations.getOrElse(label, List())),
-          IArray.from(inheritedAnnotations.getOrElse(label, List())),
-          IArray.from(typeAnnotations.getOrElse(label, List()))
+          repeated,
+          annotations,
+          inheritedAnnotations,
+          typeAnnotations,
+          idx
         ) ::
           paramsFromMaps[Typeclass, A, ltail, ptail](
             annotations,
@@ -99,6 +117,28 @@ object CaseClassDerivation:
             defaults,
             idx + 1
           )
+
+  private def paramFromMaps[Typeclass[_], A, p](
+      label: String,
+      tc: CallByNeed[Typeclass[p]],
+      d: CallByNeed[Option[p]],
+      repeated: Map[String, Boolean],
+      annotations: Map[String, List[Any]],
+      inheritedAnnotations: Map[String, List[Any]],
+      typeAnnotations: Map[String, List[Any]],
+      idx: Int
+  ): CaseClass.Param[Typeclass, A] =
+    CaseClass.Param[Typeclass, A, p](
+      label,
+      idx,
+      repeated.getOrElse(label, false),
+      tc,
+      d,
+      IArray.from(annotations.getOrElse(label, List())),
+      IArray.from(inheritedAnnotations.getOrElse(label, List())),
+      IArray.from(typeAnnotations.getOrElse(label, List()))
+    )
+
 end CaseClassDerivation
 
 trait SealedTraitDerivation:
