@@ -25,7 +25,7 @@ trait GenericPrint {
     }
   }
 
-  def split[T](ctx: SealedTrait[Print, T])(): Print[T] = { value =>
+  def split[T](ctx: SealedTrait[Print, T]): Print[T] = { value =>
     ctx.split(value) { sub =>
       sub.typeclass.print(sub.cast(value))
     }
