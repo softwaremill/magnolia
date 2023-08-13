@@ -673,12 +673,12 @@ object Magnolia {
           .unzip
 
         val subtypesVal = c.freshName(TermName("subtypes"))
-        val combineArrays = functionNames.map(name => q"""$subtypesVal ++= $name""")
+        val combinations = functionNames.map(name => q"""$subtypesVal ++= $name""")
 
         Some(q"""{
           ..$partialAssignmentFunctions
           val $subtypesVal = Array.newBuilder[$subType]
-          ..$combineArrays
+          ..$combinations
           $typeNameDef
           ${c.prefix}.split(new $SealedTraitSym(
             $typeName,
