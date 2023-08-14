@@ -393,6 +393,31 @@ object Magnolia {
           $impl
       """
 
+      def constructPartialAssignmentFunction(typeclasses: List[(Type, Tree)], arrayType: Type): (TermName, Tree) = {
+        val name = c.freshName(TermName("partialAssignments"))
+        val assignments = typeclasses.zipWithIndex.map { case ((subType, typeclass), idx) =>
+          val symbol = subType.typeSymbol
+          val (annotationTrees, inheritedAnnotationTrees) = annotationsOf(symbol)
+          q"""arr(start + $idx) = $SubtypeObj[$typeConstructor, $genericType, $subType](
+            ${typeNameOf(subType)},
+            $idx,
+            $ArrayObj(..${annotationTrees}): Array[_root_.scala.Any],
+            $ArrayObj(..${inheritedAnnotationTrees}): Array[_root_.scala.Any],
+            $ArrayObj(..${typeAnnotationsOf(symbol, fromParents = true)}): Array[_root_.scala.Any],
+            $CallByNeedObj($typeclass),
+            (t: $genericType) => t.isInstanceOf[$subType],
+            (t: $genericType) => t.asInstanceOf[$subType]
+          )"""
+        }
+        val tree =
+          q"""def $name(arr: Array[$arrayType], start: Int) = {
+              ..$assignments
+            }
+          """
+
+        (name, tree)
+      }
+
       val result = if (isRefinedType) {
         error(s"could not infer $prefixName.Typeclass for refined type $genericType")
       } else if (isCaseObject) {
@@ -641,48 +666,23 @@ object Magnolia {
 
         val subType = appliedType(SubtypeTpe, typeConstructor, genericType)
         val groupSize = 500
-        val partialSubtypesVal = c.freshName(TermName("partialSubtypes"))
         val (functionNames, partialAssignmentFunctions) = typeclasses
           .grouped(groupSize)
           .toList
-          .map { group =>
-            val name = c.freshName(TermName("partialAssignments"))
-            val assignments = group.zipWithIndex.map { case ((subType, typeclass), idx) =>
-              val symbol = subType.typeSymbol
-              val (annotationTrees, inheritedAnnotationTrees) = annotationsOf(symbol)
-              q"""$partialSubtypesVal($idx) = $SubtypeObj[$typeConstructor, $genericType, $subType](
-                        ${typeNameOf(subType)},
-                        $idx,
-                        $ArrayObj(..${annotationTrees}): Array[_root_.scala.Any],
-                        $ArrayObj(..${inheritedAnnotationTrees}): Array[_root_.scala.Any],
-                        $ArrayObj(..${typeAnnotationsOf(symbol, fromParents = true)}): Array[_root_.scala.Any],
-                        $CallByNeedObj($typeclass),
-                        (t: $genericType) => t.isInstanceOf[$subType],
-                        (t: $genericType) => t.asInstanceOf[$subType]
-                      )"""
-            }
-            val tree = q"""def $name = {
-                val $partialSubtypesVal = new $ArrayClass[$subType](${assignments.size})
-                ..$assignments
-                $partialSubtypesVal
-              }
-           """
-
-            (name, tree)
-          }
+          .map(constructPartialAssignmentFunction(_, subType))
           .unzip
 
         val subtypesVal = c.freshName(TermName("subtypes"))
-        val combinations = functionNames.map(name => q"""$subtypesVal ++= $name""")
+        val combinations = functionNames.zipWithIndex.map { case (name, idx) => q"""$name($subtypesVal, ${idx * groupSize})""" }
 
         Some(q"""{
           ..$partialAssignmentFunctions
-          val $subtypesVal = Array.newBuilder[$subType]
+          val $subtypesVal = new $ArrayClass[$subType](${typeclasses.size})
           ..$combinations
           $typeNameDef
           ${c.prefix}.split(new $SealedTraitSym(
             $typeName,
-            $subtypesVal.result(): $ArrayClass[$subType],
+            $subtypesVal: $ArrayClass[$subType],
             $ArrayObj(..$classAnnotationTrees),
             $ArrayObj(..$inheritedClassAnnotationTrees),
             $ArrayObj(..$classTypeAnnotationTrees)
