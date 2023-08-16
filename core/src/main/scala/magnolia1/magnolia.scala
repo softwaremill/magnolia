@@ -96,6 +96,7 @@ object Magnolia {
     val SubtypeObj = reify(Subtype).tree
     val SubtypeTpe = typeOf[Subtype[Any, Any]].typeConstructor
     val TypeNameObj = reify(magnolia1.TypeName).tree
+    val ArrayTpe = typeOf[Array[Any]].typeConstructor
 
     val debug = c.macroApplication.symbol.annotations
       .find(_.tree.tpe <:< DebugTpe)
@@ -393,29 +394,32 @@ object Magnolia {
           $impl
       """
 
-      def constructPartialAssignmentFunction(typeclasses: List[(Type, Tree)], arrayType: Type): (TermName, Tree) = {
-        val name = c.freshName(TermName("partialAssignments"))
+      def constructPartialAssignmentFunction(typeclasses: List[(Type, Tree)], arrayElementType: Type): (TermName, Tree) = {
+        val functionName = c.freshName(TermName("partialAssignments"))
+        val arrayVal = c.freshName(TermName("arr"))
+        val startVal = c.freshName(TermName("start"))
         val assignments = typeclasses.zipWithIndex.map { case ((subType, typeclass), idx) =>
           val symbol = subType.typeSymbol
           val (annotationTrees, inheritedAnnotationTrees) = annotationsOf(symbol)
-          q"""arr(start + $idx) = $SubtypeObj[$typeConstructor, $genericType, $subType](
+          q"""$arrayVal($startVal + $idx) = $SubtypeObj[$typeConstructor, $genericType, $subType](
             ${typeNameOf(subType)},
             $idx,
-            $ArrayObj(..${annotationTrees}): Array[_root_.scala.Any],
-            $ArrayObj(..${inheritedAnnotationTrees}): Array[_root_.scala.Any],
-            $ArrayObj(..${typeAnnotationsOf(symbol, fromParents = true)}): Array[_root_.scala.Any],
+            $ArrayObj[$AnyTpe](..${annotationTrees}),
+            $ArrayObj[$AnyTpe](..${inheritedAnnotationTrees}),
+            $ArrayObj[$AnyTpe](..${typeAnnotationsOf(symbol, fromParents = true)}),
             $CallByNeedObj($typeclass),
             (t: $genericType) => t.isInstanceOf[$subType],
             (t: $genericType) => t.asInstanceOf[$subType]
           )"""
         }
+        val arrayTpe = appliedType(ArrayTpe, arrayElementType)
         val tree =
-          q"""def $name(arr: Array[$arrayType], start: Int) = {
+          q"""def $functionName($arrayVal: $arrayTpe, $startVal: $IntTpe) = {
               ..$assignments
             }
           """
 
-        (name, tree)
+        (functionName, tree)
       }
 
       val result = if (isRefinedType) {
