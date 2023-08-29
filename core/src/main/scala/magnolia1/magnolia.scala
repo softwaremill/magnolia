@@ -394,9 +394,8 @@ object Magnolia {
           $impl
       """
 
-      def constructPartialAssignmentFunction(typeclasses: List[(Type, Tree)], arrayElementType: Type): (Tree, Tree) = {
-        val objectName = c.freshName(TermName("PartialAssignments"))
-        val functionName = c.freshName(TermName("func"))
+      def constructPartialAssignmentFunction(typeclasses: List[(Type, Tree)], arrayElementType: Type): (TermName, Tree) = {
+        val functionName = c.freshName(TermName("partialAssignments"))
         val arrayVal = c.freshName(TermName("arr"))
         val startVal = c.freshName(TermName("start"))
         val assignments = typeclasses.zipWithIndex.map { case ((subType, typeclass), idx) =>
@@ -415,15 +414,12 @@ object Magnolia {
         }
         val arrayTpe = appliedType(ArrayTpe, arrayElementType)
         val tree =
-          q"""
-              object $objectName {
-                def $functionName($arrayVal: $arrayTpe, $startVal: $IntTpe) = {
+          q"""def $functionName($arrayVal: $arrayTpe, $startVal: $IntTpe) = {
               ..$assignments
-              }
             }
           """
 
-        (q"""$objectName.$functionName""", tree)
+        (functionName, tree)
       }
 
       val result = if (isRefinedType) {
