@@ -266,6 +266,6 @@ object Macro:
 
     private def filterAnnotation(a: Term): Boolean =
       a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
-        a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal" ||
-        a.tpe.typeSymbol.owner.fullName != "jdk.internal"
+        (a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal" &&
+          a.tpe.typeSymbol.owner.fullName != "jdk.internal")
   }
