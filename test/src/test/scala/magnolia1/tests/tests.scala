@@ -3,6 +3,7 @@ package magnolia1.tests
 import magnolia1.TypeName
 import magnolia1.examples._
 
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.time.LocalDate
 import scala.annotation.StaticAnnotation
 import scala.language.experimental.macros
@@ -242,6 +243,12 @@ case class Bar(
 ) extends Base2(foo, bar)
 
 case class Hamster(name: String, age: Int, likesNuts: Boolean, @MyAnnotation(4) likesVeggies: Boolean) extends Rodent
+
+// not serializable outer
+class Outer {
+  val showAddress: Show[String, Address] = Show.gen
+  val showColor: Show[String, Color] = Show.gen
+}
 
 class Tests extends munit.FunSuite {
 
@@ -857,4 +864,24 @@ class Tests extends munit.FunSuite {
       val res = Show.gen[Bar].show(Bar("foo", "bar"))
       assertEquals(res, "Bar(foo{MyAnnotation(2),MyAnnotation(1)}=foo,bar{MyAnnotation(2),MyAnnotation(1)}=bar)")
     }
+
+  private def serializeToByteArray(value: Serializable): Array[Byte] = {
+    val buffer = new ByteArrayOutputStream()
+    val oos = new ObjectOutputStream(buffer)
+    oos.writeObject(value)
+    buffer.toByteArray
+  }
+
+  private def deserializeFromByteArray(encodedValue: Array[Byte]): AnyRef = {
+    val ois = new ObjectInputStream(new ByteArrayInputStream(encodedValue))
+    ois.readObject()
+  }
+
+  def ensureSerializable[T <: Serializable](value: T): T =
+    deserializeFromByteArray(serializeToByteArray(value)).asInstanceOf[T]
+
+  test("generate serializable type-classes") {
+    ensureSerializable(new Outer().showAddress)
+    ensureSerializable(new Outer().showColor)
+  }
 }
