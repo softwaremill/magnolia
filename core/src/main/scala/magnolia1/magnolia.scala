@@ -260,7 +260,17 @@ object Magnolia {
       val term = TermName(termName)
       val classWithTerm = c.prefix.tree.tpe.baseClasses
         .find(cls => cls.asType.toType.decl(term) != NoSymbol)
-        .getOrElse(error(s"the method `$termName` must be defined on the derivation $prefixObject to derive typeclasses for $category"))
+        .getOrElse {
+          val searchType = stack.top.map(_.searchType.toString)
+          val additionalInfo = searchType match {
+            case Some(tpe) => s"unable to derive $tpe -- "
+            case None      => ""
+          }
+
+          error(
+            s"${additionalInfo}the method `$termName` must be defined on the derivation $prefixObject to derive typeclasses for $category"
+          )
+        }
 
       classWithTerm.asType.toType.decl(term).asTerm.asMethod.paramLists.head
     }
