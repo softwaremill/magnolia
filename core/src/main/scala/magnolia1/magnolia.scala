@@ -258,9 +258,14 @@ object Magnolia {
 
     def extractParameterBlockFor(termName: String, category: String): List[Symbol] = {
       val term = TermName(termName)
+      val searchType = stack.top.map(_.searchType.toString).getOrElse("")
       val classWithTerm = c.prefix.tree.tpe.baseClasses
         .find(cls => cls.asType.toType.decl(term) != NoSymbol)
-        .getOrElse(error(s"the method `$termName` must be defined on the derivation $prefixObject to derive typeclasses for $category"))
+        .getOrElse(
+          error(
+            s"unable to derive $searchType -- the method `$termName` must be defined on the derivation $prefixObject to derive typeclasses for $category"
+          )
+        )
 
       classWithTerm.asType.toType.decl(term).asTerm.asMethod.paramLists.head
     }
