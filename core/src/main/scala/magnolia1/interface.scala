@@ -685,6 +685,16 @@ final class debug(typeNamePart: String = "") extends scala.annotation.StaticAnno
 
 private[magnolia1] final case class EarlyExit[E](e: E) extends Exception with util.control.NoStackTrace
 
+trait Config {
+  type Proxy <: Singleton { type Typeclass[A] }
+  type Ignore <: annotation.Annotation
+  val readOnly: Boolean
+  val minFields: Int
+  val maxFields: Int
+  val minCases: Int
+  val maxCases: Int
+}
+
 object MagnoliaUtil {
 
   final def checkParamLengths(fieldValues: Seq[Any], paramsLength: Int, typeName: String): Unit =
