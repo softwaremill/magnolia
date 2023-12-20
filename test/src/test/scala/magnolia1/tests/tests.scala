@@ -250,6 +250,15 @@ class Outer {
   val showColor: Show[String, Color] = Show.gen
 }
 
+sealed trait NoNameCollision
+object NoNameCollision {
+  case class Foo(a: Boolean) extends NoNameCollision
+  case class Bar(b: Int) extends NoNameCollision
+  case class Array(c: String) extends NoNameCollision
+
+  val showNoNameCollision: Show[String, NoNameCollision] = Show.gen[NoNameCollision]
+}
+
 class Tests extends munit.FunSuite {
 
     test("construct a Show product instance with alternative apply functions") {

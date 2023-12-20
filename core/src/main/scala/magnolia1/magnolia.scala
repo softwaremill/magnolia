@@ -495,9 +495,9 @@ object Magnolia {
               $repeated,
               $CallByNeedObj($ref),
               ..${default.toList.map(d => q"$CallByNeedObj($d)")},
-              $ArrayObj(..$annotations): Array[_root_.scala.Any],
-              $ArrayObj(..$inheritedAnnotations): Array[_root_.scala.Any],
-              $ArrayObj(..$typeAnnotations): Array[_root_.scala.Any]
+              $ArrayObj(..$annotations): _root_.scala.Array[_root_.scala.Any],
+              $ArrayObj(..$inheritedAnnotations): _root_.scala.Array[_root_.scala.Any],
+              $ArrayObj(..$typeAnnotations): _root_.scala.Array[_root_.scala.Any]
             )"""
         }
 
