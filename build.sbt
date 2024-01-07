@@ -27,11 +27,10 @@ lazy val root =
       (core.projectRefs ++ examples.projectRefs ++ test.projectRefs): _*
     )
 
-lazy val core = (projectMatrix in file(".core"))
+lazy val core = (projectMatrix in file("core"))
   .settings(commonSettings)
   .settings(
     name := "magnolia",
-    Compile / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "core",
     mimaPreviousArtifacts := {
       val current = version.value
       val isRcOrMilestone = current.contains("M") || current.contains("RC")
@@ -56,19 +55,18 @@ lazy val core = (projectMatrix in file(".core"))
   .jsPlatform(scalaVersions = List(scala3))
   .nativePlatform(scalaVersions = List(scala3))
 
-lazy val examples = (projectMatrix in file(".examples"))
+lazy val examples = (projectMatrix in file("examples"))
   .dependsOn(core)
   .settings(commonSettings)
   .settings(
     name := "magnolia-examples",
-    Compile / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "examples",
     publishArtifact := false
   )
   .jvmPlatform(scalaVersions = List(scala3))
   .jsPlatform(scalaVersions = List(scala3))
   .nativePlatform(scalaVersions = List(scala3))
 
-lazy val test = (projectMatrix in file(".test"))
+lazy val test = (projectMatrix in file("test"))
   .dependsOn(examples)
   .settings(commonSettings)
   .settings(
@@ -78,7 +76,6 @@ lazy val test = (projectMatrix in file(".test"))
       "org.scalameta" %%% "munit" % "1.0.0-M6"
     ),
     testFrameworks += new TestFramework("munit.Framework"),
-    Test / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "test",
     publishArtifact := false
   )
   .jvmPlatform(scalaVersions = List(scala3))
