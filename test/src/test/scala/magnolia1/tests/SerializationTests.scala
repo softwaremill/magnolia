@@ -40,4 +40,3 @@ object SerializationTests:
   class Outer:
     val showAddress: Show[String, Address] = summon[Show[String, Address]]
     val showColor: Show[String, Color] = summon[Show[String, Color]]
-
