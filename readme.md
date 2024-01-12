@@ -41,7 +41,7 @@ Creating a generic derivation with Magnolia requires implementing two methods on
 
 ### Example derivations
 
-There are many examples in the [`src/examples`](src/examples) folder.
+There are many examples in the   [`examples`](examples/src/main/scala/magnolia1/examples) sub-project.
 
 The definition of a `Print` typeclass with generic derivation might look like this
 (note we're using the [Lambda syntax for Single Abstract Method types](https://www.scala-lang.org/news/2.12.0/#lambda-syntax-for-sam-types)
