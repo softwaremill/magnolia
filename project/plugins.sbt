@@ -9,5 +9,5 @@ addSbtPlugin(
 )
 
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.15.0")
-addSbtPlugin("org.scala-native" % "sbt-scala-native" % "0.4.16")
+addSbtPlugin("org.scala-native" % "sbt-scala-native" % "0.4.17")
 addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.3")
