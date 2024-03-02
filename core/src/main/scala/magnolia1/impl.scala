@@ -6,6 +6,14 @@ import scala.reflect.*
 
 import Macro.*
 
+// scala3 lambda generated during derivation reference outer scope
+// This fails the typeclass serialization if the outer scope is not serializable
+// workaround with this with a serializable fuction
+private trait SerializableFunction0[+R] extends Function0[R] with Serializable:
+  def apply(): R
+private trait SerializableFunction1[-T1, +R] extends Function1[T1, R] with Serializable:
+  def apply(v1: T1): R
+
 object CaseClassDerivation:
   inline def fromMirror[Typeclass[_], A](
       product: Mirror.ProductOf[A]
@@ -97,12 +105,17 @@ object CaseClassDerivation:
       case _: (EmptyTuple, EmptyTuple) =>
         Nil
       case _: ((l *: ltail), (p *: ptail)) =>
-        def unsafeCast(any: Any) = Option.when(any == null || (any: @unchecked).isInstanceOf[p])(any.asInstanceOf[p])
         val label = constValue[l].asInstanceOf[String]
+        val tc = new SerializableFunction0[Typeclass[p]]:
+          override def apply(): Typeclass[p] = summonInline[Typeclass[p]]
+
+        val d = new SerializableFunction0[Option[p]]:
+          private def unsafeCast(any: Any) = Option.when(any == null || (any: @unchecked).isInstanceOf[p])(any.asInstanceOf[p])
+          override def apply(): Option[p] = defaults.get(label).flatten.flatMap(d => unsafeCast(d.apply))
         paramFromMaps[Typeclass, A, p](
           label,
-          CallByNeed(summonInline[Typeclass[p]]),
-          CallByNeed(defaults.get(label).flatten.flatMap(d => unsafeCast(d.apply))),
+          new CallByNeed(tc),
+          new CallByNeed(d),
           repeated,
           annotations,
           inheritedAnnotations,
@@ -172,7 +185,16 @@ trait SealedTraitDerivation:
               mm.asInstanceOf[m.type],
               0
             )
-          case _ =>
+          case _ => {
+            val tc = new SerializableFunction0[Typeclass[s]]:
+              override def apply(): Typeclass[s] = summonFrom {
+                case tc: Typeclass[`s`] => tc
+                case _                  => deriveSubtype(summonInline[Mirror.Of[s]])
+              }
+            val isType = new SerializableFunction1[A, Boolean]:
+              override def apply(a: A): Boolean = a.isInstanceOf[s & A]
+            val asType = new SerializableFunction1[A, s & A]:
+              override def apply(a: A): s & A = a.asInstanceOf[s & A]
             List(
               new SealedTrait.Subtype[Typeclass, A, s](
                 typeInfo[s],
@@ -181,14 +203,12 @@ trait SealedTraitDerivation:
                 IArray.from(paramTypeAnns[A]),
                 isObject[s],
                 idx,
-                CallByNeed(summonFrom {
-                  case tc: Typeclass[`s`] => tc
-                  case _                  => deriveSubtype(summonInline[Mirror.Of[s]])
-                }),
-                x => x.isInstanceOf[s & A],
-                _.asInstanceOf[s & A]
+                new CallByNeed(tc),
+                isType,
+                asType
               )
             )
+          }
         }
         (sub ::: subtypesFromMirror[A, tail](m, idx + 1)).distinctBy(_.typeInfo).sortBy(_.typeInfo.full)
 end SealedTraitDerivation

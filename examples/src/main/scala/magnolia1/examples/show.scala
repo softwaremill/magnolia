@@ -6,7 +6,7 @@ import magnolia1._
   *
   * Note that this is a more general form of `Show` than is usual, as it permits the return type to be something other than a string.
   */
-trait Show[Out, T] { def show(value: T): Out }
+trait Show[Out, T] extends Serializable { def show(value: T): Out }
 
 trait GenericShow[Out] extends AutoDerivation[[X] =>> Show[Out, X]] {
 
