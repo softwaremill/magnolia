@@ -16,6 +16,9 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   ideSkipProject := (scalaVersion.value == scala2_12) // only import 2.13 projects
 )
 
+ThisBuild / semanticdbEnabled := true
+ThisBuild / semanticdbVersion := "4.9.3"
+
 lazy val root =
   project
     .in(file("."))
