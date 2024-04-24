@@ -70,7 +70,7 @@ jobs:
         with:
           extraKey: sbt-cache-${{ runner.os }}
       - name: Generate LSIF
-        run: sbt 'set every semanticdbEnabled := true; set every semanticdbVersion := "4.4.33"' sourcegraphLsif
+        run: sbt 'set every semanticdbEnabled := true; set every semanticdbVersion := "4.9.3"' sourcegraphLsif
       - name: Upload LSIF data
         uses: sourcegraph/lsif-upload-action@master
         with:
