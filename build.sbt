@@ -13,7 +13,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.magnolia1_2",
   description := "Fast, easy and transparent typeclass derivation for Scala 2",
   updateDocs := UpdateVersionInDocs(sLog.value, organization.value, version.value, List(file("readme.md"))),
-  ideSkipProject := (scalaVersion.value == scala2_12) // only import 2.13 projects,
+  ideSkipProject := (scalaVersion.value == scala2_12) // only import 2.13 projects
 )
 
 lazy val root =
