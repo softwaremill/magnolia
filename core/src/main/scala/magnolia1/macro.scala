@@ -70,10 +70,24 @@ object Macro:
       .zipWithIndex
       .map { case (field, i) =>
         exprOfOption {
+          val defaultMethodName = s"$$lessinit$$greater$$default$$${i + 1}"
           Expr(field.name) -> tpe.companionClass
-            .declaredMethod(s"$$lessinit$$greater$$default$$${i + 1}")
+            .declaredMethod(defaultMethodName)
             .headOption
-            .flatMap(_.tree.asInstanceOf[DefDef].rhs)
+            .map { defaultMethod =>
+              val callDefault = {
+                val base = Ident(tpe.companionModule.termRef).select(defaultMethod)
+                val tParams = defaultMethod.paramSymss.headOption.filter(_.forall(_.isType))
+                tParams match
+                  case Some(tParams) => TypeApply(base, tParams.map(TypeTree.ref))
+                  case _             => base
+              }
+
+              defaultMethod.tree match {
+                case tree: DefDef => tree.rhs.getOrElse(callDefault)
+                case _            => callDefault
+              }
+            }
             .map(_.asExprOf[Any])
         }
       }
@@ -87,14 +101,10 @@ object Macro:
       case _                         => Nil
 
     Expr.ofList {
-      TypeRepr
-        .of[T]
-        .typeSymbol
-        .caseFields
+      val typeRepr = TypeRepr.of[T]
+      typeRepr.typeSymbol.caseFields
         .map { field =>
-          val tpeRepr = field.tree match
-            case v: ValDef => v.tpt.tpe
-            case d: DefDef => d.returnTpt.tpe
+          val tpeRepr = typeRepr.memberType(field)
 
           Expr(field.name) -> getAnnotations(tpeRepr)
             .filter { a =>
@@ -110,25 +120,20 @@ object Macro:
   def repeated[T: Type](using Quotes): Expr[List[(String, Boolean)]] =
     import quotes.reflect.*
 
-    def isRepeated[T](tpeRepr: TypeRepr): Boolean = tpeRepr match
-      case a: AnnotatedType =>
-        a.annotation.tpe match
-          case tr: TypeRef => tr.name == "Repeated"
-          case _           => false
-      case _ => false
-
     val tpe = TypeRepr.of[T]
-    val symbol: Option[Symbol] =
-      if tpe.typeSymbol.isNoSymbol then None else Some(tpe.typeSymbol)
-    val constr: Option[DefDef] =
-      symbol.map(_.primaryConstructor.tree.asInstanceOf[DefDef])
-
-    val areRepeated = constr.toList
-      .flatMap(_.paramss)
-      .flatMap(_.params.flatMap {
-        case ValDef(name, tpeTree, _) => Some(name -> isRepeated(tpeTree.tpe))
-        case _                        => None
-      })
+    val areRepeated =
+      if tpe.typeSymbol.isNoSymbol then Nil
+      else {
+        val symbol = tpe.typeSymbol
+        val ctor = symbol.primaryConstructor
+        for param <- ctor.paramSymss.flatten
+        yield
+          val isRepeated = tpe.memberType(param) match {
+            case AnnotatedType(_, annot) => annot.tpe.typeSymbol == defn.RepeatedAnnot
+            case _                       => false
+          }
+          param.name -> isRepeated
+      }
 
     Expr(areRepeated)
 
@@ -209,7 +214,13 @@ object Macro:
               .filter(filterAnnotation)
               .map(_.asExpr.asInstanceOf[Expr[Any]])
           case _ =>
-            List.empty
+            // Best effort in case whe -Yretain-trees is not used
+            // Does not support class parent annotations (in the extends clouse)
+            tpe.baseClasses
+              .map(tpe.baseType(_))
+              .flatMap(getAnnotations(_))
+              .filter(filterAnnotation)
+              .map(_.asExpr)
         }
       }
     }
@@ -229,11 +240,11 @@ object Macro:
             .filterNot(isObjectOrScala)
             .collect {
               case s if s != tpe.typeSymbol =>
-                (fromConstructor(s) ++ fromDeclarations(s)).filter { case (_, anns) =>
+                (fromConstructor(s)).filter { case (_, anns) =>
                   anns.nonEmpty
                 }
             }
-            .flatten
+            .flatten ++ fromDeclarations(tpe.typeSymbol, inherited = true)
         }
       }
 
@@ -245,13 +256,14 @@ object Macro:
       }
 
     private def fromDeclarations(
-        from: Symbol
+        from: Symbol,
+        inherited: Boolean = false
     ): List[(String, List[Expr[Any]])] =
-      from.declarations.collect {
-        case field: Symbol if field.tree.isInstanceOf[ValDef] =>
-          field.name -> field.annotations
-            .filter(filterAnnotation)
-            .map(_.asExpr.asInstanceOf[Expr[Any]])
+      from.fieldMembers.collect { case field: Symbol =>
+        val annotations = if (!inherited) field.annotations else field.allOverriddenSymbols.flatMap(_.annotations).toList
+        field.name -> annotations
+          .filter(filterAnnotation)
+          .map(_.asExpr.asInstanceOf[Expr[Any]])
       }
 
     private def groupByParamName(anns: List[(String, List[Expr[Any]])]) =

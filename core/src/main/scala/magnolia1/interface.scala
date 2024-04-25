@@ -35,7 +35,7 @@ object CaseClass:
       */
     def deref(param: Type): PType
 
-    /** Requires compilation with `-Yretain-trees` on.
+    /** Recommended compilation with `-Yretain-trees` on.
       * @return
       *   default argument value, if any
       */

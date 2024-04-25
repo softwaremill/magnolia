@@ -77,7 +77,7 @@ be automatically available for consideration during contextual search.
 If you don't want to make the automatic derivation available in the given scope, consider using the `Derivation` trait which provides semi-auto derivation with `derived` method, but also brings some additional limitations.
 ## Limitations
 
-Accessing default values for case class parameters requires compilation with `-Yretain-trees` on.
+For accessing default values for case class parameters we recommend compilation with `-Yretain-trees` on.
 
 For a recursive structures it is required to assign the derived value to an implicit variable e.g.
 ```Scala
@@ -88,7 +88,7 @@ given instance: SemiPrint[Recursive] = SemiPrint.derived
 For Scala 3:
 
 ```scala
-val magnolia = "com.softwaremill.magnolia1_3" %% "magnolia" % "1.3.4"
+val magnolia = "com.softwaremill.magnolia1_3" %% "magnolia" % "1.3.5"
 ```
 
 For Scala 2, see the [scala2 branch](https://github.com/softwaremill/magnolia/tree/scala2).

@@ -25,7 +25,7 @@ class AnnotationsTests extends munit.FunSuite:
     val res = Show.derived[Pet].show(Dog("Alex", 10, likesMeat = true))
     assertEquals(
       res,
-      "{MyTypeAnnotation(2),MyTypeAnnotation(1)}Dog{MyTypeAnnotation(2),MyTypeAnnotation(1)}(name{MyAnnotation(1)}=Alex,age{MyAnnotation(2)}=10,likesMeat{MyAnnotation(3)}=true)"
+      "{MyTypeAnnotation(2),MyTypeAnnotation(1)}Dog{MyTypeAnnotation(2),MyTypeAnnotation(1)}(name{[i]MyAnnotation(1)}=Alex,age{[i]MyAnnotation(2)}=10,likesMeat{MyAnnotation(3)}=true)"
     )
   }
 
@@ -35,13 +35,13 @@ class AnnotationsTests extends munit.FunSuite:
       .show(Hamster("Alex", 10, likesNuts = true, likesVeggies = true))
     assertEquals(
       res,
-      "{MyTypeAnnotation(1)}Hamster{MyTypeAnnotation(1)}(name{MyAnnotation(1)}=Alex,age{MyAnnotation(2)}=10,likesNuts{MyAnnotation(3)}=true,likesVeggies{MyAnnotation(4)}=true)"
+      "{MyTypeAnnotation(1)}Hamster{MyTypeAnnotation(1)}(name{[i]MyAnnotation(1)}=Alex,age{MyAnnotation(6),[i]MyAnnotation(2)}=10,likesNuts{[i]MyAnnotation(3)}=true,likesVeggies{MyAnnotation(4)}=true)"
     )
   }
 
   test("inherit annotations from base class constructor parameters") {
     val res = Show.derived[Foo].show(Foo("foo"))
-    assertEquals(res, "Foo(foo{MyAnnotation(2),MyAnnotation(1)}=foo)")
+    assertEquals(res, "Foo(foo{MyAnnotation(2),[i]MyAnnotation(1)}=foo)")
   }
 
   test(
@@ -50,7 +50,7 @@ class AnnotationsTests extends munit.FunSuite:
     val res = Show.derived[Bar].show(Bar("foo", "bar"))
     assertEquals(
       res,
-      "Bar(foo{MyAnnotation(2),MyAnnotation(1)}=foo,bar{MyAnnotation(2),MyAnnotation(1)}=bar)"
+      "Bar(foo{MyAnnotation(2),[i]MyAnnotation(1)}=foo,bar{MyAnnotation(2),[i]MyAnnotation(1)}=bar)"
     )
   }
 
@@ -156,6 +156,7 @@ object AnnotationsTests:
 
   case class Hamster(
       name: String,
+      @MyAnnotation(6)
       age: Int,
       likesNuts: Boolean,
       @MyAnnotation(4) likesVeggies: Boolean
