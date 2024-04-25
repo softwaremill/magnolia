@@ -172,7 +172,7 @@ class SumsTests extends munit.FunSuite:
     assert(
       clue(
         error
-      ) contains "No given instance of type deriving.Mirror.Of[magnolia1.tests.SumsTests.Parent] was found for parameter x$1 of method derived in trait Derivation."
+      ) contains "No given instance of type scala.deriving.Mirror.Of[magnolia1.tests.SumsTests.Parent] was found for parameter x$1 of method derived in trait Derivation."
     )
     assert(
       clue(
