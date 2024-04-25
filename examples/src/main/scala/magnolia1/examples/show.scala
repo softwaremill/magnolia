@@ -26,7 +26,7 @@ trait GenericShow[Out] extends AutoDerivation[[X] =>> Show[Out, X]] {
           if (param.annotations.isEmpty && param.inheritedAnnotations.isEmpty)
             ""
           else {
-            (param.annotations ++ param.inheritedAnnotations).distinct
+            (param.annotations.map(_.toString) ++ param.inheritedAnnotations.map(a => s"[i]$a")).distinct
               .mkString("{", ",", "}")
           }
 

@@ -240,11 +240,11 @@ object Macro:
             .filterNot(isObjectOrScala)
             .collect {
               case s if s != tpe.typeSymbol =>
-                (fromConstructor(s) ++ fromDeclarations(s)).filter { case (_, anns) =>
+                (fromConstructor(s)).filter { case (_, anns) =>
                   anns.nonEmpty
                 }
             }
-            .flatten
+            .flatten ++ fromDeclarations(tpe.typeSymbol, inherited = true)
         }
       }
 
@@ -256,10 +256,11 @@ object Macro:
       }
 
     private def fromDeclarations(
-        from: Symbol
+        from: Symbol,
+        inherited: Boolean = false
     ): List[(String, List[Expr[Any]])] =
       from.fieldMembers.collect { case field: Symbol =>
-        val annotations = field.annotations ::: field.allOverriddenSymbols.flatMap(_.annotations).toList
+        val annotations = if (!inherited) field.annotations else field.allOverriddenSymbols.flatMap(_.annotations).toList
         field.name -> annotations
           .filter(filterAnnotation)
           .map(_.asExpr.asInstanceOf[Expr[Any]])
