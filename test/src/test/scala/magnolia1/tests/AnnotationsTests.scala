@@ -156,7 +156,7 @@ object AnnotationsTests:
 
   case class Hamster(
       name: String,
-      @MyAnnotation(6) 
+      @MyAnnotation(6)
       age: Int,
       likesNuts: Boolean,
       @MyAnnotation(4) likesVeggies: Boolean
