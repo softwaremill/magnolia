@@ -494,7 +494,7 @@ object Magnolia {
               ${if (isValueClass) q"(t: $genericType) => t.$paramName" else q"$idx"},
               $repeated,
               $CallByNeedObj($ref),
-              ..${default.toList.map(d => q"$CallByNeedObj($d)")},
+              ..${default.toList.map(d => q"$CallByNeedObj.withValueEvaluator($d)")},
               $ArrayObj(..$annotations): _root_.scala.Array[_root_.scala.Any],
               $ArrayObj(..$inheritedAnnotations): _root_.scala.Array[_root_.scala.Any],
               $ArrayObj(..$typeAnnotations): _root_.scala.Array[_root_.scala.Any]
@@ -944,11 +944,47 @@ private[magnolia1] object CompileTimeState {
   }
 }
 
-object CallByNeed { def apply[A](a: => A): CallByNeed[A] = new CallByNeed(() => a) }
-final class CallByNeed[+A](private[this] var eval: () => A) extends Serializable {
+object CallByNeed {
+
+  /** Initializes a class that allows for suspending evaluation of a value until it is needed. Evaluation of a value via `.value` can only
+    * happen once. Evaluation of a value via `.valueEvaluator` will return None. For evaluating a value multiple times, please construct a
+    * CallByNeed via CallByNeed.withValueEvaluator(value)
+    */
+  def apply[A](a: => A): CallByNeed[A] = new CallByNeed(() => a, () => false)
+
+  /** Initializes a class that allows for suspending evaluation of a value until it is needed. Evaluation of a value via `.value` can only
+    * happen once. Evaluation of a value via `.valueEvaluator.map(evaluator => evaluator())` will happen every time the evaluator is called
+    */
+  def withValueEvaluator[A](a: => A): CallByNeed[A] = new CallByNeed(() => a, () => true)
+}
+
+// Both params are later nullified to reduce overhead and increase performance.
+// The supportDynamicValueEvaluation is passed as a function so that it can be nullified. Otherwise, there is no need for the function value.
+final class CallByNeed[+A] private (private[this] var eval: () => A, private var supportDynamicValueEvaluation: () => Boolean)
+    extends Serializable {
+
+  // This second constructor is necessary to support backwards compatibility for v1.1.9 and earlier
+  def this(eval: () => A) = this(eval, () => false)
+
+  val valueEvaluator: Option[() => A] = {
+    val finalRes = if (supportDynamicValueEvaluation()) {
+      val res = Some(eval.fv)
+      eval = null
+      res
+    } else {
+      None
+    }
+    supportDynamicValueEvaluation = null
+    finalRes
+  }
+
   lazy val value: A = {
-    val result = eval()
-    eval = null
-    result
+    if (eval == null) {
+      valueEvaluator.get.fv()
+    } else {
+      val result = eval()
+      eval = null
+      result
+    }
   }
 }

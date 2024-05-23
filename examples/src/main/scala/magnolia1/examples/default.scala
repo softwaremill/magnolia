@@ -5,7 +5,10 @@ import magnolia1.{CaseClass, Magnolia, SealedTrait}
 import scala.language.experimental.macros
 
 /** typeclass for providing a default value for a particular type */
-trait HasDefault[T] { def defaultValue: Either[String, T] }
+trait HasDefault[T] {
+  def defaultValue: Either[String, T]
+  def getDynamicDefaultValueForParam(paramLabel: String): Option[Any] = None
+}
 
 /** companion object and derivation object for [[HasDefault]] */
 object HasDefault {
@@ -21,6 +24,13 @@ object HasDefault {
         case None      => param.typeclass.defaultValue
       }
     }
+
+    override def getDynamicDefaultValueForParam(paramLabel: String): Option[Any] =
+      ctx.parameters
+        .filter(_.label == paramLabel)
+        .flatMap(_.evaluateDefault)
+        .headOption
+        .map(res => res())
   }
 
   /** chooses which subtype to delegate to */
@@ -29,16 +39,26 @@ object HasDefault {
       case Some(sub) => sub.typeclass.defaultValue
       case None      => Left("no subtypes")
     }
+
+    override def getDynamicDefaultValueForParam(paramLabel: String): Option[Any] =
+      ctx.subtypes.headOption match {
+        case Some(sub) => sub.typeclass.getDynamicDefaultValueForParam(paramLabel)
+        case _         => None
+      }
   }
 
   /** default value for a string; the empty string */
   implicit val string: HasDefault[String] = new HasDefault[String] { def defaultValue = Right("") }
 
   /** default value for ints; 0 */
-  implicit val int: HasDefault[Int] = new HasDefault[Int] { def defaultValue = Right(0) }
+  implicit val int: HasDefault[Int] = new HasDefault[Int] {
+    def defaultValue = Right(0)
+  }
 
   /** oh, no, there is no default Boolean... whatever will we do? */
   implicit val boolean: HasDefault[Boolean] = new HasDefault[Boolean] { def defaultValue = Left("truth is a lie") }
+
+  implicit val double: HasDefault[Double] = new HasDefault[Double] { def defaultValue = Right(0) }
 
   /** default value for sequences; the empty sequence */
   implicit def seq[A]: HasDefault[Seq[A]] = new Typeclass[Seq[A]] { def defaultValue = Right(Seq.empty) }

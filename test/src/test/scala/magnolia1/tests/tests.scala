@@ -195,6 +195,7 @@ object Exactly {
 
 case class ParamsWithDefault(a: Int = 3, b: Int = 4)
 case class ParamsWithDefaultGeneric[A, B](a: A = "A", b: B = "B")
+case class ParamsWithDynamicDefault(a: Double = scala.math.random())
 
 sealed trait Parent
 trait BadChild extends Parent // escape hatch!
@@ -294,6 +295,20 @@ class Tests extends munit.FunSuite {
     test("construct a HasDefault instance for a generic product with default values") {
       val res = HasDefault.gen[ParamsWithDefaultGeneric[String, Int]].defaultValue
       assertEquals(res, Right(ParamsWithDefaultGeneric("A", 0)))
+    }
+
+    test("construct a HasDefault instance for a generic product with dynamic default values") {
+      val res1 = HasDefault.gen[ParamsWithDynamicDefault].getDynamicDefaultValueForParam("a")
+      val res2 = HasDefault.gen[ParamsWithDynamicDefault].getDynamicDefaultValueForParam("a")
+
+      assertEquals(res1.isDefined, true)
+      assertEquals(res2.isDefined, true)
+
+      for {
+        firstParam <- res1
+        secondParam <- res2
+        res = assertNotEquals(firstParam, secondParam)
+      } yield res
     }
 
     test("serialize a Branch") {

@@ -296,6 +296,9 @@ trait Param[Typeclass[_], Type] extends ReadOnlyParam[Typeclass, Type] {
   /** provides the default value for this parameter, as defined in the case class constructor */
   def default: Option[PType]
 
+  /** provides a function to evaluate the default value for this parameter, as defined in the case class constructor */
+  def evaluateDefault: Option[() => PType] = None
+
   override def toString: String = s"Param($label)"
 }
 
@@ -322,6 +325,7 @@ object Param {
     def typeName: TypeName = typeNameParam
     def index: Int = idx
     def repeated: Boolean = isRepeated
+    override def evaluateDefault: Option[() => PType] = getDefaultEvaluatorFromDefaultVal(defaultVal)
     def default: Option[PType] = defaultVal.value
     def typeclass: Tc[PType] = typeclassParam.value
     def dereference(t: T): PType = t.asInstanceOf[Product].productElement(idx).asInstanceOf[PType]
@@ -346,6 +350,7 @@ object Param {
     def typeName: TypeName = typeNameParam
     def index: Int = idx
     def repeated: Boolean = isRepeated
+    override def evaluateDefault: Option[() => PType] = getDefaultEvaluatorFromDefaultVal(defaultVal)
     def default: Option[PType] = defaultVal.value
     def typeclass: Tc[PType] = typeclassParam.value
     def dereference(t: T): PType = t.asInstanceOf[Product].productElement(idx).asInstanceOf[PType]
@@ -370,6 +375,7 @@ object Param {
     def typeName: TypeName = typeNameParam
     def index: Int = 0
     def repeated: Boolean = isRepeated
+    override def evaluateDefault: Option[() => PType] = getDefaultEvaluatorFromDefaultVal(defaultVal)
     def default: Option[PType] = defaultVal.value
     def typeclass: Tc[PType] = typeclassParam.value
     def dereference(t: T): PType = deref(t)
@@ -394,6 +400,7 @@ object Param {
     def typeName: TypeName = typeNameParam
     def index: Int = 0
     def repeated: Boolean = isRepeated
+    override def evaluateDefault: Option[() => PType] = getDefaultEvaluatorFromDefaultVal(defaultVal)
     def default: Option[PType] = defaultVal.value
     def typeclass: Tc[PType] = typeclassParam.value
     def dereference(t: T): PType = deref(t)
@@ -401,6 +408,13 @@ object Param {
     override def inheritedAnnotationsArray: Array[Any] = Array.empty
     def typeAnnotationsArray: Array[Any] = typeAnnotationsArrayParam
   }
+
+  private def getDefaultEvaluatorFromDefaultVal[P](defaultVal: CallByNeed[Option[P]]): Option[() => P] =
+    defaultVal.valueEvaluator.flatMap { evaluator =>
+      evaluator().fold[Option[() => P]](None) { _ =>
+        Some(() => evaluator().get)
+      }
+    }
 
 }
 
