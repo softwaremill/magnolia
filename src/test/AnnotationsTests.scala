@@ -74,17 +74,17 @@ class AnnotationsTests extends munit.FunSuite:
     assertEquals(subtypeAnnotations(1).mkString, "MyAnnotation(2)")
   }
 
-  // TODO - not compiling
-  // test("serialize case class with Java annotations by skipping them") {
-  //   val res = Show.derived[MyDto].show(MyDto("foo", 42))
-  //   assertEquals(res, "MyDto{MyAnnotation(0)}(foo=foo,bar=42)")
-  // }
+  test("serialize case class with Java annotations by skipping them") {
+    val res = Show.derived[MyDto].show(MyDto("foo", 42))
+    assertEquals(res, "MyDto{MyAnnotation(0)}(foo=foo,bar=42)")
+  }
 
-  // TODO - not compiling
-  // test("serialize case class with Java annotations which comes from external module by skipping them") {
-  //   val res = Show.derived[JavaAnnotatedCase].show(JavaAnnotatedCase(1))
-  //   assertEquals(res, "JavaAnnotatedCase(v=1)")
-  // }
+  test(
+    "serialize case class with Java annotations which comes from external module by skipping them"
+  ) {
+    val res = Show.derived[JavaAnnotatedCase].show(JavaAnnotatedCase(1))
+    assertEquals(res, "JavaAnnotatedCase(v=1)")
+  }
 
 object AnnotationsTests:
 

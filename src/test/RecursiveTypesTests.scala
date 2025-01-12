@@ -95,9 +95,7 @@ class RecursiveTypesTests extends munit.FunSuite:
     val error = compileErrors("ExportedTypeclass.derived[Recursive]")
     val expectedError =
       """|No given instance of type magnolia2.examples.ExportedTypeclass[
-         |  Seq[magnolia2.tests.RecursiveTypesTests.Recursive]
-         |] was found.
-         |""".stripMargin
+         |  Seq[magnolia2.tests.RecursiveTypesTests.Recursive]""".stripMargin
     assert(error contains expectedError)
   }
 

@@ -346,8 +346,9 @@ object Macro:
         bc.fullName.startsWith("scala.")
 
     private def filterAnnotation(a: Term): Boolean =
-      a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
-        a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
+      (a.tpe <:< TypeRepr.of[scala.annotation.Annotation]) &&
+        (a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
+          a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal")
 
   object ValueClassDerivation:
 
