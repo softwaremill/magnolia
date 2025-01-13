@@ -1,6 +1,6 @@
 package magnolia2
 
-import scala.annotation.tailrec
+import scala.annotation.{Annotation, tailrec}
 import scala.reflect.*
 
 case class TypeInfo(
@@ -15,8 +15,8 @@ object CaseClass:
       val label: String,
       val index: Int,
       val repeated: Boolean,
-      val annotations: IArray[Any],
-      val typeAnnotations: IArray[Any]
+      val annotations: IArray[Annotation],
+      val typeAnnotations: IArray[Annotation]
   ) extends Serializable:
 
     type PType
@@ -42,7 +42,7 @@ object CaseClass:
       *   default argument value, if any
       */
     def default: Option[PType]
-    def inheritedAnnotations: IArray[Any] = IArray.empty[Any]
+    def inheritedAnnotations: IArray[Annotation] = IArray.empty[Annotation]
     override def toString: String = s"Param($label)"
 
   object Param:
@@ -53,9 +53,9 @@ object CaseClass:
         repeated: Boolean,
         cbn: CallByNeed[F[P]],
         defaultVal: CallByNeed[Option[P]],
-        annotations: IArray[Any],
-        inheritedAnns: IArray[Any],
-        typeAnnotations: IArray[Any]
+        annotations: IArray[Annotation],
+        inheritedAnns: IArray[Annotation],
+        typeAnnotations: IArray[Annotation]
     ): Param[F, T] =
       new CaseClass.Param[F, T](
         name,
@@ -89,9 +89,9 @@ abstract class CaseClass[Typeclass[_], Type](
     val isObject: Boolean,
     val isValueClass: Boolean,
     val params: IArray[CaseClass.Param[Typeclass, Type]],
-    val annotations: IArray[Any],
-    val inheritedAnnotations: IArray[Any] = IArray.empty[Any],
-    val typeAnnotations: IArray[Any]
+    val annotations: IArray[Annotation],
+    val inheritedAnnotations: IArray[Annotation] = IArray.empty[Annotation],
+    val typeAnnotations: IArray[Annotation]
 ) extends Serializable:
 
   type Param = CaseClass.Param[Typeclass, Type]
@@ -113,9 +113,9 @@ abstract class CaseClass[Typeclass[_], Type](
       repeated: Boolean,
       cbn: CallByNeed[Typeclass[P]],
       defaultVal: CallByNeed[Option[P]],
-      annotations: IArray[Any],
-      inheritedAnns: IArray[Any],
-      typeAnnotations: IArray[Any]
+      annotations: IArray[Annotation],
+      inheritedAnns: IArray[Annotation],
+      typeAnnotations: IArray[Annotation]
   ): Param =
     new CaseClass.Param[Typeclass, Type](
       name,
@@ -141,10 +141,10 @@ end CaseClass
 case class SealedTrait[Typeclass[_], Type](
     typeInfo: TypeInfo,
     subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
-    annotations: IArray[Any],
-    typeAnnotations: IArray[Any],
+    annotations: IArray[Annotation],
+    typeAnnotations: IArray[(String, List[Annotation])],
     isEnum: Boolean,
-    inheritedAnnotations: IArray[Any]
+    inheritedAnnotations: IArray[Annotation]
 ) extends Serializable:
 
   type Subtype[S] = SealedTrait.SubtypeValue[Typeclass, Type, S]
@@ -191,9 +191,9 @@ object SealedTrait:
     */
   class Subtype[Typeclass[_], Type, SType](
       val typeInfo: TypeInfo,
-      val annotations: IArray[Any],
-      val inheritedAnnotations: IArray[Any],
-      val typeAnnotations: IArray[Any],
+      val annotations: IArray[Annotation],
+      val inheritedAnnotations: IArray[Annotation],
+      val typeAnnotations: IArray[(String, List[Annotation])],
       val isObject: Boolean,
       callByNeed: CallByNeed[Typeclass[SType]],
       isType: Type => Boolean,

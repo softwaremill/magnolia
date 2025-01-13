@@ -3,6 +3,7 @@ package magnolia2
 import scala.quoted.*
 import scala.annotation.meta.field
 import scala.annotation.Annotation
+import scala.reflect.ClassTag
 
 object Macro:
 
@@ -15,19 +16,19 @@ object Macro:
   inline def isEnum[T]: Boolean =
     ${ isEnum[T] }
 
-  inline def anns[T]: List[Any] =
+  inline def anns[T]: List[Annotation] =
     ${ anns[T] }
 
-  inline def inheritedAnns[T]: List[Any] =
+  inline def inheritedAnns[T]: List[Annotation] =
     ${ inheritedAnns[T] }
 
-  inline def typeAnns[T]: List[Any] =
+  inline def typeAnns[T]: List[Annotation] =
     ${ typeAnns[T] }
 
-  inline def paramAnns[T]: List[(String, List[Any])] =
+  inline def paramAnns[T]: List[(String, List[Annotation])] =
     ${ paramAnns[T] }
 
-  inline def inheritedParamAnns[T]: List[(String, List[Any])] =
+  inline def inheritedParamAnns[T]: List[(String, List[Annotation])] =
     ${ inheritedParamAnns[T] }
 
   inline def isValueClass[T]: Boolean =
@@ -36,7 +37,7 @@ object Macro:
   inline def defaultValue[T]: List[(String, Option[() => Any])] =
     ${ defaultValue[T] }
 
-  inline def paramTypeAnns[T]: List[(String, List[Any])] =
+  inline def paramTypeAnns[T]: List[(String, List[Annotation])] =
     ${ paramTypeAnns[T] }
 
   inline def repeated[T]: List[(String, Boolean)] =
@@ -60,26 +61,26 @@ object Macro:
 
   def paramTypeAnns[T: Type](using
       q: Quotes
-  ): Expr[List[(String, List[Any])]] =
+  ): Expr[List[(String, List[Annotation])]] =
     new CollectAnnotations[q.type, T].paramTypeAnns
 
-  def anns[T: Type](using q: Quotes): Expr[List[Any]] =
+  def anns[T: Type](using q: Quotes): Expr[List[Annotation]] =
     new CollectAnnotations[q.type, T].anns
 
-  def inheritedAnns[T: Type](using q: Quotes): Expr[List[Any]] =
+  def inheritedAnns[T: Type](using q: Quotes): Expr[List[Annotation]] =
     new CollectAnnotations[q.type, T].inheritedAnns
 
-  def typeAnns[T: Type](using q: Quotes): Expr[List[Any]] =
+  def typeAnns[T: Type](using q: Quotes): Expr[List[Annotation]] =
     new CollectAnnotations[q.type, T].typeAnns
 
   def paramAnns[T: Type](using
       q: Quotes
-  ): Expr[List[(String, List[Any])]] =
+  ): Expr[List[(String, List[Annotation])]] =
     new CollectAnnotations[q.type, T].paramAnns
 
   def inheritedParamAnns[T: Type](using
       q: Quotes
-  ): Expr[List[(String, List[Any])]] =
+  ): Expr[List[(String, List[Annotation])]] =
     new CollectAnnotations[q.type, T].inheritedParamAnns
 
   def isValueClass[T: Type](using Quotes): Expr[Boolean] =
@@ -192,14 +193,14 @@ object Macro:
 
     val tpe: TypeRepr = TypeRepr.of[T]
 
-    def anns: Expr[List[Any]] =
+    def anns: Expr[List[Annotation]] =
       Expr.ofList {
         tpe.typeSymbol.annotations
           .filter(filterAnnotation)
-          .map(_.asExpr.asInstanceOf[Expr[Any]])
+          .map(_.asExpr.asInstanceOf[Expr[Annotation]])
       }
 
-    def inheritedAnns: Expr[List[Any]] =
+    def inheritedAnns: Expr[List[Annotation]] =
       Expr.ofList {
         tpe.baseClasses
           .filterNot(isObjectOrScala)
@@ -208,10 +209,10 @@ object Macro:
           } // skip self
           .flatten
           .filter(filterAnnotation)
-          .map(_.asExpr.asInstanceOf[Expr[Any]])
+          .map(_.asExpr.asInstanceOf[Expr[Annotation]])
       }
 
-    def typeAnns: Expr[List[Any]] =
+    def typeAnns: Expr[List[Annotation]] =
       val symbol: Option[Symbol] =
         if tpe.typeSymbol.isNoSymbol then None else Some(tpe.typeSymbol)
 
@@ -231,7 +232,7 @@ object Macro:
                 }
                 .flatMap(loopForAnnotations)
                 .filter(filterAnnotation)
-                .map { _.asExpr.asInstanceOf[Expr[Any]] }
+                .map { _.asExpr.asInstanceOf[Expr[Annotation]] }
             case _ =>
               List.empty
           }
@@ -248,8 +249,8 @@ object Macro:
         }
         .filter(_._2.nonEmpty)
 
-    def paramTypeAnns: Expr[List[(String, List[Any])]] =
-      liftTermsDict(paramTypeAnnsOnTerms)
+    def paramTypeAnns: Expr[List[(String, List[Annotation])]] =
+      liftTermsDict(paramTypeAnnsOnTerms).asInstanceOf[Expr[List[(String, List[Annotation])]]]
 
     def paramAnnsOnTerms: List[(String, List[Term])] =
       val terms = (annotationsFromConstructorOnTerms(
@@ -259,8 +260,8 @@ object Macro:
 
       groupByNameOnTerms(terms)
 
-    def paramAnns: Expr[List[(String, List[Any])]] =
-      liftTermsDict(paramAnnsOnTerms)
+    def paramAnns: Expr[List[(String, List[Annotation])]] =
+      liftTermsDict(paramAnnsOnTerms).asInstanceOf[Expr[List[(String, List[Annotation])]]]
 
     def inheritedParamAnnsOnTerms: List[(String, List[Term])] =
       val annTerms: List[(String, List[Term])] =
@@ -279,8 +280,8 @@ object Macro:
 
       groupByNameOnTerms(annTerms)
 
-    def inheritedParamAnns: Expr[List[(String, List[Any])]] =
-      liftTermsDict(inheritedParamAnnsOnTerms)
+    def inheritedParamAnns: Expr[List[(String, List[Annotation])]] =
+      liftTermsDict(inheritedParamAnnsOnTerms).asInstanceOf[Expr[List[(String, List[Annotation])]]]
 
     private def loopForAnnotations(t: TypeRepr): List[Term] =
       t match
@@ -310,10 +311,10 @@ object Macro:
 
     private def annotationsfromConstructor(
         from: Symbol
-    ): List[(String, List[Expr[Any]])] =
+    ): List[(String, List[Expr[Annotation]])] =
       annotationsFromConstructorOnTerms(from)
         .map { p =>
-          p._1 -> p._2.map(_.asExpr.asInstanceOf[Expr[Any]])
+          p._1 -> p._2.map(_.asExpr.asInstanceOf[Expr[Annotation]])
         }
 
     private def annotationsFromDeclarationsOnTerms(
@@ -327,10 +328,10 @@ object Macro:
 
     private def annotationsFromDeclarations(
         from: Symbol
-    ): List[(String, List[Expr[Any]])] =
+    ): List[(String, List[Expr[Annotation]])] =
       annotationsFromDeclarationsOnTerms(from)
         .map { p =>
-          p._1 -> p._2.map(_.asExpr.asInstanceOf[Expr[Any]])
+          p._1 -> p._2.map(_.asExpr.asInstanceOf[Expr[Annotation]])
         }
 
     private def groupByNameOnTerms(
@@ -346,7 +347,7 @@ object Macro:
         bc.fullName.startsWith("scala.")
 
     private def filterAnnotation(a: Term): Boolean =
-      (a.tpe <:< TypeRepr.of[scala.annotation.Annotation]) &&
+      (a.tpe <:< TypeRepr.of[Annotation]) &&
         (a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
           a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal")
 
@@ -384,7 +385,7 @@ object Macro:
           case Some(expr) =>
             '{ new CallByNeed(() => Some(($expr).asInstanceOf[P])) }
 
-      def selectFromDict(
+      def selectFromDict[T: Type](
           dict: List[(String, List[Term])],
           name: String
       ) =
@@ -394,11 +395,11 @@ object Macro:
               dict,
               name
             )
-              .map(_.asExpr)
+              .map(_.asExprOf[T])
           }
 
-      def toIArray(es: Expr[List[Any]]): Expr[IArray[Any]] =
-        '{ IArray($es: _*) }
+      def toAnnIArray(es: Expr[List[Annotation]]): Expr[IArray[Annotation]] =
+        '{ IArray[Annotation]($es: _*) }
 
       extension [B: Type](e: Expr[B])
         def asCallByNeedExpr: Expr[CallByNeed[B]] =
@@ -438,24 +439,24 @@ object Macro:
                 selectDefault[p](defaultValueOnTerms[a], paramSymbol.name)
 
           val annotations =
-            toIArray(
-              selectFromDict(
+            toAnnIArray(
+              selectFromDict[Annotation](
                 new CollectAnnotations[q.type, A].paramAnnsOnTerms,
                 paramSymbol.name
               )
             )
 
           val inheritedAnnotations =
-            toIArray(
-              selectFromDict(
+            toAnnIArray(
+              selectFromDict[Annotation](
                 new CollectAnnotations[q.type, A].inheritedParamAnnsOnTerms,
                 paramSymbol.name
               )
             )
 
           val typeAnnotations =
-            toIArray(
-              selectFromDict(
+            toAnnIArray(
+              selectFromDict[Annotation](
                 new CollectAnnotations[q.type, A].paramTypeAnnsOnTerms,
                 paramSymbol.name
               )

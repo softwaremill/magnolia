@@ -1,5 +1,6 @@
 package magnolia2
 
+import scala.annotation.Annotation
 import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.reflect.*
@@ -85,7 +86,7 @@ object CaseClassDerivation:
       parameters,
       IArray(anns[A]*),
       IArray(inheritedAnns[A]*),
-      IArray[Any](typeAnns[A]*)
+      IArray[Annotation](typeAnns[A]*)
     ):
       def construct[PType: ClassTag](makeParam: Param => PType): A =
         product.fromProduct(Tuple.fromArray(params.map(makeParam).to(Array)))
@@ -120,9 +121,9 @@ object CaseClassDerivation:
       }
 
   inline def paramsFromMaps[Typeclass[_], A, Labels <: Tuple, Params <: Tuple](
-      annotations: Map[String, List[Any]],
-      inheritedAnnotations: Map[String, List[Any]],
-      typeAnnotations: Map[String, List[Any]],
+      annotations: Map[String, List[Annotation]],
+      inheritedAnnotations: Map[String, List[Annotation]],
+      typeAnnotations: Map[String, List[Annotation]],
       repeated: Map[String, Boolean],
       defaults: Map[String, Option[() => Any]],
       idx: Int = 0
@@ -165,7 +166,7 @@ trait SealedTraitDerivation:
       typeInfo[A],
       IArray(subtypesFromMirror[A, m.MirroredElemTypes](m)*),
       IArray.from(anns[A]),
-      IArray(paramTypeAnns[A]*),
+      IArray.from(paramTypeAnns[A]),
       isEnum[A],
       IArray.from(inheritedAnns[A])
     )
