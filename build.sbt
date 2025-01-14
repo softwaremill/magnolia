@@ -2,7 +2,7 @@ import com.softwaremill.UpdateVersionInDocs
 import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
 import com.softwaremill.Publish.{updateDocs, ossPublishSettings}
 
-val scala3 = "3.2.1"
+val scala3 = "3.3.4"
 
 ThisBuild / dynverTagPrefix := "scala3-v" // a custom prefix is needed to differentiate tags between scala2 & scala3 versions
 
@@ -75,7 +75,7 @@ lazy val test = (projectMatrix in file(".test"))
     name := "magnolia-test",
     scalacOptions += "-Yretain-trees",
     projectDependencies ++= Seq(
-      "org.scalameta" %%% "munit" % "1.0.0-M6"
+      "org.scalameta" %%% "munit" % "1.0.0-M12"
     ),
     testFrameworks += new TestFramework("munit.Framework"),
     Test / scalaSource := baseDirectory.value / ".." / ".." / ".." / "src" / "test",

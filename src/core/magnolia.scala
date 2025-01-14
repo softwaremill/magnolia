@@ -1,5 +1,6 @@
 package magnolia2
 
+import scala.annotation.Annotation
 import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.reflect.*
@@ -30,9 +31,9 @@ trait CommonDerivation[TypeClass[_]]:
   ): Typeclass[A] = join(CaseClassDerivation.fromMirror(product))
 
   inline def getParams__[T, Labels <: Tuple, Params <: Tuple](
-      annotations: Map[String, List[Any]],
-      inheritedAnnotations: Map[String, List[Any]],
-      typeAnnotations: Map[String, List[Any]],
+      annotations: Map[String, List[Annotation]],
+      inheritedAnnotations: Map[String, List[Annotation]],
+      typeAnnotations: Map[String, List[Annotation]],
       repeated: Map[String, Boolean],
       defaults: Map[String, Option[() => Any]],
       idx: Int = 0
