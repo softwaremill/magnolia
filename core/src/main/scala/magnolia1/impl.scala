@@ -184,17 +184,19 @@ trait SealedTraitDerivation:
 
   protected transparent inline def subtypesFromMirror[A, SubtypeTuple <: Tuple](
       m: Mirror.SumOf[A],
-      idx: Int = 0 // no longer used, kept for bincompat
+      idx: Int = 0, // no longer used, kept for bincompat
+      result: List[SealedTrait.Subtype[Typeclass, A, _]] = Nil
   ): List[SealedTrait.Subtype[Typeclass, A, _]] =
     inline erasedValue[SubtypeTuple] match
       case _: EmptyTuple =>
-        Nil
+        result.distinctBy(_.typeInfo).sortBy(_.typeInfo.full)
       case _: (s *: tail) =>
         val sub = summonFrom {
           case mm: Mirror.SumOf[`s`] =>
             subtypesFromMirror[A, mm.MirroredElemTypes](
               mm.asInstanceOf[m.type],
-              0
+              0,
+              Nil
             )
           case _ => {
             val tc = new SerializableFunction0[Typeclass[s]]:
@@ -221,5 +223,5 @@ trait SealedTraitDerivation:
             )
           }
         }
-        (sub ::: subtypesFromMirror[A, tail](m, idx + 1)).distinctBy(_.typeInfo).sortBy(_.typeInfo.full)
+        subtypesFromMirror[A, tail](m, idx + 1, sub ::: result)
 end SealedTraitDerivation
