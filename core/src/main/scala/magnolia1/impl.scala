@@ -121,30 +121,29 @@ object CaseClassDerivation:
     type PFactory[P] = ParamFactory[Typeclass, P]
     val factories: List[PFactory[?]] =
       summonAll[Tuple.Map[Params, PFactory]].toList.asInstanceOf[List[PFactory[?]]]
-    labels.zip(factories).zipWithIndex.map {
-      case ((label, f: PFactory[p]), i) =>
-        val d =
-          defaults(label) match {
-            case Some(evaluator) =>
-              new SerializableFunction0[Option[p]]:
-                override def apply(): Option[p] =
-                  val v = evaluator()
-                  if (f.isType(v)) Some(v.asInstanceOf[p])
-                  else None
-            case _ =>
-              new SerializableFunction0[Option[p]]:
-                override def apply(): Option[p] = None
-          }
-        paramFromMaps[Typeclass, A, p](
-            label,
-            CallByNeed.createLazy(f.tc),
-            CallByNeed.createValueEvaluator(d),
-            repeated,
-            annotations,
-            inheritedAnnotations,
-            typeAnnotations,
-            idx + i
-          )
+    labels.zip(factories).zipWithIndex.map { case ((label, f: PFactory[p]), i) =>
+      val d =
+        defaults(label) match {
+          case Some(evaluator) =>
+            new SerializableFunction0[Option[p]]:
+              override def apply(): Option[p] =
+                val v = evaluator()
+                if (f.isType(v)) Some(v.asInstanceOf[p])
+                else None
+          case _ =>
+            new SerializableFunction0[Option[p]]:
+              override def apply(): Option[p] = None
+        }
+      paramFromMaps[Typeclass, A, p](
+        label,
+        CallByNeed.createLazy(f.tc),
+        CallByNeed.createValueEvaluator(d),
+        repeated,
+        annotations,
+        inheritedAnnotations,
+        typeAnnotations,
+        idx + i
+      )
     }
 
   private def paramFromMaps[Typeclass[_], A, p](
