@@ -112,7 +112,7 @@ object CaseClassDerivation:
         val tc = new SerializableFunction0[Typeclass[p]]:
           override def apply(): Typeclass[p] = summonInline[Typeclass[p]]
         val d =
-          defaults(label) match {
+          defaults.get(label).flatten match {
             case Some(evaluator) =>
               new SerializableFunction0[Option[p]]:
                 override def apply(): Option[p] =
