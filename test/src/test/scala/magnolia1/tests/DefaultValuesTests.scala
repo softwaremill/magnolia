@@ -50,6 +50,18 @@ class DefaultValuesTests extends munit.FunSuite:
     } yield assertNotEquals(default1, default2)
   }
 
+  test("issue 571") {
+    given list[A]: HasDefault[List[A]] with
+      def defaultValue = Right(Nil)
+      override def getDynamicDefaultValueForParam(paramLabel: String): Option[Any] = None
+
+    val res1 = summon[HasDefault[::[String]]].getDynamicDefaultValueForParam("value")
+    val res2 = summon[HasDefault[::[String]]].getDynamicDefaultValueForParam("next")
+
+    assertEquals(res1.isDefined, false)
+    assertEquals(res2.isDefined, false)
+  }
+
   test("construct a HasDefault instance for a generic product with default values") {
     val res = HasDefault.derived[ParamsWithDefaultGeneric[String, Int]].defaultValue
     assertEquals(res, Right(ParamsWithDefaultGeneric("A", 0)))
