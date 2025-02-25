@@ -96,6 +96,18 @@ object CaseClassDerivation:
       } { params => product.fromProduct(Tuple.fromArray(params)) }
     }
 
+  private trait ParamFactory[TC[_], P]:
+    def tc: SerializableFunction0[TC[P]]
+    def isType(v: Any): Boolean
+
+  private object ParamFactory:
+    inline given paramFactory[TC[_], P]: ParamFactory[TC, P] =
+      new ParamFactory[TC, P]:
+        def tc: SerializableFunction0[TC[P]] =
+          new SerializableFunction0[TC[P]]:
+            def apply(): TC[P] = summonInline[TC[P]]
+        def isType(v: Any): Boolean = (v: @unchecked).isInstanceOf[P]
+
   inline def paramsFromMaps[Typeclass[_], A, Labels <: Tuple, Params <: Tuple](
       annotations: Map[String, List[Any]],
       inheritedAnnotations: Map[String, List[Any]],
@@ -104,43 +116,35 @@ object CaseClassDerivation:
       defaults: Map[String, Option[() => Any]],
       idx: Int = 0
   ): List[CaseClass.Param[Typeclass, A]] =
-    inline erasedValue[(Labels, Params)] match
-      case _: (EmptyTuple, EmptyTuple) =>
-        Nil
-      case _: ((l *: ltail), (p *: ptail)) =>
-        val label = constValue[l].asInstanceOf[String]
-        val tc = new SerializableFunction0[Typeclass[p]]:
-          override def apply(): Typeclass[p] = summonInline[Typeclass[p]]
-        val d =
-          defaults.get(label).flatten match {
-            case Some(evaluator) =>
-              new SerializableFunction0[Option[p]]:
-                override def apply(): Option[p] =
-                  val v = evaluator()
-                  if ((v: @unchecked).isInstanceOf[p]) Some(v.asInstanceOf[p])
-                  else None
-            case _ =>
-              new SerializableFunction0[Option[p]]:
-                override def apply(): Option[p] = None
-          }
-        paramFromMaps[Typeclass, A, p](
-          label,
-          CallByNeed.createLazy(tc),
-          CallByNeed.createValueEvaluator(d),
-          repeated,
-          annotations,
-          inheritedAnnotations,
-          typeAnnotations,
-          idx
-        ) ::
-          paramsFromMaps[Typeclass, A, ltail, ptail](
-            annotations,
-            inheritedAnnotations,
-            typeAnnotations,
-            repeated,
-            defaults,
-            idx + 1
-          )
+    val labels: List[String] =
+      summonAll[Tuple.Map[Labels, ValueOf]].toList.asInstanceOf[List[ValueOf[? <: String]]].map(_.value)
+    type PFactory[P] = ParamFactory[Typeclass, P]
+    val factories: List[PFactory[?]] =
+      summonAll[Tuple.Map[Params, PFactory]].toList.asInstanceOf[List[PFactory[?]]]
+    labels.zip(factories).zipWithIndex.map { case ((label, f: PFactory[p]), i) =>
+      val d =
+        defaults(label) match {
+          case Some(evaluator) =>
+            new SerializableFunction0[Option[p]]:
+              override def apply(): Option[p] =
+                val v = evaluator()
+                if (f.isType(v)) Some(v.asInstanceOf[p])
+                else None
+          case _ =>
+            new SerializableFunction0[Option[p]]:
+              override def apply(): Option[p] = None
+        }
+      paramFromMaps[Typeclass, A, p](
+        label,
+        CallByNeed.createLazy(f.tc),
+        CallByNeed.createValueEvaluator(d),
+        repeated,
+        annotations,
+        inheritedAnnotations,
+        typeAnnotations,
+        idx + i
+      )
+    }
 
   private def paramFromMaps[Typeclass[_], A, p](
       label: String,
