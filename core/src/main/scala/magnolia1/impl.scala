@@ -117,11 +117,10 @@ object CaseClassDerivation:
               new SerializableFunction0[Option[p]]:
                 override def apply(): Option[p] =
                   val v = evaluator()
-                  if ((v: @unchecked).isInstanceOf[p]) Some(v.asInstanceOf[p])
+                  if ((v: @unchecked).isInstanceOf[p]) new Some(v).asInstanceOf[Option[p]]
                   else None
             case _ =>
-              new SerializableFunction0[Option[p]]:
-                override def apply(): Option[p] = None
+              returningNone.asInstanceOf[SerializableFunction0[Option[p]]]
           }
         paramFromMaps[Typeclass, A, p](
           label,
@@ -162,6 +161,10 @@ object CaseClassDerivation:
       IArray.from(inheritedAnnotations.getOrElse(label, List())),
       IArray.from(typeAnnotations.getOrElse(label, List()))
     )
+
+  private val returningNone =
+    new SerializableFunction0[Option[Any]]:
+      override def apply(): Option[Any] = None
 
 end CaseClassDerivation
 
