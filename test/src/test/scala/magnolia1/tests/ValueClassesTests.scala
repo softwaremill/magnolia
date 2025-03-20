@@ -11,15 +11,15 @@ class ValueClassesTests extends munit.FunSuite:
   import ValueClassesTests.given
   import ValueClassesTests.*
 
-   test("serialize a value class") {
-     val res = ParamaterisedShow.derived[Length].show(new Length(100))
-     assertEquals(res, "100")
-   }
+  test("serialize a value class") {
+    val res = ParamaterisedShow.derived[Length].show(new Length(100))
+    assertEquals(res, "100")
+  }
 
-   test("construct a Show instance for value case class") {
-     val res = ParamaterisedShow.derived[ServiceName1].show(ServiceName1("service"))
-     assertEquals(res, "service")
-   }
+  test("construct a Show instance for value case class") {
+    val res = ParamaterisedShow.derived[ServiceName1].show(ServiceName1("service"))
+    assertEquals(res, "service")
+  }
 
 //   test("read-only typeclass can serialize value case class with inaccessible private constructor") {
 //     val res = implicitly[ParamaterisedGenericShow[PrivateValueClass]].show(PrivateValueClass(42))
@@ -59,5 +59,5 @@ object ValueClassesTests:
   class PrivateValueClass private (val value: Int) extends AnyVal
   object PrivateValueClass {
     def apply(l: Int) = new PrivateValueClass(l)
-     given ParamaterisedShow[String, PrivateValueClass] = ParamaterisedShow.derived
+    given ParamaterisedShow[String, PrivateValueClass] = ParamaterisedShow.derived
   }
