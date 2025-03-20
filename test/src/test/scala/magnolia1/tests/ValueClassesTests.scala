@@ -56,7 +56,7 @@ object ValueClassesTests:
 
   final case class ServiceName1(value: String) extends AnyVal
 
-  class PrivateValueClass private (val value: Int) extends AnyVal
+  case class PrivateValueClass private (val value: Int) extends AnyVal
   object PrivateValueClass {
     def apply(l: Int) = new PrivateValueClass(l)
     given ParamaterisedShow[String, PrivateValueClass] = ParamaterisedShow.derived
