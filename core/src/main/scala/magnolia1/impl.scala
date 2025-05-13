@@ -96,6 +96,39 @@ object CaseClassDerivation:
       } { params => product.fromProduct(Tuple.fromArray(params)) }
     }
 
+  inline def paramsFromMapsStep[Typeclass[_], A, l, p](
+      annotations: Map[String, List[Any]],
+      inheritedAnnotations: Map[String, List[Any]],
+      typeAnnotations: Map[String, List[Any]],
+      repeated: Map[String, Boolean],
+      defaults: Map[String, Option[() => Any]],
+      idx: Int
+  ): CaseClass.Param[Typeclass, A] =
+    val label = constValue[l].asInstanceOf[String]
+    val tc = new SerializableFunction0[Typeclass[p]]:
+      override def apply(): Typeclass[p] = summonInline[Typeclass[p]]
+    val d =
+      defaults.get(label).flatten match {
+        case Some(evaluator) =>
+          new SerializableFunction0[Option[p]]:
+            override def apply(): Option[p] =
+              val v = evaluator()
+              if ((v: @unchecked).isInstanceOf[p]) new Some(v).asInstanceOf[Option[p]]
+              else None
+        case _ =>
+          returningNone.asInstanceOf[SerializableFunction0[Option[p]]]
+      }
+    paramFromMaps[Typeclass, A, p](
+      label,
+      CallByNeed.createLazy(tc),
+      CallByNeed.createValueEvaluator(d),
+      repeated,
+      annotations,
+      inheritedAnnotations,
+      typeAnnotations,
+      idx
+    )
+
   inline def paramsFromMaps[Typeclass[_], A, Labels <: Tuple, Params <: Tuple](
       annotations: Map[String, List[Any]],
       inheritedAnnotations: Map[String, List[Any]],
@@ -107,29 +140,14 @@ object CaseClassDerivation:
     inline erasedValue[(Labels, Params)] match
       case _: (EmptyTuple, EmptyTuple) =>
         Nil
+      
       case _: ((l *: ltail), (p *: ptail)) =>
-        val label = constValue[l].asInstanceOf[String]
-        val tc = new SerializableFunction0[Typeclass[p]]:
-          override def apply(): Typeclass[p] = summonInline[Typeclass[p]]
-        val d =
-          defaults.get(label).flatten match {
-            case Some(evaluator) =>
-              new SerializableFunction0[Option[p]]:
-                override def apply(): Option[p] =
-                  val v = evaluator()
-                  if ((v: @unchecked).isInstanceOf[p]) new Some(v).asInstanceOf[Option[p]]
-                  else None
-            case _ =>
-              returningNone.asInstanceOf[SerializableFunction0[Option[p]]]
-          }
-        paramFromMaps[Typeclass, A, p](
-          label,
-          CallByNeed.createLazy(tc),
-          CallByNeed.createValueEvaluator(d),
-          repeated,
+        paramsFromMapsStep[Typeclass, A, l, p](
           annotations,
           inheritedAnnotations,
           typeAnnotations,
+          repeated,
+          defaults,
           idx
         ) ::
           paramsFromMaps[Typeclass, A, ltail, ptail](
@@ -185,6 +203,43 @@ trait SealedTraitDerivation:
       IArray.from(inheritedAnns[A])
     )
 
+  protected transparent inline def subtypesFromMirrorStep[A, s](
+      m: Mirror.SumOf[A],
+      idx: Int
+  ): List[SealedTrait.Subtype[Typeclass, A, _]] =
+    summonFrom {
+      case mm: Mirror.SumOf[`s`] =>
+        subtypesFromMirror[A, mm.MirroredElemTypes](
+          mm.asInstanceOf[m.type],
+          0,
+          Nil
+        )
+      case _ => {
+        val tc = new SerializableFunction0[Typeclass[s]]:
+          override def apply(): Typeclass[s] = summonFrom {
+            case tc: Typeclass[`s`] => tc
+            case _                  => deriveSubtype(summonInline[Mirror.Of[s]])
+          }
+        val isType = new SerializableFunction1[A, Boolean]:
+          override def apply(a: A): Boolean = a.isInstanceOf[s & A]
+        val asType = new SerializableFunction1[A, s & A]:
+          override def apply(a: A): s & A = a.asInstanceOf[s & A]
+        List(
+          new SealedTrait.Subtype[Typeclass, A, s](
+            typeInfo[s],
+            IArray.from(anns[s]),
+            IArray.from(inheritedAnns[s]),
+            IArray.from(paramTypeAnns[A]),
+            isObject[s],
+            idx,
+            CallByNeed.createLazy(tc),
+            isType,
+            asType
+          )
+        )
+      }
+    }
+
   protected transparent inline def subtypesFromMirror[A, SubtypeTuple <: Tuple](
       m: Mirror.SumOf[A],
       idx: Int = 0, // no longer used, kept for bincompat
@@ -194,37 +249,6 @@ trait SealedTraitDerivation:
       case _: EmptyTuple =>
         result.distinctBy(_.typeInfo).sortBy(_.typeInfo.full)
       case _: (s *: tail) =>
-        val sub = summonFrom {
-          case mm: Mirror.SumOf[`s`] =>
-            subtypesFromMirror[A, mm.MirroredElemTypes](
-              mm.asInstanceOf[m.type],
-              0,
-              Nil
-            )
-          case _ => {
-            val tc = new SerializableFunction0[Typeclass[s]]:
-              override def apply(): Typeclass[s] = summonFrom {
-                case tc: Typeclass[`s`] => tc
-                case _                  => deriveSubtype(summonInline[Mirror.Of[s]])
-              }
-            val isType = new SerializableFunction1[A, Boolean]:
-              override def apply(a: A): Boolean = a.isInstanceOf[s & A]
-            val asType = new SerializableFunction1[A, s & A]:
-              override def apply(a: A): s & A = a.asInstanceOf[s & A]
-            List(
-              new SealedTrait.Subtype[Typeclass, A, s](
-                typeInfo[s],
-                IArray.from(anns[s]),
-                IArray.from(inheritedAnns[s]),
-                IArray.from(paramTypeAnns[A]),
-                isObject[s],
-                idx,
-                CallByNeed.createLazy(tc),
-                isType,
-                asType
-              )
-            )
-          }
-        }
+        val sub = subtypesFromMirrorStep[A, s](m, idx)
         subtypesFromMirror[A, tail](m, idx + 1, sub ::: result)
 end SealedTraitDerivation
