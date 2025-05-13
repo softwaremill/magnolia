@@ -140,7 +140,58 @@ object CaseClassDerivation:
     inline erasedValue[(Labels, Params)] match
       case _: (EmptyTuple, EmptyTuple) =>
         Nil
-      
+      case _: (
+              (l1 *: l2 *: l3 *: l4 *: l5 *: l6 *: l7 *: l8 *: l9 *: l10 *: l11 *: l12 *: l13 *: l14 *: l15 *: l16 *: ltail),
+              (p1 *: p2 *: p3 *: p4 *: p5 *: p6 *: p7 *: p8 *: p9 *: p10 *: p11 *: p12 *: p13 *: p14 *: p15 *: p16 *: ptail)
+          ) =>
+        val s1 = paramsFromMapsStep[Typeclass, A, l1, p1](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx)
+        val s2 = paramsFromMapsStep[Typeclass, A, l2, p2](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 1)
+        val s3 = paramsFromMapsStep[Typeclass, A, l3, p3](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 2)
+        val s4 = paramsFromMapsStep[Typeclass, A, l4, p4](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 3)
+        val s5 = paramsFromMapsStep[Typeclass, A, l5, p5](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 4)
+        val s6 = paramsFromMapsStep[Typeclass, A, l6, p6](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 5)
+        val s7 = paramsFromMapsStep[Typeclass, A, l7, p7](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 6)
+        val s8 = paramsFromMapsStep[Typeclass, A, l8, p8](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 7)
+        val s9 = paramsFromMapsStep[Typeclass, A, l9, p9](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 8)
+        val s10 =
+          paramsFromMapsStep[Typeclass, A, l10, p10](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 9)
+        val s11 =
+          paramsFromMapsStep[Typeclass, A, l11, p11](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 10)
+        val s12 =
+          paramsFromMapsStep[Typeclass, A, l12, p12](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 11)
+        val s13 =
+          paramsFromMapsStep[Typeclass, A, l13, p13](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 12)
+        val s14 =
+          paramsFromMapsStep[Typeclass, A, l14, p14](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 13)
+        val s15 =
+          paramsFromMapsStep[Typeclass, A, l15, p15](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 14)
+        val s16 =
+          paramsFromMapsStep[Typeclass, A, l16, p16](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 15)
+
+        s1 :: s2 :: s3 :: s4 :: s5 :: s6 :: s7 :: s8 :: s9 :: s10 :: s11 :: s12 :: s13 :: s14 :: s15 :: s16 ::
+          paramsFromMaps[Typeclass, A, ltail, ptail](
+            annotations,
+            inheritedAnnotations,
+            typeAnnotations,
+            repeated,
+            defaults,
+            idx + 16
+          )
+      case _: ((l1 *: l2 *: l3 *: l4 *: ltail), (p1 *: p2 *: p3 *: p4 *: ptail)) =>
+        val s1 = paramsFromMapsStep[Typeclass, A, l1, p1](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx)
+        val s2 = paramsFromMapsStep[Typeclass, A, l2, p2](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 1)
+        val s3 = paramsFromMapsStep[Typeclass, A, l3, p3](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 2)
+        val s4 = paramsFromMapsStep[Typeclass, A, l4, p4](annotations, inheritedAnnotations, typeAnnotations, repeated, defaults, idx + 3)
+
+        s1 :: s2 :: s3 :: s4 ::
+          paramsFromMaps[Typeclass, A, ltail, ptail](
+            annotations,
+            inheritedAnnotations,
+            typeAnnotations,
+            repeated,
+            defaults,
+            idx + 1
+          )
       case _: ((l *: ltail), (p *: ptail)) =>
         paramsFromMapsStep[Typeclass, A, l, p](
           annotations,
@@ -203,7 +254,7 @@ trait SealedTraitDerivation:
       IArray.from(inheritedAnns[A])
     )
 
-  protected transparent inline def subtypesFromMirrorStep[A, s](
+  protected inline def subtypesFromMirrorStep[A, s](
       m: Mirror.SumOf[A],
       idx: Int
   ): List[SealedTrait.Subtype[Typeclass, A, _]] =
@@ -248,6 +299,35 @@ trait SealedTraitDerivation:
     inline erasedValue[SubtypeTuple] match
       case _: EmptyTuple =>
         result.distinctBy(_.typeInfo).sortBy(_.typeInfo.full)
+      case _: (h1 *: h2 *: h3 *: h4 *: h5 *: h6 *: h7 *: h8 *: h9 *: h10 *: h11 *: h12 *: h13 *: h14 *: h15 *: h16 *: tail) =>
+        val sub1 = subtypesFromMirrorStep[A, h1](m, idx)
+        val sub2 = subtypesFromMirrorStep[A, h2](m, idx + 1)
+        val sub3 = subtypesFromMirrorStep[A, h3](m, idx + 2)
+        val sub4 = subtypesFromMirrorStep[A, h4](m, idx + 3)
+        val sub5 = subtypesFromMirrorStep[A, h5](m, idx + 4)
+        val sub6 = subtypesFromMirrorStep[A, h6](m, idx + 5)
+        val sub7 = subtypesFromMirrorStep[A, h7](m, idx + 6)
+        val sub8 = subtypesFromMirrorStep[A, h8](m, idx + 7)
+        val sub9 = subtypesFromMirrorStep[A, h9](m, idx + 8)
+        val sub10 = subtypesFromMirrorStep[A, h10](m, idx + 9)
+        val sub11 = subtypesFromMirrorStep[A, h11](m, idx + 10)
+        val sub12 = subtypesFromMirrorStep[A, h12](m, idx + 11)
+        val sub13 = subtypesFromMirrorStep[A, h13](m, idx + 12)
+        val sub14 = subtypesFromMirrorStep[A, h14](m, idx + 13)
+        val sub15 = subtypesFromMirrorStep[A, h15](m, idx + 14)
+        val sub16 = subtypesFromMirrorStep[A, h16](m, idx + 15)
+
+        subtypesFromMirror[A, tail](
+          m,
+          idx + 4,
+          sub1 ::: sub2 ::: sub3 ::: sub4 ::: sub5 ::: sub6 ::: sub7 ::: sub8 ::: sub9 ::: sub10 ::: sub11 ::: sub12 ::: sub13 ::: sub14 ::: sub15 ::: sub16 ::: result
+        )
+      case _: (h1 *: h2 *: h3 *: h4 *: tail) =>
+        val sub1 = subtypesFromMirrorStep[A, h1](m, idx)
+        val sub2 = subtypesFromMirrorStep[A, h2](m, idx + 1)
+        val sub3 = subtypesFromMirrorStep[A, h3](m, idx + 2)
+        val sub4 = subtypesFromMirrorStep[A, h4](m, idx + 3)
+        subtypesFromMirror[A, tail](m, idx + 4, sub1 ::: sub2 ::: sub3 ::: sub4 ::: result)
       case _: (s *: tail) =>
         val sub = subtypesFromMirrorStep[A, s](m, idx)
         subtypesFromMirror[A, tail](m, idx + 1, sub ::: result)
