@@ -71,6 +71,9 @@ object SumsTests:
   object Righty:
     given NoCombine[Righty] = NoCombine.instance(_ => "Righty")
 
+  enum VeryLong:
+    case _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28,
+      _29, _30, _31, _32, _33
 end SumsTests
 
 class SumsTests extends munit.FunSuite:
@@ -122,6 +125,11 @@ class SumsTests extends munit.FunSuite:
   test("construct a Show instance for an enum") {
     val res = Show.derived[Size].show(Size.S)
     assertEquals(res, "S()")
+  }
+
+  test("construct a Show instance for very long enum") {
+    val res = Show.derived[VeryLong].show(VeryLong._33)
+    assertEquals(res, "_33()")
   }
 
   test("choose a enum") {

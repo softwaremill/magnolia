@@ -101,7 +101,17 @@ class ProductsTests extends munit.FunSuite:
         "p20",
         "p21",
         "p22",
-        "p23"
+        "p23",
+        "p24",
+        "p25",
+        "p26",
+        "p27",
+        "p28",
+        "p29",
+        "p30",
+        "p31",
+        "p32",
+        "p33"
       )
     val res = Eq.derived[VeryLong].equal(vl, vl)
     assert(res)
@@ -265,7 +275,17 @@ object ProductsTests:
       p20: String,
       p21: String,
       p22: String,
-      p23: String
+      p23: String,
+      p24: String,
+      p25: String,
+      p26: String,
+      p27: String,
+      p28: String,
+      p29: String,
+      p30: String,
+      p31: String,
+      p32: String,
+      p33: String
   )
 
   case class Account(id: String, emails: String*)
