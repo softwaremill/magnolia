@@ -190,7 +190,7 @@ object CaseClassDerivation:
             typeAnnotations,
             repeated,
             defaults,
-            idx + 1
+            idx + 4
           )
       case _: ((l *: ltail), (p *: ptail)) =>
         paramsFromMapsStep[Typeclass, A, l, p](
@@ -319,7 +319,7 @@ trait SealedTraitDerivation:
 
         subtypesFromMirror[A, tail](
           m,
-          idx + 4,
+          idx + 16,
           sub1 ::: sub2 ::: sub3 ::: sub4 ::: sub5 ::: sub6 ::: sub7 ::: sub8 ::: sub9 ::: sub10 ::: sub11 ::: sub12 ::: sub13 ::: sub14 ::: sub15 ::: sub16 ::: result
         )
       case _: (h1 *: h2 *: h3 *: h4 *: tail) =>
