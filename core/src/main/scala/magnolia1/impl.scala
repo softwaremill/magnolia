@@ -129,6 +129,9 @@ object CaseClassDerivation:
       idx
     )
 
+  /** This method unrolls recursion by 16, 4, 1 steps to increase maximal size of `Labels` and `Params` tuples due to compiler limitation of
+    * maximal nested inlines.
+    */
   inline def paramsFromMaps[Typeclass[_], A, Labels <: Tuple, Params <: Tuple](
       annotations: Map[String, List[Any]],
       inheritedAnnotations: Map[String, List[Any]],
@@ -291,6 +294,9 @@ trait SealedTraitDerivation:
       }
     }
 
+  /** This method unrolls recursion by 16, 4, 1 steps to increase maximal size of `SubtypeTuple` tuple due to compiler limitation of maximal
+    * nested inlines.
+    */
   protected transparent inline def subtypesFromMirror[A, SubtypeTuple <: Tuple](
       m: Mirror.SumOf[A],
       idx: Int = 0, // no longer used, kept for bincompat
