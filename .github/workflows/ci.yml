@@ -11,14 +11,14 @@ jobs:
     # run on external PRs, but not on internal PRs since those will be run by push to branch
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     with:
-      java-opts: '-Xmx4G'
+      java-opts: '-Xmx4G -Xss16M'
 
   mima:
     # run on external PRs, but not on internal PRs since those will be run by push to branch
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-22.04
     env:
-      JAVA_OPTS: -Xmx4G
+      JAVA_OPTS: '-Xmx4G -Xss16M'
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       STTP_NATIVE: 1
-      JAVA_OPTS: -Xmx4G
+      JAVA_OPTS: '-Xmx4G -Xss16M'
     steps:
       - name: Checkout
         uses: actions/checkout@v2
