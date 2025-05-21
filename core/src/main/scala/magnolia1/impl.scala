@@ -11,8 +11,17 @@ import Macro.*
 // workaround with this with a serializable fuction
 private trait SerializableFunction0[+R] extends Function0[R] with Serializable:
   def apply(): R
+
+object SerializableFunction0:
+  def from[R](r: => R) = new SerializableFunction0[R]:
+    override def apply(): R = r
+
 private trait SerializableFunction1[-T1, +R] extends Function1[T1, R] with Serializable:
   def apply(v1: T1): R
+
+object SerializableFunction1:
+  def from[T1, R](f: T1 => R): SerializableFunction1[T1, R] = new SerializableFunction1[T1, R]:
+    def apply(v1: T1): R = f(v1)
 
 object CaseClassDerivation:
   inline def fromMirror[Typeclass[_], A](
@@ -105,16 +114,16 @@ object CaseClassDerivation:
       idx: Int
   ): CaseClass.Param[Typeclass, A] =
     val label = constValue[l].asInstanceOf[String]
-    val tc = new SerializableFunction0[Typeclass[p]]:
-      override def apply(): Typeclass[p] = summonInline[Typeclass[p]]
+    val tc = SerializableFunction0.from[Typeclass[p]](summonInline[Typeclass[p]])
+
     val d =
       defaults.get(label).flatten match {
         case Some(evaluator) =>
-          new SerializableFunction0[Option[p]]:
-            override def apply(): Option[p] =
+          SerializableFunction0.from[Option[p]]:
               val v = evaluator()
               if ((v: @unchecked).isInstanceOf[p]) new Some(v).asInstanceOf[Option[p]]
               else None
+
         case _ =>
           returningNone.asInstanceOf[SerializableFunction0[Option[p]]]
       }
@@ -235,8 +244,7 @@ object CaseClassDerivation:
     )
 
   private val returningNone =
-    new SerializableFunction0[Option[Any]]:
-      override def apply(): Option[Any] = None
+    SerializableFunction0.from[Option[Any]](None)
 
 end CaseClassDerivation
 
@@ -269,15 +277,15 @@ trait SealedTraitDerivation:
           Nil
         )
       case _ => {
-        val tc = new SerializableFunction0[Typeclass[s]]:
-          override def apply(): Typeclass[s] = summonFrom {
+        val tc = SerializableFunction0.from[Typeclass[s]]:
+          summonFrom {
             case tc: Typeclass[`s`] => tc
             case _                  => deriveSubtype(summonInline[Mirror.Of[s]])
           }
-        val isType = new SerializableFunction1[A, Boolean]:
-          override def apply(a: A): Boolean = a.isInstanceOf[s & A]
-        val asType = new SerializableFunction1[A, s & A]:
-          override def apply(a: A): s & A = a.asInstanceOf[s & A]
+        val isType = SerializableFunction1.from[A, Boolean]: (a: A) =>
+          a.isInstanceOf[s & A]
+        val asType = SerializableFunction1.from[A, s & A]: (a: A) =>
+          a.asInstanceOf[s & A]
         List(
           new SealedTrait.Subtype[Typeclass, A, s](
             typeInfo[s],
