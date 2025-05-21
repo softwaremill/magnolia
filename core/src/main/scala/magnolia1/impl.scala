@@ -120,9 +120,9 @@ object CaseClassDerivation:
       defaults.get(label).flatten match {
         case Some(evaluator) =>
           SerializableFunction0.from[Option[p]]:
-              val v = evaluator()
-              if ((v: @unchecked).isInstanceOf[p]) new Some(v).asInstanceOf[Option[p]]
-              else None
+            val v = evaluator()
+            if ((v: @unchecked).isInstanceOf[p]) new Some(v).asInstanceOf[Option[p]]
+            else None
         case _ =>
           returningNone.asInstanceOf[SerializableFunction0[Option[p]]]
       }
