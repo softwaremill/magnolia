@@ -123,7 +123,6 @@ object CaseClassDerivation:
               val v = evaluator()
               if ((v: @unchecked).isInstanceOf[p]) new Some(v).asInstanceOf[Option[p]]
               else None
-
         case _ =>
           returningNone.asInstanceOf[SerializableFunction0[Option[p]]]
       }
