@@ -14,8 +14,6 @@ jobs:
       java-opts: '-Xmx4G -Xss16M'
 
   mima:
-    # run on external PRs, but not on internal PRs since those will be run by push to branch
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-22.04
     env:
       JAVA_OPTS: '-Xmx4G -Xss16M'
