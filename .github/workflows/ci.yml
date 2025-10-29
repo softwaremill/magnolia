@@ -5,6 +5,9 @@ on:
   push:
     branches: ['**']
     tags: [scala3-v*]
+permissions:
+  contents: write        # release-drafter, auto-merge requirement
+  pull-requests: write   # labeler, auto-merge requirement    
 jobs:
   build:
     uses: softwaremill/github-actions-workflows/.github/workflows/build-scala.yml@main
@@ -34,15 +37,17 @@ jobs:
         run: sbt -v core3/mimaReportBinaryIssues
 
   label:
-    # only for PRs by softwaremill-ci
-    if: github.event.pull_request.user.login == 'softwaremill-ci'
+    # only for PRs by github-actions[bot]
+    if: github.event.pull_request.user.login == 'github-actions[bot]'
     uses: softwaremill/github-actions-workflows/.github/workflows/label.yml@main
+    secrets: inherit
 
   auto-merge:
-    # only for PRs by softwaremill-ci
-    if: github.event.pull_request.user.login == 'softwaremill-ci'
+    # only for PRs by github-actions[bot]
+    if: github.event.pull_request.user.login == 'github-actions[bot]'
     needs: [ build, mima, label ]
     uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
+    secrets: inherit
 
   publish:
     name: Publish release
@@ -55,14 +60,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Set up JDK 11
-        uses: actions/setup-java@v1
+      - name: Set up JDK 
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
-      - name: Cache sbt
-        uses: coursier/cache-action@v6
-        with:
-          extraKey: sbt-cache-release-${{ runner.os }}
+          distribution: 'temurin'
+          cache: 'sbt'
+          java-version: ${{ matrix.java }}
+      - uses: sbt/setup-sbt@3e125ece5c3e5248e18da9ed8d2cce3d335ec8dd # v1, specifically v1.1.14
       - name: Compile
         run: sbt compile
       - name: Publish artifacts
@@ -79,7 +83,7 @@ jobs:
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
       - name: Publish release notes
-        uses: release-drafter/release-drafter@v5
+        uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5 # v6, specifically v6.1.0
         with:
           config-name: release-drafter.yml
           publish: true
