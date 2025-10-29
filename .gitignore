@@ -17,3 +17,6 @@ target
 .*.bak
 .vscode/
 .java-version
+.cursor
+metals.sbt
+project/project/build.properties
