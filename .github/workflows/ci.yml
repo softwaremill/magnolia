@@ -37,14 +37,14 @@ jobs:
         run: sbt -v core3/mimaReportBinaryIssues
 
   label:
-    # only for PRs by github-actions[bot]
-    if: github.event.pull_request.user.login == 'github-actions[bot]'
+    # only for PRs by softwaremill-ci
+    if: github.event.pull_request.user.login == 'softwaremill-ci'
     uses: softwaremill/github-actions-workflows/.github/workflows/label.yml@main
     secrets: inherit
 
   auto-merge:
-    # only for PRs by github-actions[bot]
-    if: github.event.pull_request.user.login == 'github-actions[bot]'
+    # only for PRs by softwaremill-ci
+    if: github.event.pull_request.user.login == 'softwaremill-ci'
     needs: [ build, mima, label ]
     uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
     secrets: inherit
