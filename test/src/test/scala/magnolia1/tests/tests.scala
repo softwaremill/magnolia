@@ -908,4 +908,38 @@ class Tests extends munit.FunSuite {
     ensureSerializable(new Outer().showAddress)
     ensureSerializable(new Outer().showColor)
   }
+
+  test("narrow generated instance types for case classes") {
+    case class Foo(a: Int, b: Int)
+
+    val instance = CollectFields.gen[Foo]
+    val collected = instance.collectFields(Foo(123, 456))
+    // Only compiles because the type was narrowed to `CollectFields[IntField, Foo]`
+    val ints = collected.map(_.int)
+    assertEquals(ints, Seq(123, 456))
+  }
+
+  test("narrow generated instance types for sealed traits") {
+    sealed trait Foo
+    case class Bar(a: String, b: String) extends Foo
+    case object Baz extends Foo
+
+    val instance = CollectFields.gen[Foo]
+
+    val collected = instance.collectFields(Bar("abc", "def"))
+    // Only compiles because the type was narrowed to `CollectFields[StringField, Foo]`
+    val strings = collected.map(_.string)
+    assertEquals(strings, Seq("abc", "def"))
+  }
+
+  test("choose least upper bound as instance type") {
+    case class Foo(a: Int, b: String)
+
+    val instance = CollectFields.gen[Foo]
+
+    val collected = instance.collectFields(Foo(123, "abc"))
+    // Only compiles because the type was narrowed to `CollectFields[Field, Foo]`
+    val fields: Seq[CollectFields.Field] = collected
+    assertEquals(fields, Seq(CollectFields.IntField(123), CollectFields.StringField("abc")))
+  }
 }

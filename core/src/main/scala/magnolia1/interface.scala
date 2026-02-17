@@ -10,7 +10,7 @@ import scala.language.higherKinds
   * @tparam Type
   *   generic type of this parameter
   */
-trait Subtype[Typeclass[_], Type] extends Serializable {
+trait Subtype[+Typeclass[_], Type] extends Serializable {
 
   /** the type of subtype */
   type SType <: Type
@@ -106,7 +106,7 @@ object Subtype {
     }
 }
 
-trait ReadOnlyParam[Typeclass[_], Type] extends Serializable {
+trait ReadOnlyParam[+Typeclass[_], Type] extends Serializable {
 
   /** the type of the parameter being represented
     *
@@ -291,7 +291,7 @@ object ReadOnlyParam {
   * @tparam Type
   *   generic type of this parameter
   */
-trait Param[Typeclass[_], Type] extends ReadOnlyParam[Typeclass, Type] {
+trait Param[+Typeclass[_], Type] extends ReadOnlyParam[Typeclass, Type] {
 
   /** provides the default value for this parameter, as defined in the case class constructor */
   def default: Option[PType]
@@ -436,7 +436,7 @@ object Param {
   * @tparam Type
   *   generic type of this parameter
   */
-abstract class ReadOnlyCaseClass[Typeclass[_], Type](
+abstract class ReadOnlyCaseClass[+Typeclass[_], Type](
     val typeName: TypeName,
     val isObject: Boolean,
     val isValueClass: Boolean,
@@ -513,7 +513,7 @@ abstract class ReadOnlyCaseClass[Typeclass[_], Type](
   * @tparam Type
   *   generic type of this parameter
   */
-abstract class CaseClass[Typeclass[_], Type](
+abstract class CaseClass[+Typeclass[_], Type](
     override val typeName: TypeName,
     override val isObject: Boolean,
     override val isValueClass: Boolean,
@@ -616,7 +616,7 @@ abstract class CaseClass[Typeclass[_], Type](
   * @tparam Type
   *   generic type of this parameter
   */
-final class SealedTrait[Typeclass[_], Type](
+final class SealedTrait[+Typeclass[_], Type](
     val typeName: TypeName,
     subtypesArray: Array[Subtype[Typeclass, Type]],
     annotationsArray: Array[Any],
