@@ -9,12 +9,26 @@ permissions:
   contents: write        # release-drafter, auto-merge requirement
   pull-requests: write   # labeler, auto-merge requirement
 jobs:
-  build:
-    uses: softwaremill/github-actions-workflows/.github/workflows/build-scala.yml@main
+  ci:
     # run on external PRs, but not on internal PRs since those will be run by push to branch
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    with:
-      java-opts: '-Xmx4G'
+    runs-on: ubuntu-22.04
+    env:
+      JAVA_OPTS: -Xmx4G
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          cache: 'sbt'
+          java-version: '17'
+      - uses: sbt/setup-sbt@3e125ece5c3e5248e18da9ed8d2cce3d335ec8dd # v1, specifically v1.1.14
+      - name: Compile
+        run: sbt -v compile
+      - name: Test
+        run: sbt -v test
 
   mima:
     # run on external PRs, but not on internal PRs since those will be run by push to branch
@@ -46,13 +60,13 @@ jobs:
   auto-merge:
     # only for PRs by softwaremill-ci
     if: github.event.pull_request.user.login == 'softwaremill-ci'
-    needs: [ build, mima, label ]
+    needs: [ ci, mima, label ]
     uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
     secrets: inherit
 
   publish:
     name: Publish release
-    needs: [build]
+    needs: [ci]
     if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/scala2-v'))
     runs-on: ubuntu-22.04
     env:
