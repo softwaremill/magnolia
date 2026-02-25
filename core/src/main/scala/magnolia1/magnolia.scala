@@ -12,6 +12,8 @@ import scala.reflect.ClassTag
 object Magnolia {
   import CompileTimeState._
 
+  /** A "typeclass" that is a subtype of any typeclass.
+    */
   private[Magnolia] type ConstNothing[a] = Nothing
 
   /** derives a generic typeclass instance for the type `T`
@@ -569,6 +571,9 @@ object Magnolia {
 
         val paramsValDef = {
           val method = TermName(if (isReadOnly) "readOnlyParams" else "params")
+
+          // When building `paramsVal`, we simultaneously let the typer calculate the narrowest subtype of the original `Typeclass`
+          // we can fit over the params. We can then use it instead of the original `Typeclass`.
           q"$PartsObj.$method[$typeConstructor, $genericType](..$paramsItems)"
         }
 
@@ -1000,6 +1005,7 @@ final class Parts[F[+_[_]], Tc[_]]private[Parts] (val array: Array[F[Tc]]) exten
 /** Helpers to guide `Param`/`Subtype` array types and to provide access to the resulting typeclass.
   */
 object Parts {
+  // This is the magic that lets the typer choose a narrower typeclass, while still being constrained by the original `Typeclass` (`TcWide` here).
   def params[TcWide[_], T]: PartiallyApplied[Param[*[_], T],  TcWide] = new PartiallyApplied[Param[*[_], T],  TcWide]()
   def readOnlyParams[TcWide[_], T]: PartiallyApplied[ReadOnlyParam[*[_], T],  TcWide] = new PartiallyApplied[ReadOnlyParam[*[_], T],  TcWide]()
   def subtypes[TcWide[_], T]: PartiallyApplied[Subtype[*[_], T],  TcWide] = new PartiallyApplied[Subtype[*[_], T],  TcWide]()
