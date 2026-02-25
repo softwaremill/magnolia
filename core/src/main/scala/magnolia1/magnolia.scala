@@ -97,7 +97,6 @@ object Magnolia {
     val SeqTpe = typeOf[Seq[Any]].typeConstructor
     val SomeObj = reify(Some).tree
     val SubtypeObj = reify(Subtype).tree
-    val SubtypeTpe = typeOf[Subtype[Any, Any]].typeConstructor
     val TypeNameObj = reify(magnolia1.TypeName).tree
     val ConstNothingTpe = typeOf[ConstNothing[Any]].typeConstructor
     val PartsObj = reify(Parts).tree
@@ -408,7 +407,7 @@ object Magnolia {
           $impl
       """
 
-      def constructPartialSubtypesValFunction(typeclasses: List[(Type, Tree)], arrayElementType: Type): (TermName, Tree) = {
+      def constructPartialSubtypesValFunction(typeclasses: List[(Type, Tree)]): (TermName, Tree) = {
         val functionName = c.freshName(TermName("partialSubtypes"))
         val startVal = c.freshName(TermName("start"))
         val subtypeObjects = typeclasses.zipWithIndex.map { case ((subType, typeclass), idx) =>
@@ -682,12 +681,11 @@ object Magnolia {
             .fold(error(_), identity)
         }
 
-        val subType = appliedType(SubtypeTpe, typeConstructor, genericType)
         val groupSize = 500
         val (functionNames, partialSubtypesFunctions) = typeclasses
           .grouped(groupSize)
           .toList
-          .map(constructPartialSubtypesValFunction(_, subType))
+          .map(constructPartialSubtypesValFunction(_))
           .unzip
 
         val subtypesVal = c.freshName(TermName("subtypes"))
