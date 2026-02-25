@@ -1002,12 +1002,12 @@ final class Parts[F[+_[_]], Tc[_]]private[Parts] (val array: Array[F[Tc]]) exten
 /** Helpers to guide `Param`/`Subtype` array types and to provide access to the resulting typeclass.
   */
 object Parts {
-  def params[TcLower[_], T]: PartiallyApplied[Param[*[_], T],  TcLower] = new PartiallyApplied[Param[*[_], T],  TcLower]()
-  def readOnlyParams[TcLower[_], T]: PartiallyApplied[ReadOnlyParam[*[_], T],  TcLower] = new PartiallyApplied[ReadOnlyParam[*[_], T],  TcLower]()
-  def subtypes[TcLower[_], T]: PartiallyApplied[Subtype[*[_], T],  TcLower] = new PartiallyApplied[Subtype[*[_], T],  TcLower]()
+  def params[TcWide[_], T]: PartiallyApplied[Param[*[_], T],  TcWide] = new PartiallyApplied[Param[*[_], T],  TcWide]()
+  def readOnlyParams[TcWide[_], T]: PartiallyApplied[ReadOnlyParam[*[_], T],  TcWide] = new PartiallyApplied[ReadOnlyParam[*[_], T],  TcWide]()
+  def subtypes[TcWide[_], T]: PartiallyApplied[Subtype[*[_], T],  TcWide] = new PartiallyApplied[Subtype[*[_], T],  TcWide]()
 
-  final class PartiallyApplied[F[+_[_]], TcLower[_]] private[Parts](private val dummy: Boolean = false) extends AnyVal {
-    def apply[Tc[_] <: TcLower[_]](elements: F[Tc]*)(implicit ct: ClassTag[F[Tc]]): Parts[F, Tc] = new Parts(elements.toArray)
-    def flatten[Tc[_] <: TcLower[_]](partss: Parts[F, Tc]*)(implicit ct: ClassTag[F[Tc]]): Parts[F, Tc] = new Parts(partss.toArray.flatMap(_.array))
+  final class PartiallyApplied[F[+_[_]], TcWide[_]] private[Parts](private val dummy: Boolean = false) extends AnyVal {
+    def apply[Tc[_] <: TcWide[_]](elements: F[Tc]*)(implicit ct: ClassTag[F[Tc]]): Parts[F, Tc] = new Parts(elements.toArray)
+    def flatten[Tc[_] <: TcWide[_]](partss: Parts[F, Tc]*)(implicit ct: ClassTag[F[Tc]]): Parts[F, Tc] = new Parts(partss.toArray.flatMap(_.array))
   }
 }
