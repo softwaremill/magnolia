@@ -6,10 +6,15 @@ import scala.annotation.{compileTimeOnly, tailrec}
 import scala.collection.mutable
 import scala.language.higherKinds
 import scala.reflect.macros._
+import scala.reflect.ClassTag
 
 /** the object which defines the Magnolia macro */
 object Magnolia {
   import CompileTimeState._
+
+  /** A "typeclass" that is a subtype of any typeclass.
+    */
+  private[Magnolia] type ConstNothing[a] = Nothing
 
   /** derives a generic typeclass instance for the type `T`
     *
@@ -94,9 +99,9 @@ object Magnolia {
     val SeqTpe = typeOf[Seq[Any]].typeConstructor
     val SomeObj = reify(Some).tree
     val SubtypeObj = reify(Subtype).tree
-    val SubtypeTpe = typeOf[Subtype[Any, Any]].typeConstructor
     val TypeNameObj = reify(magnolia1.TypeName).tree
-    val ArrayTpe = typeOf[Array[Any]].typeConstructor
+    val ConstNothingTpe = typeOf[ConstNothing[Any]].typeConstructor
+    val PartsObj = reify(Parts).tree
 
     val debug = c.macroApplication.symbol.annotations
       .find(_.tree.tpe <:< DebugTpe)
@@ -381,37 +386,36 @@ object Magnolia {
       }
 
       val typeNameDef = q"val $typeName = ${typeNameOf(genericType.dealias)}"
-      lazy val paramType = appliedType(paramSymbol, typeConstructor, genericType)
-      lazy val caseClassType = appliedType(caseClassSymbol, typeConstructor, genericType)
+      def paramType(typeConstructor: Tree) =
+        tq"$paramSymbol[$typeConstructor, $genericType]"
 
-      def construct(impl: Tree): Tree = q"""
-        override def construct[Return](makeParam: $paramType => Return): $genericType =
+      def construct(typeConstructor: Tree, impl: Tree): Tree = q"""
+        override def construct[Return](makeParam: ${paramType(typeConstructor)} => Return): $genericType =
           $impl
       """
 
-      def constructMonadic(f: TypeName, impl: Tree): Tree = q"""
-        def constructMonadic[$f[_], Return](makeParam: $paramType => $f[Return])(implicit monadic: $MonadicSym[$f]): $f[$genericType] =
+      def constructMonadic(typeConstructor: Tree, f: TypeName, impl: Tree): Tree = q"""
+        override def constructMonadic[$f[_], Return](makeParam: ${paramType(typeConstructor)} => $f[Return])(implicit monadic: $MonadicSym[$f]): $f[$genericType] =
           $impl
       """
 
-      def constructEither(impl: Tree): Tree = q"""
-        def constructEither[Err, PType](makeParam: $paramType => $EitherSym[Err, PType]): $EitherSym[$ListClass[Err], $genericType] =
+      def constructEither(typeConstructor: Tree, impl: Tree): Tree = q"""
+        override def constructEither[Err, PType](makeParam: ${paramType(typeConstructor)} => $EitherSym[Err, PType]): $EitherSym[$ListClass[Err], $genericType] =
           $impl
       """
 
       def rawConstruct(impl: Tree): Tree = q"""
-        def rawConstruct(fieldValues: ${typeOf[Seq[Any]]}): $genericType =
+        override def rawConstruct(fieldValues: ${typeOf[Seq[Any]]}): $genericType =
           $impl
       """
 
-      def constructPartialAssignmentFunction(typeclasses: List[(Type, Tree)], arrayElementType: Type): (TermName, Tree) = {
-        val functionName = c.freshName(TermName("partialAssignments"))
-        val arrayVal = c.freshName(TermName("arr"))
+      def constructPartialSubtypesValFunction(typeclasses: List[(Type, Tree)]): (TermName, Tree) = {
+        val functionName = c.freshName(TermName("partialSubtypes"))
         val startVal = c.freshName(TermName("start"))
-        val assignments = typeclasses.zipWithIndex.map { case ((subType, typeclass), idx) =>
+        val subtypeObjects = typeclasses.zipWithIndex.map { case ((subType, typeclass), idx) =>
           val symbol = subType.typeSymbol
           val (annotationTrees, inheritedAnnotationTrees) = annotationsOf(symbol)
-          q"""$arrayVal($startVal + $idx) = $SubtypeObj[$typeConstructor, $genericType, $subType](
+          q"""$SubtypeObj(
             ${typeNameOf(subType)},
             $idx,
             $ArrayObj[$AnyTpe](..${annotationTrees}),
@@ -422,12 +426,10 @@ object Magnolia {
             (t: $genericType) => t.asInstanceOf[$subType]
           )"""
         }
-        val arrayTpe = appliedType(ArrayTpe, arrayElementType)
         val tree =
-          q"""def $functionName($arrayVal: $arrayTpe, $startVal: $IntTpe) = {
-              ..$assignments
-            }
-          """
+          q"""def $functionName($startVal: $IntTpe) = {
+                $PartsObj.subtypes[$typeConstructor, $genericType](..$subtypeObjects)
+              }"""
 
         (functionName, tree)
       }
@@ -440,16 +442,16 @@ object Magnolia {
           else {
             val module = Ident(genericType.typeSymbol.asClass.module)
             List(
-              construct(module),
-              constructMonadic(c.freshName(TypeName("F")), q"monadic.point($module)"),
-              constructEither(q"$RightObj($module)"),
+              construct(q"$ConstNothingTpe", module),
+              constructMonadic(q"$ConstNothingTpe", c.freshName(TypeName("F")), q"monadic.point($module)"),
+              constructEither(q"$ConstNothingTpe", q"$RightObj($module)"),
               rawConstruct(module)
             )
           }
 
         val impl = q"""
           $typeNameDef
-          ${c.prefix}.join(new $caseClassType(
+          ${c.prefix}.join(new $caseClassSymbol[$ConstNothingTpe, $genericType](
             $typeName,
             true,
             false,
@@ -481,14 +483,13 @@ object Magnolia {
 
         case class CaseParam(paramName: TermName, repeated: Boolean, typeclass: Tree, paramType: Type, ref: TermName, paramTypeName: Tree) {
           def compile(
-              params: TermName,
               idx: Int,
               default: Option[Tree],
               annotations: List[Tree],
               inheritedAnnotations: List[Tree],
               typeAnnotations: List[Tree]
           ): Tree =
-            q"""$params($idx) = $factoryObject.$factoryMethod[$typeConstructor, $genericType, $paramType](
+            q"""$factoryObject.$factoryMethod(
               ${paramName.toString.trim},
               $paramTypeName,
               ${if (isValueClass) q"(t: $genericType) => t.$paramName" else q"$idx"},
@@ -536,9 +537,9 @@ object Magnolia {
         val annotations = headParamList.getOrElse(Nil).map(annotationsOf(_))
         val typeAnnotations = headParamList.getOrElse(Nil).map(typeAnnotationsOf(_, fromParents = false))
 
-        val assignments = if (isReadOnly) {
+        val paramsItems = if (isReadOnly) {
           for ((((param, idx), (annList, inheritedAnnList)), tpeAnnList) <- paramsWithIndex zip annotations zip typeAnnotations)
-            yield param.compile(paramsVal, idx, None, annList, inheritedAnnList, tpeAnnList)
+            yield param.compile(idx, None, annList, inheritedAnnList, tpeAnnList)
         } else {
           val defaults = headParamList.fold[List[Tree]](Nil) { params =>
             def allNone = params.map(_ => NoneObj)
@@ -565,14 +566,22 @@ object Magnolia {
             ((((param, idx), default), (annList, inheritedAnnList)), typeAnnList) <-
               paramsWithIndex zip defaults zip annotations zip typeAnnotations
           )
-            yield param.compile(paramsVal, idx, Some(default), annList, inheritedAnnList, typeAnnList)
+            yield param.compile(idx, Some(default), annList, inheritedAnnList, typeAnnList)
+        }
+
+        val paramsValDef = {
+          val method = TermName(if (isReadOnly) "readOnlyParams" else "params")
+
+          // When building `paramsVal`, we simultaneously let the typer calculate the narrowest subtype of the original `Typeclass`
+          // we can fit over the params. We can then use it instead of the original `Typeclass`.
+          q"$PartsObj.$method[$typeConstructor, $genericType](..$paramsItems)"
         }
 
         val caseClassBody =
           if (isReadOnly) List(EmptyTree)
           else {
             val genericParams = paramsWithIndex.map { case (typeclass, idx) =>
-              val arg = q"makeParam($paramsVal($idx)).asInstanceOf[${typeclass.paramType}]"
+              val arg = q"makeParam($paramsVal.array($idx)).asInstanceOf[${typeclass.paramType}]"
               if (typeclass.repeated) q"$arg: _*" else arg
             }
 
@@ -586,7 +595,7 @@ object Magnolia {
               val p = TermName(s"p$idx")
               (
                 if (typeclass.repeated) q"$p: _*" else q"$p",
-                fq"$p <- new $MagnoliaMonadicOpsSym(makeParam($paramsVal($idx)).asInstanceOf[$f[${typeclass.paramType}]])"
+                fq"$p <- new $MagnoliaMonadicOpsSym(makeParam($paramsVal.array($idx)).asInstanceOf[$f[${typeclass.paramType}]])"
               )
             }
 
@@ -603,7 +612,7 @@ object Magnolia {
                   (
                     p,
                     if (param.repeated) q"$v: _*" else q"$v",
-                    q"val $p = makeParam($paramsVal($idx)).asInstanceOf[$EitherSym[Err, ${param.paramType}]]",
+                    q"val $p = makeParam($paramsVal.array($idx)).asInstanceOf[$EitherSym[Err, ${param.paramType}]]",
                     pq"$RightObj($v)"
                   )
                 }
@@ -624,11 +633,11 @@ object Magnolia {
               }
 
             List(
-              construct(q"new $genericType(..$genericParams)"),
-              constructMonadic(f, constructMonadicImpl),
-              constructEither(constructEitherImpl),
+              construct(tq"$paramsVal.Typeclass", q"new $genericType(..$genericParams)"),
+              constructMonadic(tq"$paramsVal.Typeclass", f, constructMonadicImpl),
+              constructEither(tq"$paramsVal.Typeclass", constructEitherImpl),
               rawConstruct(q"""
-              $MagnoliaUtilObj.checkParamLengths(fieldValues, $paramsVal.length, $typeName.full)
+              $MagnoliaUtilObj.checkParamLengths(fieldValues, $paramsVal.array.length, $typeName.full)
               new $genericType(..$rawGenericParams)
             """)
             )
@@ -636,14 +645,13 @@ object Magnolia {
 
         Some(q"""{
             ..${caseParams.map(_.typeclass)}
-            val $paramsVal = new $ArrayClass[$paramType](${assignments.length})
-            ..$assignments
+            val $paramsVal = $paramsValDef
             $typeNameDef
-            ${c.prefix}.join(new $caseClassType(
+            ${c.prefix}.join(new $caseClassSymbol[$paramsVal.Typeclass, $genericType](
               $typeName,
               false,
               $isValueClass,
-              $paramsVal,
+              $paramsVal.array,
               $ArrayObj(..$classAnnotationTrees),
               $ArrayObj(..$inheritedClassAnnotationTrees),
               $ArrayObj(..$classTypeAnnotationTrees)
@@ -678,25 +686,26 @@ object Magnolia {
             .fold(error(_), identity)
         }
 
-        val subType = appliedType(SubtypeTpe, typeConstructor, genericType)
         val groupSize = 500
-        val (functionNames, partialAssignmentFunctions) = typeclasses
+        val (functionNames, partialSubtypesFunctions) = typeclasses
           .grouped(groupSize)
           .toList
-          .map(constructPartialAssignmentFunction(_, subType))
+          .map(constructPartialSubtypesValFunction(_))
           .unzip
 
         val subtypesVal = c.freshName(TermName("subtypes"))
-        val combinations = functionNames.zipWithIndex.map { case (name, idx) => q"""$name($subtypesVal, ${idx * groupSize})""" }
+        val combinations = functionNames.zipWithIndex.map { case (name, idx) => q"""$name(${idx * groupSize})""" }
+
+        val subtypesValDef =
+          q"val $subtypesVal = $PartsObj.subtypes[$typeConstructor, $genericType].flatten(..$combinations)"
 
         Some(q"""{
-          ..$partialAssignmentFunctions
-          val $subtypesVal = new $ArrayClass[$subType](${typeclasses.size})
-          ..$combinations
+          ..$partialSubtypesFunctions
+          $subtypesValDef
           $typeNameDef
           ${c.prefix}.split(new $SealedTraitSym(
             $typeName,
-            $subtypesVal: $ArrayClass[$subType],
+            $subtypesVal.array,
             $ArrayObj(..$classAnnotationTrees),
             $ArrayObj(..$inheritedClassAnnotationTrees),
             $ArrayObj(..$classTypeAnnotationTrees)
@@ -831,7 +840,7 @@ object Magnolia {
       inheritedAnnotationsArrayParam: Array[Any],
       typeAnnotationsArrayParam: Array[Any]
   ): Param[Tc, T] =
-    Param.valueParam(
+    Param.valueParam[Tc, T, P](
       name,
       typeNameParam,
       deref,
@@ -986,5 +995,23 @@ final class CallByNeed[+A] private (private[this] var eval: () => A, private var
       eval = null
       result
     }
+  }
+}
+
+final class Parts[F[+_[_]], Tc[_]]private[Parts] (val array: Array[F[Tc]]) extends Serializable {
+  type Typeclass[a] = Tc[a]
+}
+
+/** Helpers to guide `Param`/`Subtype` array types and to provide access to the resulting typeclass.
+  */
+object Parts {
+  // This is the magic that lets the typer choose a narrower typeclass, while still being constrained by the original `Typeclass` (`TcWide` here).
+  def params[TcWide[_], T]: PartiallyApplied[Param[*[_], T],  TcWide] = new PartiallyApplied[Param[*[_], T],  TcWide]()
+  def readOnlyParams[TcWide[_], T]: PartiallyApplied[ReadOnlyParam[*[_], T],  TcWide] = new PartiallyApplied[ReadOnlyParam[*[_], T],  TcWide]()
+  def subtypes[TcWide[_], T]: PartiallyApplied[Subtype[*[_], T],  TcWide] = new PartiallyApplied[Subtype[*[_], T],  TcWide]()
+
+  final class PartiallyApplied[F[+_[_]], TcWide[_]] private[Parts](private val dummy: Boolean = false) extends AnyVal {
+    def apply[Tc[_] <: TcWide[_]](elements: F[Tc]*)(implicit ct: ClassTag[F[Tc]]): Parts[F, Tc] = new Parts(elements.toArray)
+    def flatten[Tc[_] <: TcWide[_]](partss: Parts[F, Tc]*)(implicit ct: ClassTag[F[Tc]]): Parts[F, Tc] = new Parts(partss.toArray.flatMap(_.array))
   }
 }
