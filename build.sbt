@@ -2,8 +2,8 @@ import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
 import com.softwaremill.Publish.{updateDocs, ossPublishSettings}
 import com.softwaremill.UpdateVersionInDocs
 
-val scala2_12 = "2.12.19"
-val scala2_13 = "2.13.13"
+val scala2_12 = "2.12.21"
+val scala2_13 = "2.13.18"
 val scala2 = List(scala2_12, scala2_13)
 
 excludeLintKeys in Global ++= Set(ideSkipProject)
