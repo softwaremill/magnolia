@@ -409,9 +409,7 @@ object Magnolia {
           $impl
       """
 
-      def constructPartialSubtypesValFunction(typeclasses: List[(Type, Tree)]): (TermName, Tree) = {
-        val functionName = c.freshName(TermName("partialSubtypes"))
-        val startVal = c.freshName(TermName("start"))
+      def constructPartialSubtypesValFunction(typeclasses: List[(Type, Tree)]): Tree = {
         val subtypeObjects = typeclasses.zipWithIndex.map { case ((subType, typeclass), idx) =>
           val symbol = subType.typeSymbol
           val (annotationTrees, inheritedAnnotationTrees) = annotationsOf(symbol)
@@ -426,12 +424,7 @@ object Magnolia {
             (t: $genericType) => t.asInstanceOf[$subType]
           )"""
         }
-        val tree =
-          q"""def $functionName($startVal: $IntTpe) = {
-                $PartsObj.subtypes[$typeConstructor, $genericType](..$subtypeObjects)
-              }"""
-
-        (functionName, tree)
+        q"""$PartsObj.subtypes[$typeConstructor, $genericType](..$subtypeObjects)"""
       }
 
       val result = if (isRefinedType) {
@@ -687,20 +680,17 @@ object Magnolia {
         }
 
         val groupSize = 500
-        val (functionNames, partialSubtypesFunctions) = typeclasses
+        val partialSubtypesFunctions = typeclasses
           .grouped(groupSize)
           .toList
           .map(constructPartialSubtypesValFunction(_))
-          .unzip
 
         val subtypesVal = c.freshName(TermName("subtypes"))
-        val combinations = functionNames.zipWithIndex.map { case (name, idx) => q"""$name(${idx * groupSize})""" }
 
         val subtypesValDef =
-          q"val $subtypesVal = $PartsObj.subtypes[$typeConstructor, $genericType].flatten(..$combinations)"
+          q"val $subtypesVal = $PartsObj.subtypes[$typeConstructor, $genericType].flatten(..$partialSubtypesFunctions)"
 
         Some(q"""{
-          ..$partialSubtypesFunctions
           $subtypesValDef
           $typeNameDef
           ${c.prefix}.split(new $SealedTraitSym(
