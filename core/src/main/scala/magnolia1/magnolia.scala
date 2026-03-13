@@ -409,7 +409,7 @@ object Magnolia {
           $impl
       """
 
-      def constructPartialSubtypesValFunction(typeclasses: List[(Type, Tree)]): Tree = {
+      def constructPartialSubtypesVal(typeclasses: List[(Type, Tree)]): Tree = {
         val subtypeObjects = typeclasses.zipWithIndex.map { case ((subType, typeclass), idx) =>
           val symbol = subType.typeSymbol
           val (annotationTrees, inheritedAnnotationTrees) = annotationsOf(symbol)
@@ -424,7 +424,7 @@ object Magnolia {
             (t: $genericType) => t.asInstanceOf[$subType]
           )"""
         }
-        q"""$PartsObj.subtypes[$typeConstructor, $genericType](..$subtypeObjects)"""
+        q"""(() => $PartsObj.subtypes[$typeConstructor, $genericType](..$subtypeObjects))()"""
       }
 
       val result = if (isRefinedType) {
@@ -683,7 +683,7 @@ object Magnolia {
         val partialSubtypesFunctions = typeclasses
           .grouped(groupSize)
           .toList
-          .map(constructPartialSubtypesValFunction(_))
+          .map(constructPartialSubtypesVal(_))
 
         val subtypesVal = c.freshName(TermName("subtypes"))
 

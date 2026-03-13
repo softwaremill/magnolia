@@ -889,6 +889,11 @@ class Tests extends munit.FunSuite {
       assertEquals(res, "Bar(foo{MyAnnotation(2),MyAnnotation(1)}=foo,bar{MyAnnotation(2),MyAnnotation(1)}=bar)")
     }
 
+    test("construct a Show instance for huge enums") {
+      val res = Show.gen[HugeEnum].show(HugeEnum.Case42)
+      assertEquals(res, "Case42()")
+    }
+
   private def serializeToByteArray(value: Serializable): Array[Byte] = {
     val buffer = new ByteArrayOutputStream()
     val oos = new ObjectOutputStream(buffer)
