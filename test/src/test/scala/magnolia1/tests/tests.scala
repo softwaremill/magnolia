@@ -53,7 +53,10 @@ sealed trait AttributeParent
 
 case class `%%`(`/`: Int, `#`: String)
 
-case class Param(a: String, b: String)
+case class Param(a: String, b: String) {
+  @transient
+  val daad = "Test"
+}
 case class TestEntry(param: Param)
 object TestEntry {
   def apply(): TestEntry = TestEntry(Param("", ""))
