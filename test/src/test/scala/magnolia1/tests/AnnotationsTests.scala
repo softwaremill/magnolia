@@ -70,8 +70,14 @@ class AnnotationsTests extends munit.FunSuite:
 
   test("sealed trait enumeration should provide subtype annotations") {
     val subtypeAnnotations = SubtypeInfo.derived[Sport].subtypeAnnotations
-    assertEquals(subtypeAnnotations(0).mkString, "MyAnnotation(1)")
+    assertEquals(subtypeAnnotations.head.mkString, "MyAnnotation(1)")
     assertEquals(subtypeAnnotations(1).mkString, "MyAnnotation(2)")
+  }
+
+  test("sealed trait enumeration should provide subtype inherited annotations") {
+    val subtypeAnnotations = SubtypeInfo.derived[Sport].subtypeInheritedAnnotations
+    assertEquals(subtypeAnnotations.head.map(_.toString).mkString, "MyAnnotation(0)") // Boxing
+    assertEquals(subtypeAnnotations(1).map(_.toString).mkString, "MyAnnotation(0)") // Soccer
   }
 
   test("serialize case class with Java annotations by skipping them") {
@@ -82,6 +88,45 @@ class AnnotationsTests extends munit.FunSuite:
   test("serialize case class with Java annotations which comes from external module by skipping them") {
     val res = Show.derived[JavaAnnotatedCase].show(JavaAnnotatedCase(1))
     assertEquals(res, "JavaAnnotatedCase(v=1)")
+  }
+
+  test("Scala 3 enum should provide annotations on enum") {
+    val traitAnnotations = SubtypeInfo.derived[Size].traitAnnotations.map(_.toString)
+    assertEquals(traitAnnotations.mkString, "MyAnnotation(0)")
+  }
+
+  test("Scala 3 enum should provide annotations on parameterless enum cases") {
+    val subtypeAnnotations = SubtypeInfo.derived[Size].subtypeAnnotations
+    // Subtypes are sorted alphabetically by full type name
+    assertEquals(subtypeAnnotations.head.mkString, "MyAnnotation(3)") // L
+    assertEquals(subtypeAnnotations(1).mkString, "MyAnnotation(2)") // M
+    assertEquals(subtypeAnnotations(2).mkString, "MyAnnotation(1)") // S
+  }
+
+  test("Scala 3 enum should provide inherited annotations on parameterless enum cases") {
+    val inherited = SubtypeInfo.derived[Size].subtypeInheritedAnnotations
+    assertEquals(inherited.head.mkString, "MyAnnotation(0)") // L inherits from Size
+    assertEquals(inherited(1).mkString, "MyAnnotation(0)") // M inherits from Size
+    assertEquals(inherited(2).mkString, "MyAnnotation(0)") // S inherits from Size
+  }
+
+  test("Scala 3 enum case with params should provide param annotations") {
+    val show = Show.derived[Shape].show(Shape.Square(5))
+    // Square's own @MyAnnotation(3), inherited @MyAnnotation(0) from Shape, and @MyAnnotation(4) on side param
+    assertEquals(show, "{MyAnnotation(3),MyAnnotation(0)}Square{MyAnnotation(3),MyAnnotation(0)}(side{MyAnnotation(4)}=5)")
+
+    val info = SubtypeInfo.derived[Shape]
+    assertEquals(info.traitAnnotations.map(_.toString).mkString, "MyAnnotation(0)")
+    // Subtypes are sorted alphabetically by full type name
+    assertEquals(info.subtypeAnnotations.head.map(_.toString).mkString, "MyAnnotation(1)") // Circle
+    assertEquals(info.subtypeAnnotations(1).map(_.toString).mkString, "MyAnnotation(3)") // Square
+    assertEquals(info.subtypeInheritedAnnotations.head.map(_.toString).mkString, "MyAnnotation(0)") // Circle inherits from Shape
+    assertEquals(info.subtypeInheritedAnnotations(1).map(_.toString).mkString, "MyAnnotation(0)") // Square inherits from Shape
+  }
+
+  test("Scala 3 enum case with params should provide inherited param annotations") {
+    val show = Show.derived[Tagged].show(Tagged.Sized("low", 5))
+    assertEquals(show, "Sized(name=low,value{[i]MyAnnotation(10)}=5)")
   }
 
 object AnnotationsTests:
@@ -159,3 +204,27 @@ object AnnotationsTests:
       likesNuts: Boolean,
       @MyAnnotation(4) likesVeggies: Boolean
   ) extends Rodent
+
+  @MyAnnotation(0)
+  enum Size:
+    @MyAnnotation(1)
+    case S extends Size
+    @MyAnnotation(2)
+    case M extends Size
+    @MyAnnotation(3)
+    case L extends Size
+
+  @MyAnnotation(0)
+  enum Shape:
+    @MyAnnotation(1)
+    case Circle(@MyAnnotation(2) radius: Int) extends Shape
+    @MyAnnotation(3)
+    case Square(@MyAnnotation(4) side: Int) extends Shape
+
+  sealed trait HasValue:
+    def name: String
+    @MyAnnotation(10)
+    def value: Int
+
+  enum Tagged extends HasValue:
+    case Sized(name: String, value: Int) extends Tagged
