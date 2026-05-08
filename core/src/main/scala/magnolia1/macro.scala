@@ -180,17 +180,18 @@ object Macro:
 
     def anns: Expr[List[scala.annotation.Annotation]] =
       Expr.ofList {
-        tpe.typeSymbol.annotations
+        annotatedSymbol.annotations
           .filter(filterAnnotation)
           .map(_.asExpr.asInstanceOf[Expr[scala.annotation.Annotation]])
       }
 
     def inheritedAnns: Expr[List[scala.annotation.Annotation]] =
       Expr.ofList {
+        val self = annotatedSymbol
         tpe.baseClasses
           .filterNot(isObjectOrScala)
           .collect {
-            case s if s != tpe.typeSymbol => s.annotations
+            case s if s != self => s.annotations
           } // skip self
           .flatten
           .filter(filterAnnotation)
@@ -281,4 +282,9 @@ object Macro:
         (a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
           (a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal" &&
             a.tpe.typeSymbol.owner.fullName != "jdk.internal"))
+
+    // A parameterless enum case is stored in a val and needs to be resolved as term, other cases are resolved as type
+    private def annotatedSymbol: Symbol =
+      if !tpe.termSymbol.isNoSymbol && !tpe.typeSymbol.flags.is(Flags.Module) then tpe.termSymbol else tpe.typeSymbol
+
   }
