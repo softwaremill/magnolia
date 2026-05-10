@@ -81,6 +81,17 @@ sealed trait RecursiveSum
 case object RecursiveSumLeaf extends RecursiveSum
 case class RecursiveSumNode(next: RecursiveSum) extends RecursiveSum
 
+sealed trait MutuallyRecA
+case object MutuallyRecALeaf extends MutuallyRecA
+case class MutuallyRecANode(b: MutuallyRecB) extends MutuallyRecA
+sealed trait MutuallyRecB
+case object MutuallyRecBLeaf extends MutuallyRecB
+case class MutuallyRecBNode(a: MutuallyRecA) extends MutuallyRecB
+
+sealed trait BranchingRec
+case object BranchingRecLeaf extends BranchingRec
+case class BranchingRecNode(left: BranchingRec, right: BranchingRec) extends BranchingRec
+
 // This tests compilation.
 class GenericCsv[A: Csv]
 object ParamCsv extends GenericCsv[Param]
@@ -856,6 +867,19 @@ class Tests extends munit.FunSuite {
       val instance: ExportedTypeclass.Exported[RecursiveSum] = ExportedTypeclass.gen[RecursiveSum]
       assert(instance != null)
     }
+
+    test("mutually recursive sealed traits preserve narrow result type") {
+      val a: ExportedTypeclassAuto.Exported[MutuallyRecA] = ExportedTypeclassAuto.gen[MutuallyRecA]
+      val b: ExportedTypeclassAuto.Exported[MutuallyRecB] = ExportedTypeclassAuto.gen[MutuallyRecB]
+      assert(a != null)
+      assert(b != null)
+    }
+
+    test("branching recursive sealed trait preserves narrow result type") {
+      val instance: ExportedTypeclass.Exported[BranchingRec] = ExportedTypeclass.gen[BranchingRec]
+      assert(instance != null)
+    }
+
 
     test("report an error when an abstract member of a sealed hierarchy is not sealed") {
       val error = compileErrors("Show.gen[Parent]")
