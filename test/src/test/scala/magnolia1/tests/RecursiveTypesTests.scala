@@ -122,6 +122,16 @@ class RecursiveTypesTests extends munit.FunSuite:
     assert(clue(viaGenObj) != null)
   }
 
+  test("branching recursive sealed trait preserves narrow result type from split") {
+    val instance: ExportedTypeclass.Exported[BranchingRec] =
+      summon[ExportedTypeclass.Exported[BranchingRec]]
+    val direct: ExportedTypeclass.Exported[BranchingRec] =
+      ExportedTypeclass.derived[BranchingRec]
+    assert(clue(instance) != null)
+    assert(clue(direct) != null)
+  }
+
+
   test("serialize a CeList") {
     val printResult = summon[Print[CeList]].print(CeColon(3, CeColon(2, CeNil(2))))
     val showResult = summon[Show[String, CeList]].show(CeColon(3, CeColon(2, CeNil(2))))
@@ -187,3 +197,10 @@ object RecursiveTypesTests:
     case class C(next: A) extends A
     object A:
       given Tc[A] = ShowDerivation.derived[A]
+
+  sealed trait BranchingRec
+  case object BranchingRecLeaf extends BranchingRec
+  case class BranchingRecNode(left: BranchingRec, right: BranchingRec) extends BranchingRec
+  object BranchingRec:
+    given exportedBranchingRec: ExportedTypeclass.Exported[BranchingRec] =
+      ExportedTypeclass.derived[BranchingRec]
