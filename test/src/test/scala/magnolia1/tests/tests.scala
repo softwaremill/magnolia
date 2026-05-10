@@ -77,6 +77,10 @@ case class Portfolio(companies: Company*)
 
 case class Recursive(children: Seq[Recursive])
 
+sealed trait RecursiveSum
+case object RecursiveSumLeaf extends RecursiveSum
+case class RecursiveSumNode(next: RecursiveSum) extends RecursiveSum
+
 // This tests compilation.
 class GenericCsv[A: Csv]
 object ParamCsv extends GenericCsv[Param]
@@ -846,6 +850,11 @@ class Tests extends munit.FunSuite {
         |magnolia: could not find ExportedTypeclass.Typeclass for type Seq[magnolia1.tests.Recursive]
         |    in parameter 'children' of product type magnolia1.tests.Recursive
         |""".stripMargin)
+    }
+
+    test("recursive sealed trait derivation returns the narrow result type") {
+      val instance: ExportedTypeclass.Exported[RecursiveSum] = ExportedTypeclass.gen[RecursiveSum]
+      assert(instance != null)
     }
 
     test("report an error when an abstract member of a sealed hierarchy is not sealed") {
