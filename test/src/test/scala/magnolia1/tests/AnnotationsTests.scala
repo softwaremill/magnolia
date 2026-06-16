@@ -80,6 +80,12 @@ class AnnotationsTests extends munit.FunSuite:
     assertEquals(subtypeAnnotations(1).map(_.toString).mkString, "MyAnnotation(0)") // Soccer
   }
 
+  test("sealed trait enumeration should provide subtype type annotations") {
+    val subtypeTypeAnnotations =
+      SubtypeInfo.derived[AttributeParent].subtypeTypeAnnotations
+    assertEquals(subtypeTypeAnnotations.head.map(_.toString).mkString, "MyTypeAnnotation(2)") // Attributed
+  }
+
   test("serialize case class with Java annotations by skipping them") {
     val res = Show.derived[MyDto].show(MyDto("foo", 42))
     assertEquals(res, "MyDto{MyAnnotation(0)}(foo=foo,bar=42)")
