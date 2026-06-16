@@ -23,7 +23,7 @@ object Monadic:
       from.flatMap(fn)
 
   given (using ec: ExecutionContext): Monadic[Future] with
-    def point[A](value: A): Future[A] = Future(value)
+    def point[A](value: A): Future[A] = Future.successful(value)
     def map[A, B](from: Future[A])(fn: A => B): Future[B] = from.map(fn)
     def flatMap[A, B](from: Future[A])(fn: A => Future[B]): Future[B] =
       from.flatMap(fn)
