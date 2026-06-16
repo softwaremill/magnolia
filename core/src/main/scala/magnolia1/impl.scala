@@ -283,7 +283,7 @@ trait SealedTraitDerivation:
             typeInfo[s],
             IArray.from(anns[s]),
             IArray.from(inheritedAnns[s]),
-            IArray.from(paramTypeAnns[A]),
+            IArray.from(typeAnns[s]),
             isObject[s],
             idx,
             CallByNeed.createLazy(tc),
