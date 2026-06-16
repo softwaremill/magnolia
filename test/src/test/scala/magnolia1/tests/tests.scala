@@ -455,8 +455,8 @@ class Tests extends munit.FunSuite {
         case class Beta(alpha: Alpha)
         Show.gen[Beta]
       """)
-      assert(error contains """
-        |magnolia: could not find Show.Typeclass for type Double
+      assert(clue(error) contains """
+        |magnolia: could not find magnolia1.examples.Show.Typeclass[Double]
         |    in parameter 'integer' of product type Alpha
         |    in parameter 'alpha' of product type Beta
         |""".stripMargin)
@@ -477,8 +477,8 @@ class Tests extends munit.FunSuite {
         case class Gamma(unit: Unit)
         Show.gen[Gamma]
       """)
-      assert(error contains """
-        |magnolia: could not find Show.Typeclass for type Unit
+      assert(clue(error) contains """
+        |magnolia: could not find magnolia1.examples.Show.Typeclass[Unit]
         |    in parameter 'unit' of product type Gamma
         |""".stripMargin)
     }
@@ -490,8 +490,8 @@ class Tests extends munit.FunSuite {
           implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
         }
       """)
-      assert(error contains """
-        |magnolia: could not find SemiDefault.Typeclass for type magnolia1.tests.ServiceName1
+      assert(clue(error) contains """
+        |magnolia: could not find magnolia1.examples.SemiDefault.Typeclass[magnolia1.tests.ServiceName1]
         |    in parameter 'n' of product type LoggingConfig
         |""".stripMargin)
     }
@@ -503,8 +503,8 @@ class Tests extends munit.FunSuite {
           implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
         }
       """)
-      assert(error contains """
-        |magnolia: could not find SemiDefault.Typeclass for type magnolia1.tests.ServiceName2
+      assert(clue(error) contains """
+        |magnolia: could not find magnolia1.examples.SemiDefault.Typeclass[magnolia1.tests.ServiceName2]
         |    in parameter 'n' of product type LoggingConfig
         |""".stripMargin)
     }
@@ -516,8 +516,8 @@ class Tests extends munit.FunSuite {
           implicit val semi: SemiDefault[LoggingConfig] = SemiDefault.gen
         }
       """)
-      assert(error contains """
-        |magnolia: could not find SemiDefault.Typeclass for type Option[String]
+      assert(clue(error) contains """
+        |magnolia: could not find magnolia1.examples.SemiDefault.Typeclass[Option[String]]
         |    in parameter 'o' of product type LoggingConfig
         |""".stripMargin)
     }
@@ -552,8 +552,8 @@ class Tests extends munit.FunSuite {
     // LabelledBox being invariant in L <: String prohibits the derivation for LabelledBox[Int, _]
     test("can't show a Box with invariant label") {
       val error = compileErrors("Show.gen[Box[Int]]")
-      assert(error contains """
-        |magnolia: could not find Show.Typeclass for type L
+      assert(clue(error) contains """
+        |magnolia: could not find magnolia1.examples.Show.Typeclass[L]
         |    in parameter 'label' of product type magnolia1.tests.LabelledBox[Int, _ <: String]
         |    in coproduct type magnolia1.tests.Box[Int]
         |""".stripMargin)
@@ -688,20 +688,20 @@ class Tests extends munit.FunSuite {
 
     test("show chained error stack") {
       val error = compileErrors("Show.gen[(Int, Seq[(Double, String)])]")
-      assert(error contains """
-        |magnolia: could not find Show.Typeclass for type Double
+      assert(clue(error) contains """
+        |magnolia: could not find magnolia1.examples.Show.Typeclass[Double]
         |    in parameter '_1' of product type (Double, String)
-        |    in chained implicit Show.Typeclass for type Seq[(Double, String)]
+        |    in chained implicit magnolia1.examples.Show.Typeclass for type Seq[(Double, String)]
         |    in parameter '_2' of product type (Int, Seq[(Double, String)])
         |""".stripMargin)
     }
 
     test("show chained error stack when leaf instance is missing") {
       val error = compileErrors("Show.gen[Schedule]")
-      assert(error contains """
-        |magnolia: could not find Show.Typeclass for type java.time.LocalDate
+      assert(clue(error) contains """
+        |magnolia: could not find magnolia1.examples.Show.Typeclass[java.time.LocalDate]
         |    in parameter 'date' of product type magnolia1.tests.Event
-        |    in chained implicit Show.Typeclass for type Seq[magnolia1.tests.Event]
+        |    in chained implicit magnolia1.examples.Show.Typeclass for type Seq[magnolia1.tests.Event]
         |    in parameter 'events' of product type magnolia1.tests.Schedule
         |""".stripMargin)
     }
@@ -762,7 +762,7 @@ class Tests extends munit.FunSuite {
 
     test("disallow coproduct derivations without split method") {
       val error = compileErrors("WeakHash.gen[Entity]")
-      assert(error contains "magnolia: the method `split` must be defined on the derivation object WeakHash to derive typeclasses for sealed traits")
+      assert(clue(error) contains "magnolia: the method `split` must be defined on the derivation object WeakHash to derive typeclasses for sealed traits")
     }
 
     test("equality of Wrapper") {
@@ -801,7 +801,7 @@ class Tests extends munit.FunSuite {
 
     test("not attempt to derive instances for refined types") {
       val error = compileErrors("Show.gen[Character]")
-      assert(error contains "magnolia: could not infer Show.Typeclass for refined type magnolia1.tests.Character.Id")
+      assert(clue(error) contains "magnolia: could not infer magnolia1.examples.Show.Typeclass for refined type magnolia1.tests.Character.Id")
     }
 
     test("derive instances for types with refined types if implicit provided") {
@@ -811,7 +811,7 @@ class Tests extends munit.FunSuite {
 
     test("not attempt to derive instances for Java enums") {
       val error = compileErrors("Show.gen[WeekDay]")
-      assert(error contains "magnolia: could not infer Show.Typeclass for type magnolia1.tests.WeekDay")
+      assert(clue(error) contains "magnolia: could not infer magnolia1.examples.Show.Typeclass for type magnolia1.tests.WeekDay")
     }
 
     test("determine subtypes of Exactly[Int]") {
@@ -843,7 +843,7 @@ class Tests extends munit.FunSuite {
     test("no support for arbitrary derivation result type for recursive classes yet") {
       val error = compileErrors("ExportedTypeclass.gen[Recursive]")
       assert(error contains """
-        |magnolia: could not find ExportedTypeclass.Typeclass for type Seq[magnolia1.tests.Recursive]
+        |magnolia: could not find magnolia1.examples.ExportedTypeclass.Typeclass[Seq[magnolia1.tests.Recursive]]
         |    in parameter 'children' of product type magnolia1.tests.Recursive
         |""".stripMargin)
     }
@@ -917,7 +917,7 @@ class Tests extends munit.FunSuite {
   test("narrow generated instance types for case classes") {
     case class Foo(a: Int, b: Int)
 
-    val instance = CollectFields.gen[Foo]
+    val instance = CollectFields.genDerivation.gen[Foo]
     val collected = instance.collectFields(Foo(123, 456))
     // Only compiles because the type was narrowed to `CollectFields[IntField, Foo]`
     val ints = collected.map(_.int)
@@ -929,7 +929,7 @@ class Tests extends munit.FunSuite {
     case class Bar(a: String, b: String) extends Foo
     case object Baz extends Foo
 
-    val instance = CollectFields.gen[Foo]
+    val instance = CollectFields.genDerivation.gen[Foo]
 
     val collected = instance.collectFields(Bar("abc", "def"))
     // Only compiles because the type was narrowed to `CollectFields[StringField, Foo]`
@@ -940,11 +940,66 @@ class Tests extends munit.FunSuite {
   test("choose least upper bound as instance type") {
     case class Foo(a: Int, b: String)
 
-    val instance = CollectFields.gen[Foo]
+    val instance = CollectFields.genDerivation.gen[Foo]
 
     val collected = instance.collectFields(Foo(123, "abc"))
     // Only compiles because the type was narrowed to `CollectFields[Field, Foo]`
     val fields: Seq[CollectFields.Field] = collected
     assertEquals(fields, Seq(CollectFields.IntField(123), CollectFields.StringField("abc")))
+  }
+
+  test("narrow generated instance types for recursive structures with genNarrow") {
+    val instance = CollectFields.genNarrowDerivation.genNarrow[CollectFields[CollectFields.IntField, *], List[Int]]
+
+    val collected = instance.collectFields(List(1, 2, 3))
+    val ints = collected.map(_.int)
+    assertEquals(ints, Seq(1, 2, 3))
+  }
+
+  test("support type aliases with genNarrow") {
+    type F[x] = CollectFields[CollectFields.IntField, x]
+    val instance = CollectFields.genNarrowDerivation.genNarrow[F, List[Int]]
+
+    val collected = instance.collectFields(List(1, 2, 3))
+    val ints = collected.map(_.int)
+    assertEquals(ints, Seq(1, 2, 3))
+  }
+
+  test("narrow generated instance types for mutually recursive structures with genNarrow") {
+    case class Foo(value: Int, bar: Option[Bar])
+    case class Bar(value: Int, foo: Option[Foo])
+
+    val instance =
+      CollectFields.genNarrowDerivation.genNarrow[CollectFields[CollectFields.IntField, *], Foo]
+    val collected = instance.collectFields(Foo(1, Some(Bar(2, Some(Foo(3, None))))))
+    val ints = collected.map(_.int)
+    assertEquals(ints, Seq(1, 2, 3))
+  }
+
+  test("produce readable errors in genNarrow") {
+    val error = compileErrors(
+      """
+      CollectFields.genNarrowDerivation.genNarrow[
+        ({ type F[x] = CollectFields[CollectFields.IntField, x] }) # F,
+        List[String]
+      ]
+      """
+    )
+    assert(
+      clue(error).contains("""
+        |magnolia: could not find magnolia1.examples.CollectFields[magnolia1.examples.CollectFields.IntField,String]
+        |    in parameter 'head' of product type scala.collection.immutable.::[String]
+        |    in coproduct type List[String]""".stripMargin)
+    )
+  }
+
+  test("support Derived pattern with genNarrow") {
+    final case class Foo(value: String)
+    final case class Bar(foo: Foo)
+    final case class Baz(bar: Bar)
+
+    import magnolia1.examples.schema.Schema
+    import magnolia1.examples.schema.Schema.auto._
+    val _: Schema[Any, Baz] = genAll[Any, Baz]
   }
 }

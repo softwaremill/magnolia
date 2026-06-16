@@ -46,8 +46,28 @@ object Magnolia {
     * [[SealedTrait]], like so, <pre> &lt;derivation&gt;.split(&lt;sealedTrait&gt;): Typeclass[T] </pre> so a definition such as, <pre> def
     * split[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T] = ... </pre> will suffice, however the qualifications regarding
     * additional type parameters and implicit parameters apply equally to `split` as to `join`.
+    *
+    * `gen` will make an effort to keep the resulting value's type as narrow as possible, which can be useful for typeclass families. As a
+    * contrived example, when configured with `type Typeclass[x] = Either[Any, x]` and corresponding `join` and `split`, `gen` may derive an
+    * `Either[String, T]` if the target type and available instances allow it. To take advantage of it, one has to define `join` and `split`
+    * in such a way that they propagate narrowed typeclasses as appropriate:
+    *
+    * {{{
+    * def join[L, T](caseClass: CaseClass[Either[L, *], T]): Either[L, T]
+    * }}}
+    *
+    * Note that narrowing is not perfect, and it will fail for (mutually) recursive target types, producing `Typeclass[T]` instead of a more
+    * specific variant. To handle such cases, please refer to the [[genNarrow]] macro which supports choosing a specific typeclass family member.
     */
-  def gen[T: c.WeakTypeTag](c: whitebox.Context): c.Tree = Stack.withContext(c) { (stack, depth) =>
+  def gen[T](c: whitebox.Context)(implicit T: c.WeakTypeTag[T]): c.Tree =
+    genImpl(c)(TypeConstructor.fromTypeclass(c), T)
+
+  /** Like [[gen]], but instead of `Typeclass[T]` this produces `Tc[T]` for the specified `Tc[_]`.
+    */
+  def genNarrow[Tc[_], T](c: whitebox.Context)(implicit Tc: c.WeakTypeTag[Tc[_]], T: c.WeakTypeTag[T]): c.Tree =
+    genImpl(c)(TypeConstructor.fromTag[Tc](c)(Tc), T)
+
+  private def genImpl[T: c.WeakTypeTag](c: whitebox.Context)(typeConstructor: c.Type, T: c.WeakTypeTag[T]): c.Tree = Stack.withContext(c) { (stack, depth) =>
     import c.internal._
     import c.universe._
     import definitions._
@@ -60,19 +80,6 @@ object Magnolia {
 
     val prefixType = c.prefix.tree.tpe
     val prefixObject = prefixType.typeSymbol
-    val prefixName = prefixObject.name.decodedName
-
-    val TypeClassNme = TypeName("Typeclass")
-    val typeDefs = prefixType.baseClasses.flatMap { baseClass =>
-      baseClass.asType.toType.decls.collectFirst {
-        case tpe: TypeSymbol if tpe.name == TypeClassNme =>
-          tpe.toType.asSeenFrom(prefixType, baseClass)
-      }
-    }
-
-    val typeConstructor = typeDefs.headOption.fold(
-      error(s"the derivation $prefixObject does not define the Typeclass type constructor")
-    )(_.typeConstructor)
 
     val searchType = appliedType(typeConstructor, genericType)
     val directlyReentrant = stack.top.exists(_.searchType =:= searchType)
@@ -326,7 +333,7 @@ object Magnolia {
           yield DeferredRef(searchType, methodName.decodedName.toString)
 
       deferredRef.fold {
-        val path = ChainedImplicit(s"$prefixName.Typeclass", genericType.toString)
+        val path = ChainedImplicit(typeConstructor.toString, genericType.toString)
         val frame = stack.Frame(path, searchType, assignedName)
         stack.recurse(frame, searchType, shouldCache) {
           Option(c.inferImplicitValue(searchType))
@@ -340,10 +347,8 @@ object Magnolia {
               else {
                 val (top, paths) = stack.trace
                 val missingType = top.fold(searchType)(_.searchType)
-                val typeClassName = s"${missingType.typeSymbol.name.decodedName}.Typeclass"
-                val genericType = missingType.typeArgs.head
                 val trace = paths.mkString("    in ", "\n    in ", "\n")
-                s"could not find $typeClassName for type $genericType\n$trace"
+                s"could not find $missingType\n$trace"
               }
             }
         }
@@ -428,7 +433,7 @@ object Magnolia {
       }
 
       val result = if (isRefinedType) {
-        error(s"could not infer $prefixName.Typeclass for refined type $genericType")
+        error(s"could not infer $typeConstructor for refined type $genericType")
       } else if (isCaseObject) {
         val classBody =
           if (isReadOnly) List(EmptyTree)
@@ -734,7 +739,7 @@ object Magnolia {
       else for (tree <- result) yield c.untypecheck(expandDeferred.transform(tree))
 
     dereferencedResult.getOrElse {
-      error(s"could not infer $prefixName.Typeclass for type $genericType")
+      error(s"could not infer $typeConstructor for type $genericType")
     }
   }
 
@@ -847,6 +852,55 @@ object Magnolia {
 
   private[Magnolia] final def keepLeft[A](values: Either[A, _]*): List[A] = MagnoliaUtil.keepLeft(values: _*)
 
+  private object TypeConstructor {
+    def fromTypeclass(c: blackbox.Context): c.Type = {
+      import c.universe._
+
+      val prefixType = c.prefix.tree.tpe
+      val prefixObject = prefixType.typeSymbol
+
+      val TypeClassNme = TypeName("Typeclass")
+      val typeDefs = prefixType.baseClasses.flatMap { baseClass =>
+        baseClass.asType.toType.decls.collectFirst {
+          case tpe: TypeSymbol if tpe.name == TypeClassNme =>
+            tpe.toType.asSeenFrom(prefixType, baseClass)
+        }
+      }
+      val typeclass = typeDefs.headOption.fold(
+        c.abort(c.enclosingPosition, s"the derivation $prefixObject does not define the Typeclass type constructor")
+      )(_.typeConstructor)
+
+      typeclass
+    }
+
+    def fromTag[F[_]](c: blackbox.Context)(tag: c.WeakTypeTag[F[_]]): c.Type = {
+      import c.universe._
+      import c.internal.polyType
+
+      val tpe = tag.tpe
+
+      def fail() =
+        c.abort(
+          c.enclosingPosition,
+          s"""expected a * -> * HKT,
+             |got: $tpe as ${showRaw(tpe)}
+             |eta-expanded: ${tpe.etaExpand} as ${showRaw(tpe.etaExpand)}"""
+        )
+
+      tpe.etaExpand match {
+        case poly: PolyType if poly.typeParams.nonEmpty =>
+          val partiallyApplied = polyType(
+            poly.typeParams.takeRight(1),
+            poly.resultType.substituteTypes(
+              poly.typeParams.dropRight(1),
+              tpe.typeArgs.dropRight(1)
+            )
+          )
+          partiallyApplied
+        case _ => fail()
+      }
+    }
+  }
 }
 
 @compileTimeOnly("magnolia1.Deferred is used for derivation of recursive typeclasses")
