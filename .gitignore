@@ -20,3 +20,4 @@ target
 .cursor
 metals.sbt
 project/project/build.properties
+.orca
