@@ -382,6 +382,18 @@ object Magnolia {
 
       val isValueClass = genericType <:< AnyValTpe && !primitives.exists(_ =:= genericType)
       val resultType = appliedType(typeConstructor, genericType)
+      val narrowResultType: Type = {
+        val macroSym = c.macroApplication.symbol
+        if (macroSym != null && macroSym.isMethod) {
+          val method = macroSym.asMethod
+          val tparams = method.typeParams
+          val rawReturn = method.returnType.asSeenFrom(prefixType, method.owner)
+          val substituted =
+            if (tparams.size == 1) rawReturn.substituteTypes(tparams, List(genericType))
+            else rawReturn
+          if (substituted <:< resultType) substituted else resultType
+        } else resultType
+      }
       val typeName = c.freshName(TermName("typeName"))
 
       def typeNameOf(tpe: Type): Tree = {
@@ -719,7 +731,7 @@ object Magnolia {
 
       for (term <- result)
         yield q"""{
-        ${deferredVal(assignedName, resultType, term)}
+        ${deferredVal(assignedName, narrowResultType, term)}
         $assignedName
       }"""
     }
