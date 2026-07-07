@@ -1,13 +1,13 @@
 package magnolia1.tests
 
 import magnolia1.*
-import magnolia1.examples.*
+//import magnolia1.examples.*
 
 /** TODO: Support for value classes is missing for scala3 branch. Eventually refactor and uncomment the tests below once the feature is
   * implemented.
   */
 class ValueClassesTests extends munit.FunSuite:
-  import ValueClassesTests.*
+  // import ValueClassesTests.*
 
   // test("serialize a value class") {
   //   val res = Show.derived[Length].show(new Length(100))
@@ -51,6 +51,7 @@ class ValueClassesTests extends munit.FunSuite:
   //    val res = (ExportedTypeclass.derived[Length], ExportedTypeclass.derived[Color])
   //    assertEquals(res, (ExportedTypeclass.Exported[Length](), ExportedTypeclass.Exported[Color]()))
   //  }
+end ValueClassesTests
 
 object ValueClassesTests:
 
