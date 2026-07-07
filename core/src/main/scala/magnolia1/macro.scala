@@ -20,15 +20,19 @@ object Macro:
   inline def repeated[T]: List[(String, Boolean)] = ${ repeated[T] }
   inline def typeInfo[T]: TypeInfo = ${ typeInfo[T] }
 
+  private def typeRepr[T: Type](using Quotes) =
+    import quotes.reflect.*
+    TypeRepr.of[T].dealias
+
   def isObject[T: Type](using Quotes): Expr[Boolean] =
     import quotes.reflect.*
 
-    Expr(TypeRepr.of[T].typeSymbol.flags.is(Flags.Module))
+    Expr(typeRepr[T].typeSymbol.flags.is(Flags.Module))
 
   def isEnum[T: Type](using Quotes): Expr[Boolean] =
     import quotes.reflect.*
 
-    Expr(TypeRepr.of[T].typeSymbol.flags.is(Flags.Enum))
+    Expr(typeRepr[T].typeSymbol.flags.is(Flags.Enum))
 
   def anns[T: Type](using Quotes): Expr[List[Any]] =
     new CollectAnnotations[T].anns
@@ -51,7 +55,7 @@ object Macro:
     import quotes.reflect.*
 
     Expr(
-      TypeRepr.of[T].baseClasses.contains(Symbol.classSymbol("scala.AnyVal"))
+      typeRepr[T].baseClasses.contains(Symbol.classSymbol("scala.AnyVal"))
     )
 
   def defaultValue[T: Type](using
@@ -64,7 +68,7 @@ object Macro:
       case (label, None)     => Expr(label.valueOrAbort -> None)
       case (label, Some(et)) => '{ $label -> Some(() => $et) }
     }
-    val tpe = TypeRepr.of[T].typeSymbol
+    val tpe = typeRepr[T].typeSymbol
     val terms = tpe.primaryConstructor.paramSymss.flatten
       .filter(_.isValDef)
       .zipWithIndex
@@ -101,7 +105,7 @@ object Macro:
       case _                         => Nil
 
     Expr.ofList {
-      val typeRepr = TypeRepr.of[T]
+      val typeRepr = this.typeRepr[T]
       typeRepr.typeSymbol.caseFields
         .map { field =>
           val tpeRepr = typeRepr.memberType(field)
@@ -120,7 +124,7 @@ object Macro:
   def repeated[T: Type](using Quotes): Expr[List[(String, Boolean)]] =
     import quotes.reflect.*
 
-    val tpe = TypeRepr.of[T]
+    val tpe = typeRepr[T]
     val areRepeated =
       if tpe.typeSymbol.isNoSymbol then Nil
       else {
@@ -171,12 +175,12 @@ object Macro:
       case _ =>
         '{ TypeInfo(${ owner(tpe) }, ${ name(tpe) }, Nil) }
 
-    typeInfo(TypeRepr.of[T])
+    typeInfo(typeRepr[T])
 
   private class CollectAnnotations[T: Type](using val quotes: Quotes) {
     import quotes.reflect.*
 
-    private val tpe: TypeRepr = TypeRepr.of[T]
+    private val tpe: TypeRepr = typeRepr[T]
 
     def anns: Expr[List[scala.annotation.Annotation]] =
       Expr.ofList {

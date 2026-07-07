@@ -13,7 +13,13 @@ class TypeAliasesTests extends munit.FunSuite:
   test("resolve aliases for type names") {
     type LO[X] = Leaf[Seq[X]]
     val res = Show.derived[LO[String]].show(Leaf(Seq("hi")))
-    assertEquals(res, "Leaf[String](value=[hi])") // todo should be Seq[String]
+    assertEquals(res, "Leaf[Seq[String]](value=[hi])")
+  }
+  test("preserve defaults") {
+    assertEquals(List(("i", 1)), Macro.defaultValue[AliasA].map((n, v) => (n, v.get.apply())))
+  }
+  test("opaques should remain opaque") {
+    assertEquals(Nil, Macro.defaultValue[OpaqueA])
   }
 end TypeAliasesTests
 object TypeAliasesTests:
@@ -27,4 +33,8 @@ object TypeAliasesTests:
     given [T: [X] =>> Show[String, X]]: Show[String, Tree[T]] = Show.derived
   case class Leaf[+L](value: L) extends Tree[L]
   case class Branch[+B](left: Tree[B], right: Tree[B]) extends Tree[B]
+
+  case class A(i: Int = 1)
+  opaque type OpaqueA = A
+  type AliasA = A
 end TypeAliasesTests
