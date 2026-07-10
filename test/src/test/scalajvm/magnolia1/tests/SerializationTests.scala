@@ -17,8 +17,8 @@ class SerializationTests extends munit.FunSuite:
     val ois = new ObjectInputStream(new ByteArrayInputStream(encodedValue))
     ois.readObject()
 
-  def ensureSerializable[T <: Serializable](value: T): T =
-    deserializeFromByteArray(serializeToByteArray(value)).asInstanceOf[T]
+  def ensureSerializable[T <: Serializable](value: T): Unit =
+    deserializeFromByteArray(serializeToByteArray(value)).asInstanceOf[T]: Unit
 
   test("generate serializable type-classes") {
     ensureSerializable(new Outer().showAddress)
