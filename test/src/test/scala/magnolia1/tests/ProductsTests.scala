@@ -201,7 +201,7 @@ class ProductsTests extends munit.FunSuite:
   test("show chained error stack when leaf instance is missing") {
     val error = compileErrors("Show.derived[Schedule]")
     assert(
-      clue(error) contains "No given instance of type magnolia1.examples.Show[String"
+      clue(error) contains "No given instance of type magnolia1.examples.Show[String, Seq[magnolia1.tests.ProductsTests.Event]] was found."
     )
   }
 
