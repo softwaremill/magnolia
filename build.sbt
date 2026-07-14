@@ -74,6 +74,10 @@ lazy val test = (projectMatrix in file("test"))
     projectDependencies ++= Seq(
       "org.scalameta" %%% "munit" % "1.0.0-M12"
     ),
+    scalacOptions ++= List(
+      "-pagewidth",
+      "80",
+    ),
     testFrameworks += new TestFramework("munit.Framework"),
     publishArtifact := false
   )

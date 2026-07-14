@@ -34,7 +34,7 @@ class OtherTests extends munit.FunSuite:
     assert(
       clue(
         error
-      ) contains "No given instance of type magnolia1.examples.Show[String"
+      ) contains "No given instance of type magnolia1.examples.Show[String, Long & magnolia1.tests.OtherTests.Character.Tag] was found."
     )
   }
 
