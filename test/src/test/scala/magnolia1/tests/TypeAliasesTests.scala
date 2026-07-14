@@ -3,6 +3,8 @@ package magnolia1.tests
 import magnolia1.*
 import magnolia1.examples.*
 
+import scala.annotation.StaticAnnotation
+
 class TypeAliasesTests extends munit.FunSuite:
   import TypeAliasesTests.*
   test("show a type aliased case class") {
@@ -21,6 +23,12 @@ class TypeAliasesTests extends munit.FunSuite:
   test("opaques should remain opaque") {
     assertEquals(Nil, Macro.defaultValue[OpaqueA])
   }
+  test("collect annotations from a union type alias") {
+    assertEquals(Macro.anns[AnnotatedUnion].map(_.toString), List("MyAnnotation(0)"))
+  }
+  test("combine annotations on a type alias with those on the dealiased type") {
+    assertEquals(Macro.anns[AnnotatedAlias].map(_.toString), List("MyAnnotation(1)", "MyAnnotation(2)"))
+  }
 end TypeAliasesTests
 object TypeAliasesTests:
   sealed trait Entity
@@ -37,4 +45,15 @@ object TypeAliasesTests:
   case class A(i: Int = 1)
   opaque type OpaqueA = A
   type AliasA = A
+
+  case class MyAnnotation(order: Int) extends StaticAnnotation
+
+  @MyAnnotation(0)
+  type AnnotatedUnion = Company | Person
+
+  @MyAnnotation(2)
+  case class B(i: Int)
+
+  @MyAnnotation(1)
+  type AnnotatedAlias = B
 end TypeAliasesTests

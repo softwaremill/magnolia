@@ -184,10 +184,15 @@ object Macro:
 
     def anns: Expr[List[scala.annotation.Annotation]] =
       Expr.ofList {
-        annotatedSymbol.annotations
+        (aliasAnnotations ++ annotatedSymbol.annotations)
           .filter(filterAnnotation)
           .map(_.asExpr.asInstanceOf[Expr[scala.annotation.Annotation]])
       }
+
+    // annotations on a type alias itself, e.g. @ann type T = ...
+    private def aliasAnnotations: List[Term] =
+      val aliasSymbol = TypeRepr.of[T].typeSymbol
+      if aliasSymbol != tpe.typeSymbol then aliasSymbol.annotations else Nil
 
     def inheritedAnns: Expr[List[scala.annotation.Annotation]] =
       Expr.ofList {
