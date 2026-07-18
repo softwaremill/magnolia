@@ -76,7 +76,7 @@ lazy val test = (projectMatrix in file("test"))
     ),
     scalacOptions ++= List(
       "-pagewidth",
-      "80",
+      "80"
     ),
     testFrameworks += new TestFramework("munit.Framework"),
     publishArtifact := false
