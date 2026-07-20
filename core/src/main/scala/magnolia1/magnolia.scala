@@ -16,7 +16,7 @@ trait CommonDerivation[TypeClass[_]]:
     */
   def join[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T]
 
-  inline def derivedMirrorProduct[A](
+  transparent inline def derivedMirrorProduct[A](
       product: Mirror.ProductOf[A]
   ): Typeclass[A] = join(CaseClassDerivation.fromMirror(product))
 
@@ -57,11 +57,11 @@ trait CommonDerivation[TypeClass[_]]:
 end CommonDerivation
 
 trait ProductDerivation[TypeClass[_]] extends CommonDerivation[TypeClass]:
-  inline def derivedMirror[A](using mirror: Mirror.Of[A]): Typeclass[A] =
+  transparent inline def derivedMirror[A](using mirror: Mirror.Of[A]): Typeclass[A] =
     inline mirror match
       case product: Mirror.ProductOf[A] => derivedMirrorProduct[A](product)
 
-  inline given derived[A](using Mirror.Of[A]): Typeclass[A] = derivedMirror[A]
+  transparent inline given derived[A](using Mirror.Of[A]): Typeclass[A] = derivedMirror[A]
 end ProductDerivation
 
 trait Derivation[TypeClass[_]] extends CommonDerivation[TypeClass] with SealedTraitDerivation:
@@ -84,15 +84,15 @@ trait Derivation[TypeClass[_]] extends CommonDerivation[TypeClass] with SealedTr
   ): List[SealedTrait.Subtype[Typeclass, T, _]] =
     subtypesFromMirror[T, SubtypeTuple](m, idx)
 
-  inline def derivedMirrorSum[A](sum: Mirror.SumOf[A]): Typeclass[A] =
+  transparent inline def derivedMirrorSum[A](sum: Mirror.SumOf[A]): Typeclass[A] =
     split(sealedTraitFromMirror(sum))
 
-  inline def derivedMirror[A](using mirror: Mirror.Of[A]): Typeclass[A] =
+  transparent inline def derivedMirror[A](using mirror: Mirror.Of[A]): Typeclass[A] =
     inline mirror match
       case sum: Mirror.SumOf[A]         => derivedMirrorSum[A](sum)
       case product: Mirror.ProductOf[A] => derivedMirrorProduct[A](product)
 
-  inline def derived[A](using Mirror.Of[A]): Typeclass[A] = derivedMirror[A]
+  transparent inline def derived[A](using Mirror.Of[A]): Typeclass[A] = derivedMirror[A]
 
   protected override inline def deriveSubtype[s](
       m: Mirror.Of[s]

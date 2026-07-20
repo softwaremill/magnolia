@@ -89,14 +89,48 @@ class RecursiveTypesTests extends munit.FunSuite:
     assertEquals(res, "Recursive(children=[Recursive(children=[])])")
   }
 
-  test(
-    "no support for arbitrary derivation result type for recursive classes yet"
-  ) {
-    val error = compileErrors("ExportedTypeclass.derived[Recursive]")
-    val expectedError =
-      """Seq[magnolia1.tests.RecursiveTypesTests.Recursive]] was found."""
-    assert(clue(error) contains expectedError)
+  test("recursive product derivation preserves narrow result type from join") {
+    val instance: ExportedTypeclass.Exported[NarrowRec] =
+      summon[ExportedTypeclass.Exported[NarrowRec]]
+    val direct: ExportedTypeclass.Exported[NarrowRec] =
+      ExportedTypeclass.derived[NarrowRec]
+    assert(clue(instance) != null)
+    assert(clue(direct) != null)
   }
+
+  test("recursive sealed trait derivation preserves narrow result type from split") {
+    val instance: ExportedTypeclass.Exported[NarrowSum] =
+      summon[ExportedTypeclass.Exported[NarrowSum]]
+    val direct: ExportedTypeclass.Exported[NarrowSum] =
+      ExportedTypeclass.derived[NarrowSum]
+    assert(clue(instance) != null)
+    assert(clue(direct) != null)
+  }
+
+  test("recursive derivation returns the narrow TcObj type") {
+    import CovariantRecursive.*
+    import CovariantRecursive.ShowDerivation.autoDerived
+
+    val ok1: Tc[B.type] = ShowDerivation.gen[B.type]
+    val ok2: Tc[A] = summon[Tc[A]]
+    val narrow: TcObj[A] = ShowDerivation.derived[A]
+    val viaGenObj: TcObj[A] = ShowDerivation.genObj[A]
+
+    assert(clue(ok1) != null)
+    assert(clue(ok2) != null)
+    assert(clue(narrow) != null)
+    assert(clue(viaGenObj) != null)
+  }
+
+  test("branching recursive sealed trait preserves narrow result type from split") {
+    val instance: ExportedTypeclass.Exported[BranchingRec] =
+      summon[ExportedTypeclass.Exported[BranchingRec]]
+    val direct: ExportedTypeclass.Exported[BranchingRec] =
+      ExportedTypeclass.derived[BranchingRec]
+    assert(clue(instance) != null)
+    assert(clue(direct) != null)
+  }
+
 
   test("serialize a CeList") {
     val printResult = summon[Print[CeList]].print(CeColon(3, CeColon(2, CeNil(2))))
@@ -133,3 +167,40 @@ object RecursiveTypesTests:
   object CeList:
     given Show[String, CeList] = Show.derived
     given Print[CeList] = Print.derived[CeList]
+
+  case class NarrowRec(children: Seq[NarrowRec])
+  object NarrowRec:
+    given exportedNarrowRec: ExportedTypeclass.Exported[NarrowRec] =
+      ExportedTypeclass.derived[NarrowRec]
+
+  sealed trait NarrowSum
+  case object NarrowSumEmpty extends NarrowSum
+  case class NarrowSumCons(next: NarrowSum) extends NarrowSum
+  object NarrowSum:
+    given exportedNarrowSum: ExportedTypeclass.Exported[NarrowSum] =
+      ExportedTypeclass.derived[NarrowSum]
+
+  object CovariantRecursive:
+    import scala.deriving.Mirror
+
+    trait Tc[T]
+    trait TcObj[T] extends Tc[T]
+
+    object ShowDerivation extends AutoDerivation[Tc]:
+      def join[T](ctx: CaseClass[Tc, T]): TcObj[T] = new TcObj[T] {}
+      def split[T](ctx: SealedTrait[Tc, T]): TcObj[T] = new TcObj[T] {}
+      inline def gen[T](using Mirror.Of[T]): Tc[T] = derived[T]
+      transparent inline def genObj[T](using Mirror.Of[T]): Tc[T] = derived[T]
+
+    sealed trait A
+    case object B extends A
+    case class C(next: A) extends A
+    object A:
+      given Tc[A] = ShowDerivation.derived[A]
+
+  sealed trait BranchingRec
+  case object BranchingRecLeaf extends BranchingRec
+  case class BranchingRecNode(left: BranchingRec, right: BranchingRec) extends BranchingRec
+  object BranchingRec:
+    given exportedBranchingRec: ExportedTypeclass.Exported[BranchingRec] =
+      ExportedTypeclass.derived[BranchingRec]
