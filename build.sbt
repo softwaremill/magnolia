@@ -6,29 +6,33 @@ val scala3 = "3.3.6"
 
 ThisBuild / dynverTagPrefix := "scala3-v" // a custom prefix is needed to differentiate tags between scala2 & scala3 versions
 
-val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
-  scalaVersion := scala3,
-  organization := "com.softwaremill.magnolia1_3",
-  description := "Fast, easy and transparent typeclass derivation for Scala 3",
-  updateDocs := UpdateVersionInDocs(
-    sLog.value,
-    organization.value,
-    version.value,
-    List(file("readme.md"))
-  )
-)
+commonSmlBuildSettings
+ossPublishSettings
+
+scalaVersion := scala3
+organization := "com.softwaremill.magnolia1_3"
+description := "Fast, easy and transparent typeclass derivation for Scala 3"
+
+lazy val allAggregates: Seq[ProjectReference] = core.projectRefs ++ examples.projectRefs ++ test.projectRefs
 
 lazy val root =
   project
     .in(file("."))
-    .settings(commonSettings)
-    .settings(name := "magnolia-root", publishArtifact := false)
-    .aggregate(
-      (core.projectRefs ++ examples.projectRefs ++ test.projectRefs): _*
+    .settings(
+      name := "magnolia-root",
+      publishArtifact := false,
+      updateDocs := Def.uncached(
+        UpdateVersionInDocs(
+          sLog.value,
+          organization.value,
+          version.value,
+          List(file("readme.md"))
+        )
+      )
     )
+    .aggregate(allAggregates*)
 
 lazy val core = (projectMatrix in file("core"))
-  .settings(commonSettings)
   .settings(
     name := "magnolia",
     mimaPreviousArtifacts := {
@@ -57,7 +61,6 @@ lazy val core = (projectMatrix in file("core"))
 
 lazy val examples = (projectMatrix in file("examples"))
   .dependsOn(core)
-  .settings(commonSettings)
   .settings(
     name := "magnolia-examples",
     publishArtifact := false
@@ -68,15 +71,14 @@ lazy val examples = (projectMatrix in file("examples"))
 
 lazy val test = (projectMatrix in file("test"))
   .dependsOn(examples)
-  .settings(commonSettings)
   .settings(
     name := "magnolia-test",
     projectDependencies ++= Seq(
-      "org.scalameta" %%% "munit" % "1.0.0-M12"
+      "org.scalameta" %% "munit" % "1.0.0-M12"
     ),
     scalacOptions ++= List(
       "-pagewidth",
-      "80",
+      "80"
     ),
     testFrameworks += new TestFramework("munit.Framework"),
     publishArtifact := false
