@@ -65,8 +65,8 @@ object Macro:
     def exprOfOption(
         oet: (Expr[String], Option[Expr[Any]])
     ): Expr[(String, Option[() => Any])] = oet match {
-      case (label, None)     => Expr(label.valueOrAbort -> None)
-      case (label, Some(et)) => '{ $label -> Some(() => $et) }
+      case (label, None)     => Expr((label.valueOrAbort, None))
+      case (label, Some(et)) => '{ ($label, Some(() => $et)) }
     }
     val tpe = typeRepr[T].typeSymbol
     val terms = tpe.primaryConstructor.paramSymss.flatten
