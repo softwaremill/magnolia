@@ -17,15 +17,14 @@ description := "Fast, easy and transparent typeclass derivation for Scala 2"
 ideSkipProject := (scalaVersion.value == scala2_12) // only import 2.13 projects
 
 lazy val root =
-  project
-    .in(file("."))
+  rootProject
     .settings(
       name := "magnolia-root",
       publishArtifact := false,
       scalaVersion := scala2_13,
       updateDocs := Def.uncached(UpdateVersionInDocs(sLog.value, organization.value, version.value, List(file("readme.md"))))
     )
-    .aggregate((core.projectRefs ++ examples.projectRefs ++ test.projectRefs)*)
+    .autoAggregate
 
 lazy val core = (projectMatrix in file("core"))
   .settings(
