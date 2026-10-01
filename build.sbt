@@ -13,11 +13,8 @@ scalaVersion := scala3
 organization := "com.softwaremill.magnolia1_3"
 description := "Fast, easy and transparent typeclass derivation for Scala 3"
 
-lazy val allAggregates: Seq[ProjectReference] = core.projectRefs ++ examples.projectRefs ++ test.projectRefs
-
 lazy val root =
-  project
-    .in(file("."))
+  rootProject
     .settings(
       name := "magnolia-root",
       publishArtifact := false,
@@ -30,7 +27,7 @@ lazy val root =
         )
       )
     )
-    .aggregate(allAggregates*)
+    .autoAggregate
 
 lazy val core = (projectMatrix in file("core"))
   .settings(
