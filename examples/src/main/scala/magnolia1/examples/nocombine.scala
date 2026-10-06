@@ -9,7 +9,7 @@ object NoCombine extends AutoDerivation[NoCombine]:
   type Typeclass[T] = NoCombine[T]
 
   def join[T](ctx: CaseClass[magnolia1.examples.NoCombine, T]): NoCombine[T] =
-    instance { value =>
+    instance { _ =>
       ctx.typeInfo.short
     }
 

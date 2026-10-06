@@ -33,7 +33,7 @@ object Patcher extends LowerPriorityPatcher with AutoDerivation[Patcher]:
       ctx.choose(value)(sub => sub.typeclass.patch(sub.value, fieldValues))
 
 sealed abstract class LowerPriorityPatcher:
-  private[this] val _forSingleValue =
+  private val _forSingleValue =
     new Patcher[Any]:
       def patch(value: Any, fieldValues: Seq[Any]): Any = {
         if (fieldValues.lengthCompare(1) != 0)

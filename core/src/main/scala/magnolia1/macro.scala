@@ -147,9 +147,9 @@ object Macro:
     def normalizedName(s: Symbol): String =
       if s.flags.is(Flags.Module) then s.name.stripSuffix("$") else s.name
     def name(tpe: TypeRepr): Expr[String] = tpe.dealias match
-      case matchedTpe @ TermRef(typeRepr, name) if matchedTpe.typeSymbol.flags.is(Flags.Module) =>
+      case matchedTpe @ TermRef(_, name) if matchedTpe.typeSymbol.flags.is(Flags.Module) =>
         Expr(name.stripSuffix("$"))
-      case TermRef(typeRepr, name) => Expr(name)
+      case TermRef(_, name) => Expr(name)
       case matchedTpe              => Expr(normalizedName(matchedTpe.typeSymbol))
 
     def ownerNameChain(sym: Symbol): List[String] =
