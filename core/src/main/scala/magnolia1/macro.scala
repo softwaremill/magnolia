@@ -150,7 +150,7 @@ object Macro:
       case matchedTpe @ TermRef(_, name) if matchedTpe.typeSymbol.flags.is(Flags.Module) =>
         Expr(name.stripSuffix("$"))
       case TermRef(_, name) => Expr(name)
-      case matchedTpe              => Expr(normalizedName(matchedTpe.typeSymbol))
+      case matchedTpe       => Expr(normalizedName(matchedTpe.typeSymbol))
 
     def ownerNameChain(sym: Symbol): List[String] =
       if sym.isNoSymbol then List.empty

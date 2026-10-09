@@ -206,12 +206,16 @@ class SumsTests extends munit.FunSuite:
     assert(
       clue(
         error
-      ).contains("No given instance of type scala.deriving.Mirror.Of[magnolia1.tests.SumsTests.Parent] was found for parameter x$1 of method derived in trait Derivation.")
+      ).contains(
+        "No given instance of type scala.deriving.Mirror.Of[magnolia1.tests.SumsTests.Parent] was found for parameter x$1 of method derived in trait Derivation."
+      )
     )
     assert(
       clue(
         error
-      ).contains("trait Parent is not a generic sum because its child trait BadChild is not a generic product because it is not a case class")
+      ).contains(
+        "trait Parent is not a generic sum because its child trait BadChild is not a generic product because it is not a case class"
+      )
     )
   }
 
@@ -222,7 +226,9 @@ class SumsTests extends munit.FunSuite:
     assert(
       clue(
         error
-      ).contains("trait GoodChild is not a generic sum because its child class Dewey is not a generic product because it is not a case class")
+      ).contains(
+        "trait GoodChild is not a generic sum because its child class Dewey is not a generic product because it is not a case class"
+      )
     )
   }
 
