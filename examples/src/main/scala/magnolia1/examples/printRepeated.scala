@@ -1,6 +1,7 @@
 package magnolia1.examples
 
 import magnolia1.*
+import scala.annotation.unused
 
 trait PrintRepeated[T]:
   def print(t: T): String
@@ -12,4 +13,4 @@ object PrintRepeated extends AutoDerivation[PrintRepeated]:
     ctx.choose(_) { sub => sub.typeclass.print(sub.value) }
 
   given PrintRepeated[String] = _ => ""
-  given seq[T](using printT: PrintRepeated[T]): PrintRepeated[Seq[T]] = _ => ""
+  given seq[T](using @unused printT: PrintRepeated[T]): PrintRepeated[Seq[T]] = _ => ""

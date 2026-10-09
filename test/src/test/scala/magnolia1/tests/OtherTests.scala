@@ -15,7 +15,7 @@ class OtherTests extends munit.FunSuite:
       Show.derived[Beta]
     """)
     assert(
-      clue(error) contains "No given instance of type magnolia1.examples.Show[String, Alpha] was found."
+      clue(error).contains("No given instance of type magnolia1.examples.Show[String, Alpha] was found.")
     )
   }
 
@@ -25,7 +25,7 @@ class OtherTests extends munit.FunSuite:
       Show.derived[Gamma]
     """)
     assert(
-      clue(error) contains "No given instance of type magnolia1.examples.Show[String, Unit] was found."
+      clue(error).contains("No given instance of type magnolia1.examples.Show[String, Unit] was found.")
     )
   }
 
@@ -34,7 +34,7 @@ class OtherTests extends munit.FunSuite:
     assert(
       clue(
         error
-      ) contains "No given instance of type magnolia1.examples.Show[String, Long & magnolia1.tests.OtherTests.Character.Tag] was found."
+      ).contains("No given instance of type magnolia1.examples.Show[String, Long & magnolia1.tests.OtherTests.Character.Tag] was found.")
     )
   }
 
@@ -94,12 +94,12 @@ object OtherTests:
   case class Character(id: Character.Id)
   object Character:
     trait Tag extends Any
-    type Id = Long with Tag
+    type Id = Long & Tag
 
   case class AnotherCharacter(id: AnotherCharacter.Id)
   object AnotherCharacter:
     trait Tag extends Any
-    type Id = Long with Tag
+    type Id = Long & Tag
     given Show[String, Id] = _.toString
 
   sealed trait Entity

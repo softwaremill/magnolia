@@ -260,7 +260,7 @@ trait SealedTraitDerivation:
   protected inline def subtypesFromMirrorStep[A, s](
       m: Mirror.SumOf[A],
       idx: Int
-  ): List[SealedTrait.Subtype[Typeclass, A, _]] =
+  ): List[SealedTrait.Subtype[Typeclass, A, ?]] =
     summonFrom {
       case mm: Mirror.SumOf[`s`] =>
         subtypesFromMirror[A, mm.MirroredElemTypes](
@@ -300,8 +300,8 @@ trait SealedTraitDerivation:
   protected transparent inline def subtypesFromMirror[A, SubtypeTuple <: Tuple](
       m: Mirror.SumOf[A],
       idx: Int = 0, // no longer used, kept for bincompat
-      result: List[SealedTrait.Subtype[Typeclass, A, _]] = Nil
-  ): List[SealedTrait.Subtype[Typeclass, A, _]] =
+      result: List[SealedTrait.Subtype[Typeclass, A, ?]] = Nil
+  ): List[SealedTrait.Subtype[Typeclass, A, ?]] =
     inline erasedValue[SubtypeTuple] match
       case _: EmptyTuple =>
         result.distinctBy(_.typeInfo).sortBy(_.typeInfo.full)
