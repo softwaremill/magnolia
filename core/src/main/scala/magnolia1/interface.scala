@@ -212,7 +212,7 @@ end CaseClass
   */
 case class SealedTrait[Typeclass[_], Type](
     typeInfo: TypeInfo,
-    subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
+    subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, ?]],
     annotations: IArray[Any],
     typeAnnotations: IArray[Any],
     isEnum: Boolean,
@@ -222,7 +222,7 @@ case class SealedTrait[Typeclass[_], Type](
   // for backward compatibility with v1.0.0
   def this(
       typeInfo: TypeInfo,
-      subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
+      subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, ?]],
       annotations: IArray[Any],
       typeAnnotations: IArray[Any],
       isEnum: Boolean
@@ -238,7 +238,7 @@ case class SealedTrait[Typeclass[_], Type](
   // for backward compatibility with v1.0.0
   def copy(
       typeInfo: TypeInfo,
-      subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
+      subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, ?]],
       annotations: IArray[Any],
       typeAnnotations: IArray[Any],
       isEnum: Boolean
@@ -269,7 +269,7 @@ case class SealedTrait[Typeclass[_], Type](
     * @return
     *   whatever the 'handle' function returned!
     */
-  def choose[Return](value: Type)(handle: Subtype[_] => Return): Return =
+  def choose[Return](value: Type)(handle: Subtype[?] => Return): Return =
     @tailrec def rec(ix: Int): Return =
       if ix < subtypes.length then
         val sub = subtypes(ix)
@@ -289,7 +289,7 @@ object SealedTrait:
   // for backward compatibility with v1.0.0
   def apply[Typeclass[_], Type](
       typeInfo: TypeInfo,
-      subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, _]],
+      subtypes: IArray[SealedTrait.Subtype[Typeclass, Type, ?]],
       annotations: IArray[Any],
       typeAnnotations: IArray[Any],
       isEnum: Boolean
@@ -389,7 +389,7 @@ end CallByNeed
 
 // Both params are later nullified to reduce overhead and increase performance.
 // The supportDynamicValueEvaluation is passed as a function so that it can be nullified. Otherwise, there is no need for the function value.
-final class CallByNeed[+A] private (private[this] var eval: () => A, private var supportDynamicValueEvaluation: () => Boolean)
+final class CallByNeed[+A] private (private var eval: () => A, private var supportDynamicValueEvaluation: () => Boolean)
     extends Serializable {
 
   // This second constructor is necessary to support backwards compatibility for v1.3.6 and earlier

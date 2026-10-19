@@ -95,7 +95,7 @@ class RecursiveTypesTests extends munit.FunSuite:
     val error = compileErrors("ExportedTypeclass.derived[Recursive]")
     val expectedError =
       """Seq[magnolia1.tests.RecursiveTypesTests.Recursive]] was found."""
-    assert(clue(error) contains expectedError)
+    assert(clue(error).contains(expectedError))
   }
 
   test("serialize a CeList") {

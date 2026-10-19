@@ -3,7 +3,7 @@ package magnolia1.examples
 import magnolia1._
 
 case class Passthrough[T](
-    ctx: Option[Either[CaseClass[_, T], SealedTrait[_, T]]]
+    ctx: Option[Either[CaseClass[?, T], SealedTrait[?, T]]]
 )
 object Passthrough extends Derivation[Passthrough]:
   def join[T](ctx: CaseClass[Passthrough, T]) = Passthrough(Some(Left(ctx)))

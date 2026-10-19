@@ -1,6 +1,7 @@
 package magnolia1
 
 import scala.deriving.Mirror
+import scala.annotation.unused
 
 trait CommonDerivation[TypeClass[_]]:
   type Typeclass[T] = TypeClass[T]
@@ -26,7 +27,7 @@ trait CommonDerivation[TypeClass[_]]:
       typeAnnotations: Map[String, List[Any]],
       repeated: Map[String, Boolean],
       defaults: Map[String, Option[() => Any]],
-      idx: Int = 0
+      @unused idx: Int = 0
   ): List[CaseClass.Param[Typeclass, T]] = CaseClassDerivation.paramsFromMaps(
     annotations,
     inheritedAnnotations,
@@ -38,7 +39,7 @@ trait CommonDerivation[TypeClass[_]]:
   // for backward compatibility with v1.1.1
   inline def getParams_[T, Labels <: Tuple, Params <: Tuple](
       annotations: Map[String, List[Any]],
-      inheritedAnnotations: Map[String, List[Any]],
+      @unused inheritedAnnotations: Map[String, List[Any]],
       typeAnnotations: Map[String, List[Any]],
       repeated: Map[String, Boolean],
       idx: Int = 0
@@ -81,7 +82,7 @@ trait Derivation[TypeClass[_]] extends CommonDerivation[TypeClass] with SealedTr
   transparent inline def subtypes[T, SubtypeTuple <: Tuple](
       m: Mirror.SumOf[T],
       idx: Int = 0 // no longer used, kept for bincompat
-  ): List[SealedTrait.Subtype[Typeclass, T, _]] =
+  ): List[SealedTrait.Subtype[Typeclass, T, ?]] =
     subtypesFromMirror[T, SubtypeTuple](m, idx)
 
   inline def derivedMirrorSum[A](sum: Mirror.SumOf[A]): Typeclass[A] =
